@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 280" fill="none"><defs>
+      <linearGradient id="loopSky" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#1e1b4b"/>
+        <stop offset="100%" stop-color="#0c4a6e"/>
+      </linearGradient>
+      <linearGradient id="loopTrack" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#065f46"/>
+        <stop offset="100%" stop-color="#047857"/>
+      </linearGradient>
+    </defs>
+    <rect width="960" height="280" fill="url(#loopSky)"/>
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="0 0; -320 0; 0 0" dur="8s" repeatCount="indefinite"/>
+      <rect x="0" y="170" width="1280" height="70" fill="url(#loopTrack)" opacity="0.9"/>
+      <path d="M0 205 H1280" stroke="#34d399" stroke-width="3" stroke-dasharray="40 24" opacity="0.55"/>
+      <circle cx="180" cy="120" r="28" fill="#fbbf24" opacity="0.35"/>
+      <circle cx="520" cy="120" r="28" fill="#fbbf24" opacity="0.35"/>
+      <circle cx="860" cy="120" r="28" fill="#fbbf24" opacity="0.35"/>
+      <path d="M120 198 L145 178 L170 188 L195 168 L220 198 Z" fill="#f8fafc" opacity="0.92"/>
+      <path d="M460 198 L485 178 L510 188 L535 168 L560 198 Z" fill="#f8fafc" opacity="0.92"/>
+      <path d="M800 198 L825 178 L850 188 L875 168 L900 198 Z" fill="#f8fafc" opacity="0.92"/>
+    </g>
+    <rect x="0" y="0" width="960" height="280" fill="url(#loopSky)" opacity="0.15"/></svg>

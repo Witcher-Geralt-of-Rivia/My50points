@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "functions": {
+    "src/app/api/[...path]/route.js": {
+      "maxDuration": 60
+    }
+  },
+  "redirects": [
+    {
+      "source": "/50points",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/50points/:path*",
+      "destination": "/:path*",
+      "permanent": false
+    }
+  ]
+}

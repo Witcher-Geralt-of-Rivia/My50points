@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" fill="none" role="img" aria-label="MY 50 POINTS brand ticket stripes">
+  <defs>
+    <clipPath id="notch-left">
+      <rect x="0" y="0" width="720" height="520"/>
+    </clipPath>
+    <!-- Matte ticket fills (flat, from brandColors.js) -->
+    <linearGradient id="purple-matte" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9B4FD9"/>
+      <stop offset="100%" stop-color="#5E1F96"/>
+    </linearGradient>
+    <linearGradient id="cyan-matte" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3DEAFF"/>
+      <stop offset="100%" stop-color="#0099AD"/>
+    </linearGradient>
+    <linearGradient id="gold-matte" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFC85A"/>
+      <stop offset="100%" stop-color="#D9890C"/>
+    </linearGradient>
+    <!-- Neon edge accents -->
+    <filter id="neon-purple" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="neon-cyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="neon-gold" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="720" height="520" fill="#000000"/>
+
+  <!-- Ticket helper: body with side notches -->
+  <g id="ticket-purple" transform="translate(40 72)">
+    <path d="M24 0 H616 a24 24 0 0 1 24 24 V56 a24 24 0 0 1 -24 24 H616 a24 24 0 0 0 -24 24 V104 a24 24 0 0 0 24 24 H616 a24 24 0 0 1 24 24 V176 a24 24 0 0 1 -24 24 H24 a24 24 0 0 1 -24 -24 V152 a24 24 0 0 1 24 -24 H48 a24 24 0 0 0 24 -24 V80 a24 24 0 0 0 -24 -24 H24 a24 24 0 0 1 -24 -24 V24 a24 24 0 0 1 24 -24 Z"
+          fill="url(#purple-matte)" stroke="#FFFFFF" stroke-width="3"/>
+    <!-- Perforation -->
+    <line x1="592" y1="12" x2="592" y2="188" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="6 8" opacity="0.85"/>
+    <!-- Neon top edge -->
+    <path d="M28 4 H612" stroke="#C45CFF" stroke-width="2" opacity="0.75" filter="url(#neon-purple)"/>
+  </g>
+
+  <g id="ticket-cyan" transform="translate(40 196)">
+    <path d="M24 0 H616 a24 24 0 0 1 24 24 V56 a24 24 0 0 1 -24 24 H616 a24 24 0 0 0 -24 24 V104 a24 24 0 0 0 24 24 H616 a24 24 0 0 1 24 24 V176 a24 24 0 0 1 -24 24 H24 a24 24 0 0 1 -24 -24 V152 a24 24 0 0 1 24 -24 H48 a24 24 0 0 0 24 -24 V80 a24 24 0 0 0 -24 -24 H24 a24 24 0 0 1 -24 -24 V24 a24 24 0 0 1 24 -24 Z"
+          fill="url(#cyan-matte)" stroke="#FFFFFF" stroke-width="3"/>
+    <line x1="592" y1="12" x2="592" y2="188" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="6 8" opacity="0.85"/>
+    <path d="M28 4 H612" stroke="#3DEAFF" stroke-width="2" opacity="0.75" filter="url(#neon-cyan)"/>
+  </g>
+
+  <g id="ticket-gold" transform="translate(40 320)">
+    <path d="M24 0 H616 a24 24 0 0 1 24 24 V56 a24 24 0 0 1 -24 24 H616 a24 24 0 0 0 -24 24 V104 a24 24 0 0 0 24 24 H616 a24 24 0 0 1 24 24 V176 a24 24 0 0 1 -24 24 H24 a24 24 0 0 1 -24 -24 V152 a24 24 0 0 1 24 -24 H48 a24 24 0 0 0 24 -24 V80 a24 24 0 0 0 -24 -24 H24 a24 24 0 0 1 -24 -24 V24 a24 24 0 0 1 24 -24 Z"
+          fill="url(#gold-matte)" stroke="#FFFFFF" stroke-width="3"/>
+    <line x1="592" y1="12" x2="592" y2="188" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="6 8" opacity="0.85"/>
+    <path d="M28 4 H612" stroke="#FFD54A" stroke-width="2" opacity="0.75" filter="url(#neon-gold)"/>
+  </g>
+
+  <!-- Logo badge -->
+  <g transform="translate(360 248)">
+    <circle r="118" fill="#000000" stroke="#FFFFFF" stroke-width="6"/>
+    <circle r="108" fill="#000000"/>
+    <text y="-18" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, Arial, sans-serif" font-size="96" font-weight="900">50</text>
+    <circle cx="42" cy="-38" r="22" fill="#F5A824"/>
+    <text x="42" y="-32" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, Arial, sans-serif" font-size="16" font-weight="800">my</text>
+    <text y="52" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, Arial, sans-serif" font-size="28" font-weight="900" letter-spacing="0.12em">POINTS</text>
+  </g>
+</svg>

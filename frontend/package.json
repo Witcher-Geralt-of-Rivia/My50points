@@ -1,0 +1,29 @@
+{
+  "name": "50points-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/next-cli.mjs dev",
+    "build": "node scripts/next-cli.mjs build",
+    "start": "node scripts/next-cli.mjs start",
+    "lint": "node scripts/next-cli.mjs lint",
+    "verify:ticket-workflow-assets": "node scripts/verify-ticket-workflow-assets.mjs",
+    "verify:point-modality-assets": "node scripts/verify-point-modality-assets.mjs",
+    "verify:leaderboard-assets": "node scripts/verify-leaderboard-assets.mjs",
+    "verify:how-to-play-assets": "node scripts/verify-how-to-play-assets.mjs"
+  },
+  "dependencies": {
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.16.0",
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1"
+  }
+}

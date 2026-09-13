@@ -1,0 +1,48 @@
+# Local Databases
+backend/data/*.db
+backend/data/*.db-journal
+
+# Virtual Environments & logs
+backend/.venv/
+backend/__pycache__/
+backend/output.log
+backend/app/__pycache__/
+backend/app/routers/__pycache__/
+backend/app/services/__pycache__/
+
+# Env / secrets (nunca versionar credenciales)
+.env
+backend/.env
+*.env
+!*.env.example
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large files
+hito1.mp4
+
+# Material privado del cliente y del desarrollo: NUNCA versionar.
+# El export de WhatsApp llegó a contener las credenciales reales de The Racing API.
+Chat de WhatsApp con Marco Navarro/
+conversacion_cliente.txt
+*.opus
+*.bundle
+
+# Respaldos de datos de producción (contienen datos de jugadores)
+backend/data/backup_*.json
+backend/app.db
+
+# Configuracion local de herramientas de desarrollo
+.claude/
+stitch_image_to_html_replicator/

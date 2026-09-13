@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" fill="none" aria-hidden="true">
+  <circle cx="44" cy="44" r="40" stroke="#fafafa" stroke-width="2" opacity=".35"/>
+  <text x="44" y="36" text-anchor="middle" fill="#fafafa" font-size="16" font-weight="900" font-family="system-ui,sans-serif">50</text>
+  <circle cx="54" cy="28" r="6" fill="#F5A824"/>
+  <text x="54" y="30" text-anchor="middle" fill="#fafafa" font-size="5" font-weight="800" font-family="system-ui,sans-serif">my</text>
+  <text x="44" y="62" text-anchor="middle" fill="#fafafa" font-size="9" font-weight="900" font-family="system-ui,sans-serif">POINTS</text>
+  <rect x="18" y="68" width="52" height="3" rx="1.5" fill="#7B2DBE"/>
+  <rect x="18" y="73" width="52" height="3" rx="1.5" fill="#00C4DC"/>
+  <rect x="18" y="78" width="52" height="3" rx="1.5" fill="#F5A824"/>
+  <rect x="18" y="83" width="52" height="3" rx="1.5" fill="#F0EEF5"/>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 280" fill="none"><defs>
+      <linearGradient id="promoBg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#422006"/>
+        <stop offset="55%" stop-color="#7c2d12"/>
+        <stop offset="100%" stop-color="#581c87"/>
+      </linearGradient>
+      <linearGradient id="promoGold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fde68a"/>
+        <stop offset="100%" stop-color="#f59e0b"/>
+      </linearGradient>
+    </defs>
+    <rect width="960" height="280" fill="url(#promoBg)"/>
+    <circle cx="760" cy="140" r="92" fill="#f59e0b" opacity="0.12"/>
+    <path d="M720 92h80l-8 72H728l-8-72z" fill="url(#promoGold)"/>
+    <path d="M760 68v24M748 80h24" stroke="#fef3c7" stroke-width="4" stroke-linecap="round"/>
+    <rect x="96" y="72" width="420" height="136" rx="18" fill="rgba(0,0,0,0.35)" stroke="#fbbf24" stroke-width="2"/>
+    <text x="128" y="118" fill="#fef3c7" font-family="Arial,sans-serif" font-size="34" font-weight="700">ESPACIO PUBLICITARIO</text>
+    <text x="128" y="158" fill="#fcd34d" font-family="Arial,sans-serif" font-size="22" font-weight="700">IMAGEN · TORNEO / MARCA</text>
+    <text x="128" y="192" fill="#fde68a" font-family="Arial,sans-serif" font-size="16" opacity="0.85">Reemplazar por banner del anunciante</text></svg>

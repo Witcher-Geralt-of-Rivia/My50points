@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 48" fill="none" role="img" aria-hidden="true">
+  <!-- Flat matte stripes for UI bars (matches brandColors.js) -->
+  <rect x="0" y="0" width="640" height="10" rx="2" fill="#7B2DBE"/>
+  <rect x="0" y="12" width="640" height="10" rx="2" fill="#00C4DC"/>
+  <rect x="0" y="24" width="640" height="10" rx="2" fill="#F5A824"/>
+  <rect x="0" y="36" width="640" height="10" rx="2" fill="#F0EEF5"/>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="goldGlow">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <ellipse cx="50" cy="88" rx="28" ry="6" fill="#fbbf24" opacity=".15"/>
+  <path d="M22 38c0-14 12-26 28-26s28 12 28 26" stroke="url(#goldGrad)" stroke-width="2.5" filter="url(#goldGlow)"/>
+  <path d="M50 12v8M50 62v10M50 72h-8v8h16v-8z" stroke="url(#goldGrad)" stroke-width="2.5" stroke-linecap="round" filter="url(#goldGlow)"/>
+  <text x="50" y="48" text-anchor="middle" fill="url(#goldGrad)" font-size="22" font-weight="900" font-family="system-ui,sans-serif">1</text>
+</svg>

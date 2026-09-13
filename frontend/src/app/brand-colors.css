@@ -1,0 +1,128 @@
+/**
+ * MY 50 POINTS brand tokens — synced with src/frontend/lib/brandColors.js
+ * Ticket purple · cyan · gold + guest white. Neon vars for line accents.
+ */
+:root {
+  --brand-purple-ticket: #7b2dbe;
+  --brand-purple-ticket-deep: #5e1f96;
+  --brand-purple-ticket-light: #9b4fd9;
+  --brand-purple-neon: #c45cff;
+  --brand-purple-neon-line: rgba(196, 92, 255, 0.9);
+  --brand-purple-matte-bg: #1a0e2e;
+  --brand-purple-matte-panel: #24143a;
+  --brand-purple-accent: #9333ea;
+
+  --brand-cyan-ticket: #00c4dc;
+  --brand-cyan-ticket-deep: #0099ad;
+  --brand-cyan-ticket-light: #3deaff;
+  --brand-cyan-neon: #3deaff;
+  --brand-cyan-neon-line: rgba(61, 234, 255, 0.9);
+  --brand-cyan-matte-bg: #0a2228;
+  --brand-cyan-matte-panel: #0f2e36;
+  --brand-cyan-accent: #00c4dc;
+
+  --brand-gold-ticket: #f5a824;
+  --brand-gold-ticket-deep: #d9890c;
+  --brand-gold-ticket-light: #ffc85a;
+  --brand-gold-neon: #ffd54a;
+  --brand-gold-neon-line: rgba(255, 213, 74, 0.92);
+  --brand-gold-matte-bg: #261c08;
+  --brand-gold-matte-panel: #322608;
+  --brand-gold-accent: #f5a824;
+
+  --brand-guest-ticket: #a855f7;
+  --brand-guest-matte-bg: #0d0b18;
+  --brand-guest-matte-panel: #151226;
+  --brand-logo-my: #f5a824;
+
+  /* Default floating menu / app accents = brand tickets */
+  --fm-accent: var(--brand-purple-accent);
+  --fm-accent-secondary: var(--brand-cyan-accent);
+  --fm-accent-tertiary: var(--brand-gold-accent);
+}
+
+/* Neon line utility — use on borders/dividers inside modality surfaces */
+.tracks-workflow-surface[data-modality="paid"] .mw-neon-line,
+.tracks-workflow-surface[data-modality="paid"] .mw-live-header {
+  box-shadow:
+    inset 0 1px 0 var(--brand-purple-neon-line),
+    0 0 12px rgba(196, 92, 255, 0.12);
+}
+
+.tracks-workflow-surface[data-modality="free"] .mw-neon-line,
+.tracks-workflow-surface[data-modality="free"] .mw-live-header {
+  box-shadow:
+    inset 0 1px 0 var(--brand-cyan-neon-line),
+    0 0 12px rgba(61, 234, 255, 0.1);
+}
+
+.tracks-workflow-surface[data-modality="special"] .mw-neon-line,
+.tracks-workflow-surface[data-modality="special"] .mw-live-header {
+  box-shadow:
+    inset 0 1px 0 var(--brand-gold-neon-line),
+    0 0 12px rgba(255, 213, 74, 0.1);
+}
+
+.mw-color-stripes__line--paid {
+  background: var(--brand-purple-ticket);
+  box-shadow: 0 0 10px var(--brand-purple-neon-line);
+}
+
+.mw-color-stripes__line--free {
+  background: var(--brand-cyan-ticket);
+  box-shadow: 0 0 10px var(--brand-cyan-neon-line);
+}
+
+.mw-color-stripes__line--special {
+  background: var(--brand-gold-ticket);
+  box-shadow: 0 0 10px var(--brand-gold-neon-line);
+}
+
+.mw-color-stripes__line--guest {
+  background: var(--brand-guest-ticket);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+}
+
+.mw-color-stripes--contracted .mw-color-stripes__line--paid {
+  box-shadow: 0 0 10px var(--brand-purple-neon-line);
+}
+
+.mw-color-stripes--contracted .mw-color-stripes__line--free {
+  box-shadow: 0 0 10px var(--brand-cyan-neon-line);
+}
+
+.mw-color-stripes--contracted .mw-color-stripes__line--special {
+  box-shadow: 0 0 10px var(--brand-gold-neon-line);
+}
+
+.mw-color-stripes--contracted .mw-color-stripes__line--guest {
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+}
+
+/*
+ * Fullscreen modality matte — html → body → app shell share the active ticket bg.
+ * Same pattern as ticket-landing-surface[data-modality] (comenzar / onboarding).
+ */
+html[data-modality]:has(.ticket-landing-surface),
+html[data-modality]:has(.tracks-workflow-surface:not(.tracks-workflow-surface--embedded)),
+html[data-modality]:has(.modality-page--workflow-tracks) {
+  background-color: var(--modality-matte-bg, var(--modality-bg));
+  color: var(--modality-matte-fg, var(--foreground));
+}
+
+html[data-modality]:has(.ticket-landing-surface) body,
+html[data-modality]:has(.tracks-workflow-surface:not(.tracks-workflow-surface--embedded)) body,
+html[data-modality]:has(.modality-page--workflow-tracks) body,
+html[data-modality]:has(.tracks-workflow-surface:not(.tracks-workflow-surface--embedded)) .app-main--workflow-tracks,
+html[data-modality]:has(.modality-page--workflow-tracks) .app-main--workflow-tracks,
+html[data-modality]:has(.tracks-workflow-surface:not(.tracks-workflow-surface--embedded)) .app-surface,
+html[data-modality]:has(.modality-page--workflow-tracks) .app-surface {
+  background-color: var(--modality-matte-bg, var(--modality-bg)) !important;
+  background-image: none;
+  color: var(--modality-matte-fg, #f4f4f5);
+}
+
+html[data-modality="guest"]:has(.tracks-workflow-surface:not(.tracks-workflow-surface--embedded)) .app-surface,
+html[data-modality="guest"]:has(.modality-page--workflow-tracks) .app-surface {
+  color: var(--modality-matte-fg, #18181b);
+}

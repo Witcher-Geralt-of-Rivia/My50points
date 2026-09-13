@@ -1,0 +1,7 @@
+node_modules/
+backend/.venv/
+frontend/.next/
+frontend/node_modules/
+stitch_image_to_html_replicator/
+.git/
+.venv/

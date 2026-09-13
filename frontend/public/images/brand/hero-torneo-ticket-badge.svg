@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 96" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="ht-purple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9B4FD9"/>
+      <stop offset="100%" stop-color="#5E1F96"/>
+    </linearGradient>
+    <linearGradient id="ht-cyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3DEAFF"/>
+      <stop offset="100%" stop-color="#0099AD"/>
+    </linearGradient>
+    <linearGradient id="ht-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFC85A"/>
+      <stop offset="100%" stop-color="#D9890C"/>
+    </linearGradient>
+  </defs>
+  <!-- Ticket body with side notches -->
+  <path
+    d="M14 4 H82 a10 10 0 0 1 10 10 V22 a10 10 0 0 1 -10 10 H82 a10 10 0 0 0 -10 10 V58 a10 10 0 0 0 10 10 H82 a10 10 0 0 1 10 10 V74 a10 10 0 0 1 -10 10 H14 a10 10 0 0 1 -10 -10 V68 a10 10 0 0 1 10 -10 H18 a10 10 0 0 0 10 -10 V38 a10 10 0 0 0 -10 -10 H14 a10 10 0 0 1 -10 -10 V14 a10 10 0 0 1 10 -10 Z"
+    fill="#101010"
+    stroke="#FFFFFF"
+    stroke-width="2.5"
+  />
+  <rect x="8" y="8" width="88" height="22" rx="2" fill="url(#ht-purple)"/>
+  <rect x="8" y="32" width="88" height="22" rx="2" fill="url(#ht-cyan)"/>
+  <rect x="8" y="56" width="88" height="22" rx="2" fill="url(#ht-gold)"/>
+  <line x1="84" y1="12" x2="84" y2="76" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.8"/>
+  <!-- Logo badge -->
+  <circle cx="52" cy="48" r="26" fill="#000000" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="52" y="44" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, Arial, sans-serif" font-size="22" font-weight="900">50</text>
+  <circle cx="64" cy="34" r="7" fill="#F5A824"/>
+  <text x="64" y="37" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, Arial, sans-serif" font-size="6" font-weight="800">my</text>
+  <text x="52" y="58" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, Arial, sans-serif" font-size="7" font-weight="900" letter-spacing="0.08em">POINTS</text>
+</svg>
