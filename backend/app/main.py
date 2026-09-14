@@ -115,16 +115,16 @@ async def lifespan(_app: FastAPI):
     # Sync inicial NO bloqueante: el servidor queda listo de inmediato y el scrape corre
     # en segundo plano. Antes se hacía `await ...run_sync_job` y bloqueaba el arranque
     # (riesgo de timeout de health-check en Render con la API lenta/rate-limited).
-    import asyncio
+    sync_task = None
+    if settings.racing_background_sync:
+        async def _initial_sync():
+            try:
+                await asyncio.to_thread(run_sync_job)
+            except Exception:
+                logger.exception("Initial racing sync failed on startup; API will continue")
 
-    async def _initial_sync():
-        try:
-            await asyncio.to_thread(run_sync_job)
-        except Exception:
-            logger.exception("Initial racing sync failed on startup; API will continue")
-
-    asyncio.create_task(_initial_sync())
-    sync_task = start_background_sync()
+        asyncio.create_task(_initial_sync())
+        sync_task = start_background_sync()
 
     yield
 
@@ -135,6 +135,7 @@ async def lifespan(_app: FastAPI):
             await sync_task
         except Exception:
             pass
+
 
 
 app = FastAPI(title="50points API", version="1.0.0", lifespan=lifespan)

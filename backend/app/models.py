@@ -89,7 +89,8 @@ class Horse(Base):
 class RaceResult(Base):
     __tablename__ = "RaceResult"
     __table_args__ = (
-        UniqueConstraint("raceId", "position"),
+        # Allow official dead heats (multiple horses sharing same position),
+        # but prevent duplicate result entries for the same horse in a race.
         UniqueConstraint("raceId", "horseId"),
     )
 

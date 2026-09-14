@@ -1,5 +1,4 @@
-import random
-import string
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -7,21 +6,24 @@ import jwt
 from fastapi import Header, HTTPException
 
 from app.config import settings
-from app.constants import GUEST_TTL_HOURS
 
 STRATEGIES = ("full_point", "dual_point", "smart_pick")
 
 
 def guest_expires_at(created_at: datetime | None) -> datetime:
-    """Instante exacto en que muere una identidad de invitado (creación + 12 h)."""
+    """Instante exacto en que expira una identidad de invitado (creación + TTL configurable)."""
     base = created_at or datetime.now(timezone.utc)
     if base.tzinfo is None:
         base = base.replace(tzinfo=timezone.utc)
-    return base + timedelta(hours=GUEST_TTL_HOURS)
+    return base + timedelta(hours=settings.guest_ttl_hours)
 
 
 def is_guest_expired(created_at: datetime | None) -> bool:
+    """Check if guest session is expired. Disabled by default until guest claim limits are confirmed."""
+    if not settings.enforce_guest_claim_limit:
+        return False
     return datetime.now(timezone.utc) >= guest_expires_at(created_at)
+
 
 
 def sign_token(
@@ -110,18 +112,22 @@ def optional_bearer_user(authorization: str | None = Header(default=None)) -> di
 def require_admin(x_admin_secret: str | None = Header(default=None, alias="x-admin-secret")):
     expected = settings.admin_secret
     if not expected:
-        if settings.environment == "development":
-            return
-        raise HTTPException(status_code=503, detail="Admin not configured")
-    if x_admin_secret != expected:
+        raise HTTPException(
+            status_code=503,
+            detail="Admin access is disabled because ADMIN_SECRET is not configured."
+        )
+    if not x_admin_secret or not secrets.compare_digest(x_admin_secret, expected):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
 def generate_guest_token() -> str:
-    return "50P-" + "".join(random.choices(string.digits, k=6))
+    """Generate a high-entropy cryptographically secure guest recovery token (48 bits)."""
+    return f"50P-{secrets.token_hex(6).upper()}"
 
 
 def generate_guest_username() -> str:
     adjectives = ["Swift", "Lucky", "Bold", "Wild", "Royal", "Golden", "Silver", "Iron", "Dark", "Brave"]
     nouns = ["Rider", "Runner", "Phantom", "Storm", "Spirit", "Arrow", "Crown", "Knight", "Star", "Blaze"]
-    return f"{random.choice(adjectives)}{random.choice(nouns)}{random.randint(0, 9999)}"
+    suffix = secrets.randbelow(10000)
+    return f"{secrets.choice(adjectives)}{secrets.choice(nouns)}{suffix:04d}"
+
