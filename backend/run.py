@@ -48,9 +48,15 @@ def main() -> None:
     else:
         reload = _env_bool("RELOAD", default_reload)
 
-    print(f"Starting API at http://{args.host}:{args.port}")
-    print(f"Docs: http://127.0.0.1:{args.port}/docs")
-    print(f"API:  http://127.0.0.1:{args.port}/api")
+    display_host = "localhost" if args.host in ("0.0.0.0", "127.0.0.1") else args.host
+    print(f"\n=======================================================")
+    print(f"50points Backend API Running:")
+    print(f"  Web / Root: http://{display_host}:{args.port}/")
+    print(f"  Swagger UI: http://{display_host}:{args.port}/docs")
+    print(f"  API Root:   http://{display_host}:{args.port}/api")
+    print(f"  Health:     http://{display_host}:{args.port}/health")
+    print(f"=======================================================\n")
+
 
     uvicorn.run(
         "app.main:app",
