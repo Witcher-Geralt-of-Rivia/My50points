@@ -42,13 +42,17 @@ def post_race_result(race_id: int, results: list, db: Session):
     race.status = "finished"
     db.flush()
 
-    tickets = db.query(Ticket).filter(Ticket.raceId == race_id, Ticket.isScored == False).all()
+    tickets = db.query(Ticket).filter(Ticket.raceId == race_id).all()
     scored_tickets = []
 
     for ticket in tickets:
         horses = [{"id": h.id, "odds": h.odds, "scratched": h.scratched} for h in race.horses]
         points = score_ticket(ticket.strategy, ticket.picks, result_dicts, horses)
+        prev_points = ticket.pointsEarned if ticket.isScored else 0
+        point_delta = points - prev_points
+
         ticket.pointsEarned = points
+        was_already_scored = ticket.isScored
         ticket.isScored = True
 
         entry = (
@@ -61,14 +65,15 @@ def post_race_result(race_id: int, results: list, db: Session):
             .first()
         )
         if entry:
-            entry.totalPoints += points
-            entry.racesPlayed += 1
+            entry.totalPoints += point_delta
+            if not was_already_scored:
+                entry.racesPlayed += 1
             if ticket.strategy == "full_point":
-                entry.fullPoints += points
+                entry.fullPoints += point_delta
             elif ticket.strategy == "dual_point":
-                entry.dualPoints += points
+                entry.dualPoints += point_delta
             elif ticket.strategy == "smart_pick":
-                entry.smartPoints += points
+                entry.smartPoints += point_delta
             if points > 0:
                 entry.winStreak += 1
             else:
@@ -90,6 +95,7 @@ def post_race_result(race_id: int, results: list, db: Session):
             )
             entry.lastPointsChange = points
             db.add(entry)
+
 
         stats = db.query(UserStats).filter(UserStats.userId == ticket.userId).first()
         if stats:
