@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import traceback
 from contextlib import asynccontextmanager
@@ -133,8 +134,9 @@ async def lifespan(_app: FastAPI):
         sync_task.cancel()
         try:
             await sync_task
-        except Exception:
+        except (Exception, asyncio.CancelledError):
             pass
+
 
 
 
