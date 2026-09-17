@@ -193,25 +193,36 @@ def me(payload: dict = Depends(get_bearer_user), db: Session = Depends(get_db)):
     }
 
 
+class GuestRecentItem(BaseModel):
+    username: str
+
+
 IP_GUEST_MAP = {}
 
-def register_ip_guest(ip: str | None, username: str, guest_token: str):
+
+def register_ip_guest(ip: str | None, username: str):
     if not ip:
         return
     if ip not in IP_GUEST_MAP:
         IP_GUEST_MAP[ip] = []
     # Avoid duplicate usernames (case-insensitive)
     IP_GUEST_MAP[ip] = [entry for entry in IP_GUEST_MAP[ip] if entry["username"].lower() != username.lower()]
-    IP_GUEST_MAP[ip].append({"username": username, "guestToken": guest_token})
+    # Store strictly username; recovery tokens are never recorded in or exposed by this endpoint
+    IP_GUEST_MAP[ip].append({"username": username})
     IP_GUEST_MAP[ip] = IP_GUEST_MAP[ip][-5:]
 
 
-@router.get("/guest/recent-by-ip")
+@router.get(
+    "/guest/recent-by-ip",
+    response_model=list[GuestRecentItem],
+    summary="List recent guest usernames for current IP (recovery tokens strictly excluded)",
+)
 def get_recent_guests_by_ip(request: Request):
     ip = request.client.host if request.client else None
     if not ip:
         return []
-    return IP_GUEST_MAP.get(ip, [])
+    # Strictly return only usernames; tokens are never exposed
+    return [{"username": entry["username"]} for entry in IP_GUEST_MAP.get(ip, [])]
 
 
 def purge_guest_user(db: Session, user: User) -> None:
@@ -315,7 +326,7 @@ def guest(request: Request, body: GuestBody | None = None, db: Session = Depends
         )
 
         ip = request.client.host if request.client else None
-        register_ip_guest(ip, alias, guest_token)
+        register_ip_guest(ip, alias)
 
         return {
             "token": token,
@@ -346,7 +357,7 @@ def guest(request: Request, body: GuestBody | None = None, db: Session = Depends
         )
 
         ip = request.client.host if request.client else None
-        register_ip_guest(ip, username, guest_token)
+        register_ip_guest(ip, username)
 
         return {
             "token": token,
@@ -392,7 +403,7 @@ def resume_guest(request: Request, body: GuestResumeBody, db: Session = Depends(
 
     # Register resume IP mapping
     ip = request.client.host if request.client else None
-    register_ip_guest(ip, user.username, user.guestToken)
+    register_ip_guest(ip, user.username)
 
     stats = db.query(UserStats).filter(UserStats.userId == user.id).first()
     return {

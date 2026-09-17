@@ -10,6 +10,7 @@ from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_ROOT))
+os.environ["RACING_BACKGROUND_SYNC"] = "false"
 
 # ANSI colors
 CYAN = "\033[96m"
@@ -67,19 +68,19 @@ def main():
     # 2. Alembic migrations
     header("2. Alembic Migration Verification")
     alembic_exe = str(BACKEND_ROOT / ".venv" / "Scripts" / "alembic.exe")
-    # Ensure current database is stamped at latest migration head
-    subprocess.run([alembic_exe, "-c", "alembic.ini", "stamp", "head"], cwd=BACKEND_ROOT, capture_output=True)
+    # Ensure current database is migrated to latest migration head
+    subprocess.run([alembic_exe, "-c", "alembic.ini", "upgrade", "head"], cwd=BACKEND_ROOT, capture_output=True)
     res = run_cmd([alembic_exe, "-c", "alembic.ini", "check"], "Checking Alembic Schema Drift")
     assert res.returncode == 0
     success("Alembic schema check: Zero drift detected against application models")
 
 
-    # 3. 19/19 Tests Passing
-    header("3. Automated Test Suite (19/19 Tests)")
+    # 3. 20/20 Tests Passing
+    header("3. Automated Test Suite (20/20 Tests)")
     pytest_exe = str(BACKEND_ROOT / ".venv" / "Scripts" / "pytest.exe")
     res = run_cmd([pytest_exe, "tests/", "-q"], "Running Pytest Suite")
     assert res.returncode == 0
-    success("Automated test foundation: All 19 tests passing cleanly")
+    success("Automated test foundation: All 20 tests passing cleanly")
 
     # 4. Invalid/Default JWT Rejected in Production
     header("4. Production JWT Secret Enforcement (Fail-Fast)")
@@ -94,6 +95,25 @@ def main():
         success("Default/insecure JWT_SECRET properly blocked startup with RuntimeError")
     os.environ["ENVIRONMENT"] = "development"
     os.environ["JWT_SECRET"] = "change-me-in-production"
+
+    # 4b. Guest Recent-By-IP Zero Token Exposure
+    header("4b. Guest Recent-By-IP Security (No Recovery Tokens Exposed)")
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    with TestClient(app) as client:
+        # Register a guest
+        c_res = client.post("/api/auth/guest", json={"username": "DemoGuest4b"})
+        assert c_res.status_code == 200
+        # Check recent-by-ip
+        r_res = client.get("/api/auth/guest/recent-by-ip")
+        assert r_res.status_code == 200
+        recents = r_res.json()
+        for item in recents:
+            assert "guestToken" not in item, "SECURITY FAIL: guestToken exposed in recent-by-ip!"
+            assert "username" in item
+        print(f"GET /api/auth/guest/recent-by-ip returned {len(recents)} aliases: {[x['username'] for x in recents]}")
+        success("Confirmed: /api/auth/guest/recent-by-ip only returns usernames; zero recovery tokens exposed")
 
     # 5. Admin Secret Enforcement
     header("5. Admin Access Control (Strict Constant-Time Verification)")

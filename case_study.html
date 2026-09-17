@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>50points — Technical Review & Architecture Case Study</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 9mm 12mm 9mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      line-height: 1.38;
+      font-size: 8.4pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .cover-header {
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .badge-pill {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 6.8pt;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border-radius: 9999px;
+      background: #f3e8ff;
+      color: #6b21a8;
+      border: 1px solid #d8b4fe;
+      margin-bottom: 3px;
+    }
+
+    h1 {
+      font-size: 16pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.15;
+      margin-bottom: 1px;
+      letter-spacing: -0.4px;
+    }
+
+    .subtitle {
+      font-size: 8.8pt;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .meta-box {
+      text-align: right;
+      font-size: 7.2pt;
+      color: #64748b;
+      line-height: 1.35;
+    }
+
+    .meta-box strong {
+      color: #0f172a;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 6px 8px;
+      break-inside: avoid;
+    }
+
+    .card-title {
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+    }
+
+    .stat-number {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.1;
+      margin-bottom: 1px;
+    }
+
+    .stat-desc {
+      font-size: 6.8pt;
+      color: #64748b;
+    }
+
+    h2 {
+      font-size: 9.8pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-left: 3px solid #7c3aed;
+      padding-left: 6px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+      letter-spacing: -0.2px;
+      break-after: avoid;
+    }
+
+    p {
+      color: #334155;
+      margin-bottom: 5px;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-left: 13px;
+      margin-bottom: 6px;
+      color: #334155;
+    }
+
+    li {
+      margin-bottom: 2.5px;
+    }
+
+    li strong {
+      color: #0f172a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+      font-size: 7.8pt;
+      break-inside: avoid;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      text-align: left;
+      padding: 4px 7px;
+      border: 1px solid #cbd5e1;
+    }
+
+    td {
+      padding: 3.5px 7px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+
+    .tag-ok {
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 6.8pt;
+      display: inline-block;
+    }
+
+    .tag-pending {
+      background: #fef3c7;
+      color: #92400e;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 6.8pt;
+      display: inline-block;
+    }
+
+    .tag-missing {
+      background: #fee2e2;
+      color: #991b1b;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 6.8pt;
+      display: inline-block;
+    }
+
+    .callout {
+      background: #f5f3ff;
+      border-left: 3px solid #7c3aed;
+      padding: 5px 8px;
+      border-radius: 0 4px 4px 0;
+      margin-bottom: 8px;
+      break-inside: avoid;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: #5b21b6;
+      font-size: 8pt;
+      margin-bottom: 1px;
+    }
+
+    .callout p {
+      margin-bottom: 0;
+      font-size: 7.5pt;
+      color: #4c1d95;
+    }
+
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    .footer-note {
+      margin-top: 10px;
+      padding-top: 5px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 6.8pt;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE 1: HEADER & OVERVIEW -->
+  <div class="cover-header">
+    <div>
+      <span class="badge-pill">Technical Audit & Case Study</span>
+      <h1>50points Platform</h1>
+      <div class="subtitle">Comprehensive Codebase Review, Architecture Analysis & Roadmap</div>
+    </div>
+    <div class="meta-box">
+      <div><strong>Project:</strong> Marco Project (Spain Marco)</div>
+      <div><strong>Target Repo:</strong> mahenoorsalat/My50points</div>
+      <div><strong>Auditor:</strong> Mahi (Engineering Team)</div>
+      <div><strong>Status:</strong> Baseline Verified & Preserved</div>
+    </div>
+  </div>
+
+  <!-- KPI SUMMARY CARDS -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Backend Status</div>
+      <div class="stat-number" style="color: #15803d;">Healthy</div>
+      <div class="stat-desc">FastAPI / SQLAlchemy / SQLite & Postgres</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Frontend Status</div>
+      <div class="stat-number" style="color: #15803d;">Active</div>
+      <div class="stat-desc">Next.js 14 App Router · 8/8 routes 200 OK</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Workflow Assets</div>
+      <div class="stat-number" style="color: #6b21a8;">50 / 50</div>
+      <div class="stat-desc">100% ticket journey assets present</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Figma Redesign</div>
+      <div class="stat-number" style="color: #b45309;">~90%</div>
+      <div class="stat-desc">Incoming client redesign in ~1 week</div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <h2>1. Executive Summary</h2>
+  <p>
+    <strong>50points</strong> is a tournament-based horse racing prediction platform powered by official, real-time results from United States racetracks. The core mechanic establishes that <strong>1 ticket = 1 tournament = the last 7 races of the racetrack</strong>. Unlike traditional race-by-race gambling, scoring is deterministic and directly tied to official racetrack payout dividends (<em>Win payoff</em>, base $2.00) multiplied by chosen strategy weights (Full Point, Dual Point, or Smart Point).
+  </p>
+  <p>
+    Following stakeholder directives, this technical review was conducted in a non-destructive audit mode: the baseline was verified in <code>main</code>, dependencies and servers were built and executed in an isolated local environment, and zero architectural migrations or database modifications were made. The goal is to audit current runtime health, pinpoint reusable logic, and prepare for the upcoming client Figma overhaul.
+  </p>
+
+  <!-- ARCHITECTURE & STACK OVERVIEW -->
+  <h2>2. System Architecture & Tech Stack</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">Layer</th>
+        <th style="width: 30%;">Technology Stack</th>
+        <th style="width: 50%;">Implementation & Audit Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Backend API</strong></td>
+        <td>Python 3.12, FastAPI, Uvicorn</td>
+        <td>Modular routers (<code>auth</code>, <code>tournaments</code>, <code>tickets</code>, <code>leaderboard</code>, <code>profile</code>, <code>races</code>, <code>chat</code>, <code>groups</code>). Includes CORS and lifespan tasks.</td>
+      </tr>
+      <tr>
+        <td><strong>Database & ORM</strong></td>
+        <td>SQLAlchemy 2.0, PostgreSQL / SQLite</td>
+        <td>Clean models in <code>models.py</code>. Dev fallback to local SQLite (<code>dev.db</code> with WAL); production connects via Supabase IPv4 Session Pooler.</td>
+      </tr>
+      <tr>
+        <td><strong>Frontend</strong></td>
+        <td>Next.js 14.2 (App Router), React 18, Tailwind</td>
+        <td>App directory routes (<code>src/app/</code>) with modular client code in <code>src/frontend/</code> (components, contexts, and API wrappers).</td>
+      </tr>
+      <tr>
+        <td><strong>Live Racing Data</strong></td>
+        <td>The Racing API (North America) + HRN Scraper</td>
+        <td>Primary API uses regional endpoints (<code>/v1/north-america/meets</code>). Secondary HRN scraper acts as fallback. Results are strictly real.</td>
+      </tr>
+      <tr>
+        <td><strong>Deployment</strong></td>
+        <td>Railway (Backend) & Vercel (Frontend)</td>
+        <td>Containerized Railway deployment with background sync; auto Vercel deployment triggered from production branches.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- CORE GAME RULES & LOGIC -->
+  <h2>3. Core Game Mechanics & Scoring Strategies</h2>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title" style="color: #7c3aed;">Full Point (50)</div>
+      <p style="font-size: 7.2pt; margin-bottom: 2px;"><strong>Selection:</strong> 1 Horse</p>
+      <p style="font-size: 7.2pt; margin-bottom: 2px;"><strong>Formula:</strong> <code>Round(50 × Dividendo)</code></p>
+      <p style="font-size: 6.8pt; color: #64748b;">Maximum risk, maximum reward. Points awarded only if chosen horse wins.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color: #0284c7;">Dual Point (25 + 25)</div>
+      <p style="font-size: 7.2pt; margin-bottom: 2px;"><strong>Selection:</strong> 2 Horses</p>
+      <p style="font-size: 7.2pt; margin-bottom: 2px;"><strong>Formula:</strong> <code>Round(25 × Dividendo)</code></p>
+      <p style="font-size: 6.8pt; color: #64748b;">Balanced strategy across two runners. Win payoff applied to the winning slot.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color: #d97706;">Smart Point (30 / 15 / 5)</div>
+      <p style="font-size: 7.2pt; margin-bottom: 2px;"><strong>Selection:</strong> 3 Horses</p>
+      <p style="font-size: 7.2pt; margin-bottom: 2px;"><strong>Formula:</strong> <code>Round(Base_Slot × Dividendo)</code></p>
+      <p style="font-size: 6.8pt; color: #64748b;">Strategic distribution. Scratched picks transfer to post-time favorite.</p>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <span>50points Platform — Technical Assessment</span>
+    <span>Page 1 of 2</span>
+  </div>
+
+  <!-- PAGE 2: AUDIT, GAPS, ROADMAP -->
+  <div class="page-break"></div>
+
+  <h2>4. Runtime Verification & Audit Findings</h2>
+  <div class="callout">
+    <div class="callout-title">Audit Confirmation: 100% Non-Destructive Execution</div>
+    <p>Tests were run using local virtual environments and local ports (Backend: 8000, Frontend: 3000). The remote Git repository working tree remains clean and untouched.</p>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Backend Service Verification</div>
+      <ul>
+        <li><strong>Server Lifespan & Seeding:</strong> Executed <code>python run.py --port 8000</code>. Initialized SQLite, applied missing columns, and seeded sample US racetracks.</li>
+        <li><strong>Health & Endpoints:</strong> <code>GET /health</code> returned 200 OK. <code>GET /api/tournaments</code> returned active tournaments and races with correct timezone conversions.</li>
+        <li><strong>Authentication & Guest:</strong> Tested <code>POST /api/auth/guest</code>. Generated unique guest credentials with 12h expiration JWT and guest token (<code>50P-814495</code>).</li>
+        <li><strong>Scoring Simulation:</strong> Verified <code>simulate_results.py</code>. Confirmed dividend calculations, leaderboard deltas, and streak updates.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">Frontend Web App Verification</div>
+      <ul>
+        <li><strong>Build & Server:</strong> Executed Next.js 14 dev server via <code>scripts/next-cli.mjs</code>. Resolved Windows path casing normalization automatically.</li>
+        <li><strong>Route Testing (200 OK):</strong> Validated <code>/</code>, <code>/tournaments</code>, <code>/tournament/[id]</code>, <code>/leaderboard</code>, <code>/how-to-play</code>, <code>/login</code>, <code>/register</code>, <code>/profile</code>.</li>
+        <li><strong>Routing Structure:</strong> Confirmed tournament detail is mounted on <code>/tournament/[id]</code> (singular), while the index is <code>/tournaments</code>.</li>
+        <li><strong>Linting:</strong> ESLint error found in <code>ProfileTicketHistoryPanel.jsx</code> (unescaped quotes), currently bypassed via <code>ignoreDuringBuilds</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>5. Static Assets Verification & Problem Areas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Component / Area</th>
+        <th style="width: 14%;">Status</th>
+        <th style="width: 18%;">Metrics</th>
+        <th style="width: 43%;">Findings & Recommendations</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Ticket Workflow Assets</strong></td>
+        <td><span class="tag-ok">Complete</span></td>
+        <td>50 / 50 (100%)</td>
+        <td>All tabs, badges, stubs, and accordion connectors present in <code>public/Img/</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>How-to-Play Assets</strong></td>
+        <td><span class="tag-ok">Complete</span></td>
+        <td>10 / 10 (100%)</td>
+        <td>All step cards, icons, and infographics are present and functional.</td>
+      </tr>
+      <tr>
+        <td><strong>Point Modality Assets</strong></td>
+        <td><span class="tag-pending">Partial</span></td>
+        <td>3 / 17 (18%)</td>
+        <td>14 cyberpunk hero graphics missing (defined in <code>POINT_MODALITY_ASSET_PROMPTS.md</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>Leaderboard Assets</strong></td>
+        <td><span class="tag-missing">Missing</span></td>
+        <td>0 / 9 (0%)</td>
+        <td>Gold/silver/bronze podiums, streak flames missing (in <code>LEADERBOARD_ASSET_PROMPTS.md</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>Git Branch Discrepancy</strong></td>
+        <td><span class="tag-pending">Action Req.</span></td>
+        <td>1 Remote Branch</td>
+        <td>Remote origin only has <code>main</code>. Neither <code>development</code> nor <code>recovered-baseline</code> tag exists on GitHub.</td>
+      </tr>
+      <tr>
+        <td><strong>Payment Gateway (§14)</strong></td>
+        <td><span class="tag-missing">Blocked</span></td>
+        <td>Modalities 1 & 3</td>
+        <td>Paid ticket entry (~1 € and ~50 €) is hard-blocked until payment gateway (Stripe/Redsys) is integrated.</td>
+      </tr>
+      <tr>
+        <td><strong>Figma Redesign (~90%)</strong></td>
+        <td><span class="tag-pending">In Progress</span></td>
+        <td>Incoming (1 wk)</td>
+        <td>Client is rebuilding 90% of UI. Avoid rewriting current frontend; focus on headless hooks & API decoupling.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>6. Recommended Implementation Roadmap & Stakeholder Questions</h2>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Implementation Order</div>
+      <ol style="font-size: 7.2pt; margin-left: 13px; margin-bottom: 0;">
+        <li><strong>Phase 1:</strong> Align Git branches (<code>development</code> / <code>recovered-baseline</code> tag) and resolve ESLint entity escaping.</li>
+        <li><strong>Phase 2:</strong> Decouple state hooks (<code>useAuth</code>, ticket builder) into headless hooks ready for new Figma UI.</li>
+        <li><strong>Phase 3:</strong> Build modern Figma components section-by-section as client delivers them and wire to backend API.</li>
+        <li><strong>Phase 4:</strong> Implement "Mis Tickets", dynamic "EN JUEGO" badges, and integrate Payment Gateway for paid modalities.</li>
+        <li><strong>Phase 5:</strong> End-to-end tournament testing (onboarding → picks → scoring → leaderboard deltas).</li>
+      </ol>
+    </div>
+    <div class="card">
+      <div class="card-title">Questions for Stakeholders (Admin / Client)</div>
+      <ol style="font-size: 7.2pt; margin-left: 13px; margin-bottom: 0;">
+        <li><strong>Branching:</strong> Should developer push <code>development</code> and <code>recovered-baseline</code> to origin, or will tech lead push them?</li>
+        <li><strong>Figma Delivery:</strong> Will designs arrive section-by-section (e.g. Onboarding first, then Tournament, then Leaderboard)?</li>
+        <li><strong>The Racing API:</strong> Will staging credentials be provided, or should local development continue with SQLite / <code>simulate_results.py</code>?</li>
+        <li><strong>Payment Gateway:</strong> Which payment provider is preferred for paid modalities (Stripe, Redsys/BBVA, PayPal, Crypto)?</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <span>50points Platform — Technical Assessment</span>
+    <span>Page 2 of 2</span>
+  </div>
+
+</body>
+</html>
