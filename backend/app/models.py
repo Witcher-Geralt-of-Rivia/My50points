@@ -25,6 +25,7 @@ class User(Base):
 
     stats: Mapped["UserStats | None"] = relationship(back_populates="user", uselist=False)
     tickets: Mapped[list["Ticket"]] = relationship(back_populates="user")
+    tournamentTickets: Mapped[list["TournamentTicket"]] = relationship(back_populates="user")
 
 
 class Tournament(Base):
@@ -41,10 +42,12 @@ class Tournament(Base):
     date: Mapped[datetime] = mapped_column(PrismaDateTime)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     imageUrl: Mapped[str | None] = mapped_column(String, nullable=True)
+    vendorMeetId: Mapped[str | None] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
 
     races: Mapped[list["Race"]] = relationship(back_populates="tournament")
     tickets: Mapped[list["Ticket"]] = relationship(back_populates="tournament")
+    tournamentTickets: Mapped[list["TournamentTicket"]] = relationship(back_populates="tournament")
 
 
 class Race(Base):
@@ -61,12 +64,14 @@ class Race(Base):
     surface: Mapped[str | None] = mapped_column(String, nullable=True)
     raceClass: Mapped[str | None] = mapped_column(String, nullable=True)
     purse: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    vendorRaceId: Mapped[str | None] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
 
     tournament: Mapped["Tournament"] = relationship(back_populates="races")
     horses: Mapped[list["Horse"]] = relationship(back_populates="race", order_by="Horse.postPosition")
     results: Mapped[list["RaceResult"]] = relationship(back_populates="race")
     tickets: Mapped[list["Ticket"]] = relationship(back_populates="race")
+    dividends: Mapped[list["OfficialDividend"]] = relationship(back_populates="race")
 
 
 class Horse(Base):
@@ -82,6 +87,8 @@ class Horse(Base):
     scratched: Mapped[bool] = mapped_column(Boolean, default=False)
     silkPrimary: Mapped[str | None] = mapped_column(String, nullable=True)
     silkSecondary: Mapped[str | None] = mapped_column(String, nullable=True)
+    vendorRunnerId: Mapped[str | None] = mapped_column(String, nullable=True)
+    programNumber: Mapped[str | None] = mapped_column(String, nullable=True)
 
     race: Mapped["Race"] = relationship(back_populates="horses")
 
@@ -100,9 +107,28 @@ class RaceResult(Base):
     position: Mapped[int] = mapped_column(Integer)
 
     race: Mapped["Race"] = relationship(back_populates="results")
+    horse: Mapped["Horse"] = relationship()
+
+
+class OfficialDividend(Base):
+    """Official pre/post race frozen track dividend ($2 Win payoff base)."""
+    __tablename__ = "OfficialDividend"
+    __table_args__ = (UniqueConstraint("raceId", "horseId"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    raceId: Mapped[int] = mapped_column(ForeignKey("Race.id"))
+    horseId: Mapped[int] = mapped_column(ForeignKey("Horse.id"))
+    winPayoff: Mapped[float] = mapped_column(Float)  # Official $2.00 Win payoff
+    dividend: Mapped[float] = mapped_column(Float)   # winPayoff / 2.0
+    isDeadHeat: Mapped[bool] = mapped_column(Boolean, default=False)
+    createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
+
+    race: Mapped["Race"] = relationship(back_populates="dividends")
+    horse: Mapped["Horse"] = relationship()
 
 
 class Ticket(Base):
+    """Per-race ticket selection row (preserved for backward compatibility and race-level scoring)."""
     __tablename__ = "Ticket"
     __table_args__ = (UniqueConstraint("userId", "raceId", "ticketNumber"),)
 
@@ -121,6 +147,64 @@ class Ticket(Base):
     user: Mapped["User"] = relationship(back_populates="tickets")
     race: Mapped["Race"] = relationship(back_populates="tickets")
     tournament: Mapped["Tournament"] = relationship(back_populates="tickets")
+
+
+class TournamentTicket(Base):
+    """Aggregate Root: 1 Ticket = 1 Tournament = Final 7 Races."""
+    __tablename__ = "TournamentTicket"
+    __table_args__ = (UniqueConstraint("userId", "tournamentId", "ticketNumber"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    userId: Mapped[int] = mapped_column(ForeignKey("User.id"))
+    tournamentId: Mapped[int] = mapped_column(ForeignKey("Tournament.id"))
+    ticketNumber: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String, default="confirmed")  # confirmed | locked | completed
+    isAdUnlocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    adUnlockToken: Mapped[str | None] = mapped_column(String, nullable=True)
+    totalPoints: Mapped[int] = mapped_column(Integer, default=0)
+    originalCreatorAlias: Mapped[str | None] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="tournamentTickets")
+    tournament: Mapped["Tournament"] = relationship(back_populates="tournamentTickets")
+    selections: Mapped[list["TicketSelection"]] = relationship(back_populates="tournamentTicket", cascade="all, delete-orphan")
+
+
+class TicketSelection(Base):
+    """Individual race strategy and runner picks within a 7-race tournament ticket."""
+    __tablename__ = "TicketSelection"
+    __table_args__ = (UniqueConstraint("tournamentTicketId", "raceId"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tournamentTicketId: Mapped[int] = mapped_column(ForeignKey("TournamentTicket.id"))
+    raceId: Mapped[int] = mapped_column(ForeignKey("Race.id"))
+    raceOrder: Mapped[int] = mapped_column(Integer)  # 1 to 7
+    strategy: Mapped[str] = mapped_column(String)    # full_point | dual_point | smart_pick
+    picks: Mapped[str] = mapped_column(String)       # JSON string list of horse IDs
+    pointsEarned: Mapped[int] = mapped_column(Integer, default=0)
+    isScored: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    tournamentTicket: Mapped["TournamentTicket"] = relationship(back_populates="selections")
+    race: Mapped["Race"] = relationship()
+
+
+class TournamentRankSnapshot(Base):
+    """Historical progression snapshot of ranks and point deltas after each race."""
+    __tablename__ = "TournamentRankSnapshot"
+    __table_args__ = (UniqueConstraint("tournamentId", "raceId", "userId", "ticketNumber"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tournamentId: Mapped[int] = mapped_column(ForeignKey("Tournament.id"))
+    raceId: Mapped[int] = mapped_column(ForeignKey("Race.id"))
+    raceNumber: Mapped[int] = mapped_column(Integer)
+    userId: Mapped[int] = mapped_column(ForeignKey("User.id"))
+    ticketNumber: Mapped[int] = mapped_column(Integer, default=1)
+    pointsAtRace: Mapped[int] = mapped_column(Integer, default=0)
+    rankAtRace: Mapped[int] = mapped_column(Integer, default=1)
+    pointsBehindLeader: Mapped[int] = mapped_column(Integer, default=0)
+    pointsBehindNext: Mapped[int] = mapped_column(Integer, default=0)
+    createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
 
 
 class LeaderboardEntry(Base):
@@ -142,6 +226,7 @@ class LeaderboardEntry(Base):
     previousRank: Mapped[int | None] = mapped_column(Integer, nullable=True)
     rankChange: Mapped[int] = mapped_column(Integer, default=0)
     lastPointsChange: Mapped[int] = mapped_column(Integer, default=0)
+    pointsBehindNext: Mapped[int] = mapped_column(Integer, default=0)
     originalCreatorAlias: Mapped[str | None] = mapped_column(String, nullable=True)
     isClaimed: Mapped[bool] = mapped_column(Boolean, default=False)
     claimedByUserId: Mapped[int | None] = mapped_column(Integer, nullable=True)

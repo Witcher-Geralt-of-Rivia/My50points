@@ -20,7 +20,10 @@ from sqlalchemy.orm import Session, selectinload
 from app.config import BACKEND_ROOT, settings
 from app.constants import RACES_PER_TOURNAMENT, REALISTIC_HORSE_NAMES, REALISTIC_JOCKEY_NAMES, REALISTIC_TRAINER_NAMES
 from app.database import SessionLocal
-from app.models import Horse, Race, Ticket, Tournament, RaceResult, LeaderboardEntry, UserStats
+from app.models import (
+    Horse, Race, Ticket, Tournament, RaceResult, LeaderboardEntry, UserStats,
+    OfficialDividend, TournamentTicket, TicketSelection, TournamentRankSnapshot
+)
 from app.services.racing_fetch import US_TRACKS, RACING_API_BASE, build_tournament_payload, fetch_public_track_racecards, parse_odds_value
 from app.services.leaderboard_snapshot import refresh_tournament_rank_changes
 
@@ -698,23 +701,43 @@ def _fetch_track_payload(
 
 
 def _sync_horses(db: Session, race: Race, horses_data: list[dict]) -> None:
-    """Update horses in place so ticket pick horseIds stay valid after sync."""
-    existing = {
-        h.postPosition: h for h in db.query(Horse).filter(Horse.raceId == race.id).all()
-    }
+    """Match runners by stable identity (vendorRunnerId / runner name) rather than mutable gate number."""
+    existing_horses = db.query(Horse).filter(Horse.raceId == race.id).all()
+    by_vendor_id = {h.vendorRunnerId: h for h in existing_horses if h.vendorRunnerId}
+    by_name = {h.name.strip().lower(): h for h in existing_horses}
+    by_pp = {h.postPosition: h for h in existing_horses}
+
     has_tickets = (
         db.query(Ticket.id).filter(Ticket.raceId == race.id).limit(1).first() is not None
+        or db.query(TicketSelection.id).filter(TicketSelection.raceId == race.id).limit(1).first() is not None
     )
-    seen: set[int] = set()
+    matched_horse_ids: set[int] = set()
 
     for horse_data in horses_data:
-        pp = int(horse_data["postPosition"])
-        seen.add(pp)
+        pp = int(horse_data.get("postPosition") or horse_data.get("draw") or 1)
+        vendor_id = str(horse_data.get("vendorRunnerId") or horse_data.get("id_runner") or "") or None
+        prog_no = str(horse_data.get("programNumber") or horse_data.get("program_number") or pp)
+        name = str(horse_data.get("name") or horse_data.get("horse") or f"Runner {pp}").strip()
+        norm_name = name.lower()
         raw_o = horse_data.get("odds")
         odds_val = parse_odds_value(raw_o, pp - 1)
-        horse = existing.get(pp)
+
+        # Match by vendorRunnerId, then by runner name, then by postPosition (if safe)
+        horse = None
+        if vendor_id and vendor_id in by_vendor_id:
+            horse = by_vendor_id[vendor_id]
+        elif norm_name in by_name:
+            horse = by_name[norm_name]
+        elif not has_tickets and pp in by_pp and by_pp[pp].id not in matched_horse_ids:
+            horse = by_pp[pp]
+
         if horse:
-            horse.name = horse_data["name"]
+            matched_horse_ids.add(horse.id)
+            horse.name = name
+            horse.postPosition = pp
+            horse.programNumber = prog_no
+            if vendor_id:
+                horse.vendorRunnerId = vendor_id
             horse.jockey = horse_data.get("jockey")
             horse.trainer = horse_data.get("trainer")
             horse.odds = odds_val
@@ -722,23 +745,26 @@ def _sync_horses(db: Session, race: Race, horses_data: list[dict]) -> None:
             horse.silkPrimary = horse_data.get("silkPrimary")
             horse.silkSecondary = horse_data.get("silkSecondary")
         else:
-            db.add(
-                Horse(
-                    raceId=race.id,
-                    postPosition=pp,
-                    name=horse_data["name"],
-                    jockey=horse_data.get("jockey"),
-                    trainer=horse_data.get("trainer"),
-                    odds=odds_val,
-                    scratched=bool(horse_data.get("scratched", False)),
-                    silkPrimary=horse_data.get("silkPrimary"),
-                    silkSecondary=horse_data.get("silkSecondary"),
-                )
+            new_horse = Horse(
+                raceId=race.id,
+                postPosition=pp,
+                programNumber=prog_no,
+                vendorRunnerId=vendor_id,
+                name=name,
+                jockey=horse_data.get("jockey"),
+                trainer=horse_data.get("trainer"),
+                odds=odds_val,
+                scratched=bool(horse_data.get("scratched", False)),
+                silkPrimary=horse_data.get("silkPrimary"),
+                silkSecondary=horse_data.get("silkSecondary"),
             )
+            db.add(new_horse)
+            db.flush()
+            matched_horse_ids.add(new_horse.id)
 
     if not has_tickets:
-        for pp, horse in existing.items():
-            if pp not in seen:
+        for horse in existing_horses:
+            if horse.id not in matched_horse_ids:
                 db.delete(horse)
 
 

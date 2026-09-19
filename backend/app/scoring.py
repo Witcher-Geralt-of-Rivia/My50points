@@ -38,8 +38,17 @@ def _normalize_picks(picks) -> list[int]:
     return [int(x) for x in picks]
 
 
-def _horse_dividend(horses: list | None, horse_id: int) -> float:
-    """Official pre-tournament frozen payout dividend / odds for the selected horse (multiplier)."""
+def _horse_dividend(horses: list | None, horse_id: int, official_dividends: dict[int, float] | None = None) -> float:
+    """
+    Official frozen payout dividend for the selected horse.
+    Prefers official track dividends table (derived from $2 Win payoff: win_payoff / 2.0).
+    Falls back to frozen runner odds.
+    """
+    if official_dividends and int(horse_id) in official_dividends:
+        val = official_dividends[int(horse_id)]
+        if val > 0:
+            return float(val)
+
     if not horses:
         return 1.0
     for h in horses:
@@ -54,12 +63,19 @@ def _horse_dividend(horses: list | None, horse_id: int) -> float:
     return 1.0
 
 
-def score_ticket(strategy: str, picks, results: list, horses: list | None = None) -> int:
+def score_ticket(
+    strategy: str,
+    picks,
+    results: list,
+    horses: list | None = None,
+    official_dividends: dict[int, float] | None = None,
+) -> int:
     """
-    Score a ticket: allocation × frozen pre-tournament dividend for each pick that wins the race (ganador).
+    Score a ticket: allocation × frozen official dividend for each pick that wins the race (ganador).
 
     If a selected horse was scratched/withdrawn, its points are automatically
     transferred to the official favorite of the race (the active horse with the lowest odds).
+    In case of equal odds (co-favorites), deterministic tie-break selects the lower post position.
     Supports official dead heats where multiple horses tie for position 1.
     """
     picks_arr = _normalize_picks(picks)
@@ -70,9 +86,10 @@ def score_ticket(strategy: str, picks, results: list, horses: list | None = None
     if not by_position:
         return 0
 
-    # Identify scratched horse IDs and find the favorite horse (lowest odds active horse)
+    # Identify scratched horse IDs and find the favorite horse with deterministic tie-breaking
     scratched_ids = set()
     favorite_horse_id = None
+    favorite_pp = 999
     min_odds = float("inf")
 
     if horses:
@@ -80,6 +97,7 @@ def score_ticket(strategy: str, picks, results: list, horses: list | None = None
             h_id = h.get("id") if isinstance(h, dict) else getattr(h, "id", None)
             is_scratched = h.get("scratched") if isinstance(h, dict) else getattr(h, "scratched", False)
             odds_val = h.get("odds") if isinstance(h, dict) else getattr(h, "odds", 999.0)
+            pp_val = h.get("postPosition") if isinstance(h, dict) else getattr(h, "postPosition", 999)
 
             if h_id is not None:
                 if is_scratched:
@@ -89,8 +107,14 @@ def score_ticket(strategy: str, picks, results: list, horses: list | None = None
                         odds_float = float(odds_val)
                     except (TypeError, ValueError):
                         odds_float = 999.0
-                    if odds_float < min_odds:
+                    try:
+                        pp_int = int(pp_val)
+                    except (TypeError, ValueError):
+                        pp_int = 999
+
+                    if odds_float < min_odds or (odds_float == min_odds and pp_int < favorite_pp):
                         min_odds = odds_float
+                        favorite_pp = pp_int
                         favorite_horse_id = int(h_id)
 
     allocation = ALLOCATIONS[strategy]
@@ -107,7 +131,7 @@ def score_ticket(strategy: str, picks, results: list, horses: list | None = None
 
         if effective_pick_id in winner_horse_ids:
             base = allocation[i]
-            dividend = _horse_dividend(horses, effective_pick_id)
+            dividend = _horse_dividend(horses, effective_pick_id, official_dividends)
             total += round(base * dividend)
 
     return int(total)

@@ -435,20 +435,24 @@ def tournament_leaderboard(
     for rank, (entry, user) in enumerate(rows, start=1):
         strategy_key = dominant_strategy_key(entry)
         
-        # Get from in-memory map instead of get_recent_plays(db, user.id, t.id, entry.ticketNumber)
-        user_tks = tickets_by_key.get((user.id, entry.ticketNumber), [])[:5]
+        # Absolute tournament rank must NEVER be distorted by filtering
+        true_rank = entry.rank if entry.rank is not None else rank
+
+        user_tks = tickets_by_key.get((user.id, entry.ticketNumber), [])[:7]
         recent_plays = []
         for tk in reversed(user_tks):
             if tk.pointsEarned > 0 and tk.strategy in STRATEGY_KEYS:
                 recent_plays.append({"strategy": tk.strategy, "won": True, "points": tk.pointsEarned})
             else:
                 recent_plays.append({"strategy": tk.strategy, "won": False, "points": tk.pointsEarned})
-        while len(recent_plays) < 5:
+        while len(recent_plays) < 7:
             recent_plays.insert(0, {"strategy": None, "won": False, "points": 0})
-        recent_plays = recent_plays[-5:]
+        recent_plays = recent_plays[-7:]
 
         row_payload = {
-            "rank": rank,
+            "rank": true_rank,
+            "absoluteRank": true_rank,
+            "filterRank": rank,
             "userId": user.id,
             "username": user.username,
             "avatarColor": user.avatarColor,
@@ -464,6 +468,7 @@ def tournament_leaderboard(
             "bestStreak": entry.bestStreak,
             "rankChange": entry.rankChange or 0,
             "lastPointsChange": entry.lastPointsChange or 0,
+            "pointsBehindNext": getattr(entry, "pointsBehindNext", 0) or 0,
             "activeMode": STRATEGY_LABELS.get(strategy_key, strategy_key.upper()),
             "activeModeKey": strategy_key,
             "recentPlays": recent_plays,
@@ -474,7 +479,7 @@ def tournament_leaderboard(
         leaderboard.append(row_payload)
         ticket_entries.append(
             {
-                "rank": rank,
+                "rank": true_rank,
                 "userId": user.id,
                 "username": user.username,
                 "ticketNumber": entry.ticketNumber,
@@ -489,6 +494,56 @@ def tournament_leaderboard(
         "ticketEntries": ticket_entries,
         "tournamentName": t.name,
         "tournamentSlug": t.slug,
+    }
+
+
+@router.get("/{slug}/dividends")
+def get_tournament_dividends(slug: str, db: Session = Depends(get_db)):
+    """Fixed official dividend table for all races in the tournament (Figma Page 94)."""
+    t = db.query(Tournament).options(
+        joinedload(Tournament.races).joinedload(Race.horses),
+        joinedload(Tournament.races).joinedload(Race.dividends),
+    ).filter(Tournament.slug == slug).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    sorted_races = sorted(t.races, key=lambda r: r.raceNumber)
+    final_7 = sorted_races[-7:] if len(sorted_races) >= 7 else sorted_races
+
+    tables = []
+    for idx, r in enumerate(final_7, start=1):
+        div_map = {d.horseId: d.dividend for d in (r.dividends or [])}
+        runners = []
+        for h in sorted(r.horses, key=lambda x: x.postPosition):
+            div_val = div_map.get(h.id, h.odds or 2.0)
+            runners.append({
+                "horseId": h.id,
+                "postPosition": h.postPosition,
+                "programNumber": h.programNumber or str(h.postPosition),
+                "name": h.name,
+                "jockey": h.jockey or "TBD",
+                "trainer": h.trainer or "TBD",
+                "weight": "124",
+                "odds": h.odds,
+                "dividend": round(float(div_val), 2),
+                "scratched": h.scratched,
+            })
+        tables.append({
+            "raceNumber": r.raceNumber,
+            "tournamentRaceOrder": idx,
+            "name": r.name or f"Carrera {r.raceNumber}",
+            "distance": f"{r.distance or 1600} METROS",
+            "surface": (r.surface or "ARENA").upper(),
+            "scheduledTime": r.scheduledTime or "1:45 PM",
+            "runners": runners,
+        })
+
+    return {
+        "tournamentSlug": t.slug,
+        "tournamentName": t.name,
+        "track": t.track,
+        "date": t.date.isoformat() if t.date else None,
+        "races": tables,
     }
 
 

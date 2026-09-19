@@ -6,7 +6,10 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth_utils import require_admin
 from app.database import get_db
-from app.models import LeaderboardEntry, Race, RaceResult, Ticket, Tournament, UserStats
+from app.models import (
+    LeaderboardEntry, Race, RaceResult, Ticket, Tournament, UserStats,
+    OfficialDividend, TournamentTicket, TicketSelection
+)
 from app.scoring import score_ticket
 from app.services.leaderboard_snapshot import refresh_tournament_rank_changes
 
@@ -42,12 +45,15 @@ def post_race_result(race_id: int, results: list, db: Session):
     race.status = "finished"
     db.flush()
 
+    official_div_records = db.query(OfficialDividend).filter(OfficialDividend.raceId == race_id).all()
+    official_divs = {d.horseId: d.dividend for d in official_div_records}
+
     tickets = db.query(Ticket).filter(Ticket.raceId == race_id).all()
     scored_tickets = []
 
     for ticket in tickets:
-        horses = [{"id": h.id, "odds": h.odds, "scratched": h.scratched} for h in race.horses]
-        points = score_ticket(ticket.strategy, ticket.picks, result_dicts, horses)
+        horses = [{"id": h.id, "odds": h.odds, "scratched": h.scratched, "postPosition": h.postPosition} for h in race.horses]
+        points = score_ticket(ticket.strategy, ticket.picks, result_dicts, horses, official_divs)
         prev_points = ticket.pointsEarned if ticket.isScored else 0
         point_delta = points - prev_points
 
@@ -96,16 +102,23 @@ def post_race_result(race_id: int, results: list, db: Session):
             entry.lastPointsChange = points
             db.add(entry)
 
-
         stats = db.query(UserStats).filter(UserStats.userId == ticket.userId).first()
         if stats:
-            prev_races = stats.totalRaces
-            prev_wins = round((stats.winRate / 100) * prev_races) if prev_races else 0
-            new_races = prev_races + 1
-            new_wins = prev_wins + (1 if points > 0 else 0)
-            stats.totalPoints += points
-            stats.totalRaces = new_races
-            stats.winRate = (new_wins / new_races) * 100
+            if not was_already_scored:
+                prev_races = stats.totalRaces
+                prev_wins = round((stats.winRate / 100) * prev_races) if prev_races else 0
+                new_races = prev_races + 1
+                new_wins = prev_wins + (1 if points > 0 else 0)
+                stats.totalRaces = new_races
+                stats.winRate = (new_wins / new_races) * 100
+            else:
+                prev_had_points = prev_points > 0
+                curr_has_points = points > 0
+                if prev_had_points != curr_has_points and stats.totalRaces > 0:
+                    prev_wins = round((stats.winRate / 100) * stats.totalRaces)
+                    new_wins = prev_wins + (1 if curr_has_points else -1)
+                    stats.winRate = max(0.0, min(100.0, (new_wins / stats.totalRaces) * 100))
+            stats.totalPoints += point_delta
             stats.bestStreak = max(stats.bestStreak, entry.winStreak if entry else 0)
         else:
             db.add(
@@ -128,6 +141,23 @@ def post_race_result(race_id: int, results: list, db: Session):
             }
         )
 
+    # Score aggregate 7-race tournament tickets if present
+    selections = (
+        db.query(TicketSelection)
+        .options(joinedload(TicketSelection.tournamentTicket))
+        .filter(TicketSelection.raceId == race_id)
+        .all()
+    )
+    for sel in selections:
+        horses = [{"id": h.id, "odds": h.odds, "scratched": h.scratched, "postPosition": h.postPosition} for h in race.horses]
+        sel_points = score_ticket(sel.strategy, sel.picks, result_dicts, horses, official_divs)
+        sel_prev = sel.pointsEarned if sel.isScored else 0
+        sel_delta = sel_points - sel_prev
+        sel.pointsEarned = sel_points
+        sel.isScored = True
+        if sel.tournamentTicket:
+            sel.tournamentTicket.totalPoints += sel_delta
+
     next_race = (
         db.query(Race)
         .filter(Race.tournamentId == race.tournamentId, Race.raceNumber == race.raceNumber + 1)
@@ -142,7 +172,7 @@ def post_race_result(race_id: int, results: list, db: Session):
         tournament.status = "finished"
         tournament.currentRace = race.raceNumber
 
-    refresh_tournament_rank_changes(db, race.tournamentId)
+    refresh_tournament_rank_changes(db, race.tournamentId, race_id=race.id, race_number=race.raceNumber)
     db.commit()
 
     return {
