@@ -26,6 +26,12 @@ import {
 } from '@/frontend/lib/gameModalities';
 import { markTrackTicketUsed } from '@/frontend/lib/trackTicketUsage';
 import WorkspaceOnboardingTour from '@/frontend/components/onboarding/WorkspaceOnboardingTour';
+import DividendsTableModal from '@/frontend/components/modals/DividendsTableModal';
+import RaceSummaryMatrix from '@/frontend/components/tournament/RaceSummaryMatrix';
+import TicketCarousel from '@/frontend/components/tournament/TicketCarousel';
+import FigmaStrategySlips from '@/frontend/components/tournament/FigmaStrategySlips';
+import FigmaFinalRanking from '@/frontend/components/tournament/FigmaFinalRanking';
+import { FileSpreadsheet } from 'lucide-react';
 
 const STRATEGY_MAP = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
 const STRATEGY_REVERSE = { full_point: 'full', dual_point: 'dual', smart_pick: 'smart' };
@@ -54,10 +60,10 @@ function normalizeRace(race) {
 const RACES_PER_TOURNAMENT = 7;
 
 function normalizeTournament(t) {
-  const races = (t.races || [])
+  const sorted = (t.races || [])
     .slice()
-    .sort((a, b) => (a.raceNumber || 0) - (b.raceNumber || 0))
-    .slice(0, RACES_PER_TOURNAMENT);
+    .sort((a, b) => (a.raceNumber || 0) - (b.raceNumber || 0));
+  const races = sorted.length >= RACES_PER_TOURNAMENT ? sorted.slice(-RACES_PER_TOURNAMENT) : sorted;
   return {
     ...t,
     totalRaces: RACES_PER_TOURNAMENT,
@@ -117,6 +123,7 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
   );
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [ticketMarkedComplete, setTicketMarkedComplete] = useState(false);
+  const [showDividendsModal, setShowDividendsModal] = useState(false);
   const [gameAlert, setGameAlert] = useState({
     show: false,
     title: "",
@@ -632,21 +639,33 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
 
         <div className="relative app-page pt-6 pb-8">
           <AppPageHeader title={tournament.name} className="mb-6" />
-          {onClose ? (
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors bg-transparent border-0 cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+                <span>Volver a hipódromos</span>
+              </button>
+            ) : (
+              <Link href={backHref} className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors">
+                <ChevronLeft size={16} />
+                <span>{returnPath ? 'Volver a hipódromos' : 'Volver a Torneos'}</span>
+              </Link>
+            )}
+
             <button
+              id="tournament-view-dividends-btn"
               type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors bg-transparent border-0 cursor-pointer"
+              onClick={() => setShowDividendsModal(true)}
+              className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/40 hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all cursor-pointer"
             >
-              <ChevronLeft size={16} />
-              <span>Volver a hipódromos</span>
+              <FileSpreadsheet size={14} />
+              <span>Tabla de Dividendos Fijos</span>
             </button>
-          ) : (
-            <Link href={backHref} className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors">
-              <ChevronLeft size={16} />
-              <span>{returnPath ? 'Volver a hipódromos' : 'Volver a Torneos'}</span>
-            </Link>
-          )}
+          </div>
 
           {ticketIsFullyComplete ? (
             <div className="mb-6 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 to-teal-950/40 px-5 py-4 backdrop-blur-sm">
@@ -812,6 +831,28 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
             </motion.div>
           </div>
 
+          {/* Figma Ticket Lifecycle Carousel (Pages 11–20, 37–44, 88–90) */}
+          <TicketCarousel
+            activeTicketId={activeTicketNumber}
+            onSelectTicket={handleSelectTicket}
+            ticketsState={submittedTickets}
+            totalRaces={tournament.races.length || 7}
+            completedCount={confirmedCount}
+          />
+
+          {/* Figma 7-Race General Summary Matrix (Pages 28–36, 48–52, 76–80) */}
+          <RaceSummaryMatrix
+            tournament={tournament}
+            races={tournament.races}
+            currentRaceIndex={tournament.races.findIndex((r) => r.id === (currentRace?.id || expandedRace))}
+            onSelectRace={(idx) => {
+              const target = tournament.races[idx];
+              if (target) toggleRace(target.id);
+            }}
+            picks={picks}
+            onOpenDividends={() => setShowDividendsModal(true)}
+          />
+
           <div className="tour-step-races-bar">
             <TournamentTicketSheet
               races={tournament.races}
@@ -830,6 +871,20 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               animate={{ opacity: 1, y: 0 }}
               className="space-y-4"
             >
+              {/* Figma Strategy Selection Slips (Pages 57–64, 75, 81–82, 100) */}
+              <FigmaStrategySlips
+                strategy={isRaceConfirmed(currentRace.id) ? (confirmedStrategyForRace(currentRace.id) || 'full') : activeStrategy}
+                onSelectStrategy={!isRaceConfirmed(currentRace.id) ? handleStrategyChange : undefined}
+                race={currentRace}
+                horses={currentRace.horses}
+                selectedHorseIds={isRaceConfirmed(currentRace.id) ? (submittedForRace(currentRace.id)?.picks || []) : (picks[currentRace.id] || [])}
+                onToggleHorse={!isRaceConfirmed(currentRace.id) ? handlePickHorse : undefined}
+                onOpenRaceModal={() => {
+                  const el = document.getElementById(`race-${currentRace.id}`);
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+              />
+
               <RaceCard
                 race={currentRace}
                 activeStrategy={isRaceConfirmed(currentRace.id) ? (confirmedStrategyForRace(currentRace.id) || 'full') : activeStrategy}
@@ -945,6 +1000,12 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               </motion.div>
             </div>
           </div>
+
+          {/* Official Figma Final Ranking Podium & Leaderboard (Pages 6–9, 63, 65) */}
+          <FigmaFinalRanking
+            tournamentName={tournament.name}
+            isFinished={tournament.status === 'finished' || allRacesPlayed}
+          />
         </div>
       </div>
 
@@ -963,6 +1024,12 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
       <AnimatePresence>
         {gameAlert.show && renderGameAlertModal()}
       </AnimatePresence>
+
+      <DividendsTableModal
+        isOpen={showDividendsModal}
+        onClose={() => setShowDividendsModal(false)}
+        tournamentSlug={tournament?.slug}
+      />
     </div>
     </ModalityScope>
   );

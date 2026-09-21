@@ -201,6 +201,63 @@
   text-decoration: underline;
 }
 
+/* News cards — profile + tournament (Figma hub section) */
+.profile-hub-news {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .profile-hub-news {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-hub-news__card {
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid #e4e4e7;
+  background: #fff;
+  min-height: 5.25rem;
+}
+
+.profile-hub-news__head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.profile-hub-news__icon {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+}
+
+.profile-hub-news__title {
+  margin: 0;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #71717a;
+}
+
+.profile-hub-news__body {
+  margin: 0;
+  font-size: 0.68rem;
+  color: #52525b;
+  line-height: 1.35;
+}
+
+.profile-hub-news__empty {
+  margin: 0.35rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #a1a1aa;
+}
+
 /* Ad slots — placeholders a / b (wireframe) */
 .profile-hub-page__ads {
   display: flex;
@@ -212,20 +269,139 @@
   width: 100%;
 }
 
-.profile-hub-ad__placeholder {
+/* Rewarded ad slot (Phase 1 §9–10) */
+.rewarded-ad-slot {
   width: 100%;
-  min-height: clamp(10rem, 26vw, 13.5rem);
+  border: 1px solid #e4e4e7;
+  border-radius: 0.65rem;
+  background: #fff;
+  overflow: hidden;
+}
+
+.rewarded-ad-slot__media {
+  position: relative;
+  width: 100%;
+  min-height: 7rem;
   display: grid;
   place-items: center;
-  border: 2px solid #3b82f6;
-  border-radius: 0.65rem;
-  background: #2563eb;
-  color: rgba(255, 255, 255, 0.95);
-  font-size: clamp(3.25rem, 11vw, 5rem);
-  font-weight: 900;
-  line-height: 1;
+  background: #0a0a0f;
+  overflow: hidden;
+}
+
+.rewarded-ad-slot__creative {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rewarded-ad-slot__tag {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #f4f4f5;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  user-select: none;
+}
+
+.rewarded-ad-slot__close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  cursor: pointer;
+}
+
+.rewarded-ad-slot__body {
+  padding: 0.65rem 0.75rem 0.75rem;
+}
+
+.rewarded-ad-slot__entitlement {
+  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #52525b;
+}
+
+.rewarded-ad-slot__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border: none;
+  border-radius: 0.55rem;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.rewarded-ad-slot__progress-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #e4e4e7;
+  overflow: hidden;
+}
+
+.rewarded-ad-slot__progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #7c3aed;
+  transition: width 1s linear;
+}
+
+.rewarded-ad-slot__countdown {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  color: #52525b;
+}
+
+.rewarded-ad-slot__done {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.rewarded-ad-slot__failed p {
+  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  color: #52525b;
+}
+
+.rewarded-ad-slot__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.55rem;
+  background: #fff;
+  color: #18181b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
 }
 
 /* MIS TICKETS — light cards inside profile shell */

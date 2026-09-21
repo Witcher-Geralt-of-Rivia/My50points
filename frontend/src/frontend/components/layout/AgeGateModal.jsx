@@ -43,12 +43,6 @@ export default function AgeGateModal({ onConfirm }) {
               </span>
             </p>
 
-            <div className="app-splash__loader" aria-hidden>
-              <div className="app-splash__loader-track">
-                {/* Note: This is static / un-animated on the age gate page */}
-                <div className="app-splash__loader-fill" style={{ width: "0%" }} />
-              </div>
-            </div>
           </div>
         </div>
 
