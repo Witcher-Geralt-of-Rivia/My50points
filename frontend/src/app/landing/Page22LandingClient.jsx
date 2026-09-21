@@ -38,50 +38,40 @@ export default function Page22LandingClient() {
     <div className="min-h-screen w-full bg-[#06030c] text-white font-sans overflow-x-hidden pb-16">
       <GuestOnboardingModal isOpen={showGuestModal} onClose={() => setShowGuestModal(false)} />
 
-      {/* ================= HERO — exact Figma slice ================= */}
+      {/* ================= HERO — exact Figma slice =================
+          Full desktop width (height follows the poster aspect, may exceed
+          100vh — page scrolls, per design). */}
       <section className="w-full bg-black relative overflow-hidden">
-        {/* Ambient fill: blurred stretch of the same art, so wide screens
-            get neon ambience instead of flat black bars beside the portrait hero */}
-        <div className="absolute inset-0" aria-hidden>
-          <Image
-            src="/figma/page22/p22_hero_full.png"
-            alt=""
-            fill
-            sizes="100vw"
-            className="object-cover opacity-60 blur-2xl scale-110 select-none"
-            draggable={false}
-          />
-          <div className="absolute inset-0 bg-black/55" />
-        </div>
-        <div className="relative mx-auto w-[min(100%,78svh)] aspect-[2717/3916] [container-type:inline-size]">
+        <div className="relative w-full aspect-[2717/3916] [container-type:inline-size]">
           <Image
             src="/figma/page22/p22_hero_full.png"
             alt="MY 50 POINTS — Torneo. Tu estrategia. Tus puntos. Tu juego."
             fill
             priority
             quality={95}
-            sizes="(max-width: 640px) 100vw, 78vh"
+            sizes="100vw"
             className="object-cover select-none"
             draggable={false}
           />
 
-          {/* LANGUAGE — functional replica pinned over the baked pill */}
+          {/* LANGUAGE — solid pill covering the baked pill, with globe + label */}
           <button
             type="button"
             onClick={handleToggleLanguage}
             aria-label="Toggle language"
-            className="absolute z-10 flex items-center justify-center rounded-full border-[#a855f7] bg-[#0e0918] text-white font-black tracking-widest shadow-[0_0_22px_rgba(168,85,247,0.7)] hover:bg-purple-950 active:scale-95 transition-all cursor-pointer"
+            className="absolute z-10 flex items-center justify-center rounded-full border-[#a855f7] bg-[#0e0918] text-white font-black shadow-[0_0_22px_rgba(168,85,247,0.7)] hover:bg-purple-950 active:scale-95 transition-all cursor-pointer"
             style={{
-              top: "1.1%",
-              right: "2.6%",
-              width: "24.6%",
-              height: "4.7%",
-              borderWidth: "2px",
+              top: "0.8%",
+              right: "2%",
+              width: "26%",
+              height: "5.2%",
+              borderWidth: "3px",
               fontSize: "3.4cqw",
-              gap: "1.6cqw",
+              gap: "2cqw",
+              letterSpacing: "0.18em",
             }}
           >
-            <Globe style={{ width: "4.4cqw", height: "4.4cqw" }} />
+            <Globe style={{ width: "4.6cqw", height: "4.6cqw" }} strokeWidth={2.2} />
             <span>LANGUAGE</span>
           </button>
 
