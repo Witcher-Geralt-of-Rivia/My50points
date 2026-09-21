@@ -75,9 +75,20 @@ function formatRaceTime(scheduledTime, date) {
   return 'TBD';
 }
 
-/** Map API tournament list item → LiveTournamentCard props */
+/** Map API tournament list item → home card props.
+ * Status is normalized to lowercase backend vocabulary (live | upcoming |
+ * finished) so every consumer filters the same values. Previously finished
+ * tournaments were relabeled UPCOMING and case mismatches emptied the lists.
+ */
 export function mapTournamentForHomeCard(t) {
-  const isLive = t.status === 'live';
+  const rawStatus = String(t.status || '').toLowerCase();
+  const normalizedStatus =
+    rawStatus === 'live' || rawStatus === 'active'
+      ? 'live'
+      : rawStatus === 'finished' || rawStatus === 'completed'
+        ? 'finished'
+        : 'upcoming';
+  const isLive = normalizedStatus === 'live';
   const openRace = (t.races || []).find(
     (r) => r.status === 'open' || r.status === 'live' || r.status === 'upcoming'
   );
@@ -94,7 +105,7 @@ export function mapTournamentForHomeCard(t) {
     date: t.date,
     eventDate: combinedEventDate || t.date,
     startTime: formatRaceTime(rawTime, t.date),
-    status: isLive ? 'LIVE' : 'UPCOMING',
+    status: normalizedStatus,
     currentRace: t.currentRace || 1,
     totalRaces: t.totalRaces,
     players: t.players ?? 0,
