@@ -3,9 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Globe } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import GuestOnboardingModal from "@/frontend/components/modals/GuestOnboardingModal";
+import LanguageToggle from "@/frontend/components/layout/LanguageToggle";
+import {
+  STRATEGY_IMAGES,
+  StrategyDivider,
+  StrategyPointColumn,
+  MyFiftyPointsBrand,
+} from "@/frontend/components/home/HomeLanding";
+import { staticFile } from "@/frontend/lib/config/paths";
 
 /**
  * Figma Page 22 — pixel-faithful landing.
@@ -15,9 +23,8 @@ import GuestOnboardingModal from "@/frontend/components/modals/GuestOnboardingMo
  * LANGUAGE toggle, strategy anchors, login/register links, guest entry.
  */
 export default function Page22LandingClient() {
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const [showGuestModal, setShowGuestModal] = useState(false);
-  const [langToast, setLangToast] = useState(null);
 
   useEffect(() => {
     try {
@@ -25,85 +32,104 @@ export default function Page22LandingClient() {
     } catch (e) {}
   }, []);
 
-  const isEn = language === "en";
-
-  const handleToggleLanguage = (next) => {
-    const target = next || (isEn ? "es" : "en");
-    setLanguage(target);
-    setLangToast(target);
-    setTimeout(() => setLangToast(null), 2600);
-  };
+  const mainBg = staticFile("/Img/Main_bg.png");
 
   return (
     <div className="min-h-screen w-full bg-[#06030c] text-white font-sans overflow-x-hidden pb-16">
       <GuestOnboardingModal isOpen={showGuestModal} onClose={() => setShowGuestModal(false)} />
 
-      {/* ================= HERO — exact Figma slice =================
-          Full desktop width (height follows the poster aspect, may exceed
-          100vh — page scrolls, per design). */}
-      <section className="w-full bg-black relative overflow-hidden">
-        <div className="relative w-full aspect-[2717/3916] [container-type:inline-size]">
+      {/* ================= HERO — full-bleed cover + HTML Figma content ================
+          Same technique as production main branch: landscape jockey art fills
+          every screen, strategy strip + MY 50 POINTS + dots + TORNEO banner
+          are HTML, so the hero is responsive and fully bilingual. */}
+      <section className="relative w-full overflow-hidden bg-black">
+        <div className="absolute inset-0" aria-hidden>
           <Image
-            src="/figma/page22/p22_hero_full.png"
-            alt="MY 50 POINTS — Torneo. Tu estrategia. Tus puntos. Tu juego."
+            src={mainBg}
+            alt=""
             fill
             priority
-            quality={95}
+            quality={90}
             sizes="100vw"
-            className="object-cover select-none"
+            className="object-cover object-center select-none"
             draggable={false}
           />
-
-          {/* LANGUAGE — clean fixed-size toggle pinned over the baked pill area.
-              Solid background fully covers the baked artwork beneath. */}
           <div
-            className="absolute z-10 flex items-center gap-1 rounded-full border-2 border-[#a855f7] bg-[#0e0918]/95 p-1 shadow-[0_0_22px_rgba(168,85,247,0.7)]"
-            style={{ top: "1.4%", right: "2.5%" }}
-          >
-            <Globe className="w-4 h-4 text-white/80 ml-2" />
-            {[
-              { code: "es", label: "ES" },
-              { code: "en", label: "EN" },
-            ].map((o) => {
-              const active = language === o.code;
-              return (
-                <button
-                  key={o.code}
-                  type="button"
-                  onClick={() => {
-                    if (!active) handleToggleLanguage(o.code);
-                  }}
-                  aria-label={o.code === "es" ? "Español" : "English"}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-black tracking-widest transition-all cursor-pointer ${
-                    active ? "bg-[#a855f7] text-white" : "text-white/50 hover:text-white"
-                  }`}
-                >
-                  {o.label}
-                </button>
-              );
-            })}
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(to right, rgba(3,3,6,0.88) 0%, rgba(3,3,6,0.45) 42%, transparent 70%)" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#06030c] via-transparent to-black/40" />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7 pb-8 flex flex-col min-h-[100svh]">
+          {/* Top row: strategy strip + language */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="hero-strategy-points flex flex-1 flex-col sm:flex-row items-stretch bg-transparent">
+              <StrategyPointColumn
+                variant="full"
+                label={t("hero.fullPointTitle")}
+                taglineLines={[t("hero.fullPointTag1"), t("hero.fullPointTag2")]}
+                imageSrc={staticFile(STRATEGY_IMAGES.full)}
+              />
+              <StrategyDivider />
+              <StrategyPointColumn
+                variant="dual"
+                label={t("hero.dualPointTitle")}
+                taglineLines={[t("hero.dualPointTag1"), t("hero.dualPointTag2")]}
+                imageSrc={staticFile(STRATEGY_IMAGES.dual)}
+              />
+              <StrategyDivider />
+              <StrategyPointColumn
+                variant="smart"
+                label={t("hero.smartPointTitle")}
+                taglineLines={[t("hero.smartPointTag1"), t("hero.smartPointTag2")]}
+                imageSrc={staticFile(STRATEGY_IMAGES.smart)}
+              />
+            </div>
+            <LanguageToggle />
           </div>
 
-          {/* Strategy hotspots → cómo jugar */}
-          <a href="#como-jugar" aria-label="Full Point" className="absolute" style={{ left: "11.5%", top: "10.8%", width: "25%", height: "6.4%" }} />
-          <a href="#como-jugar" aria-label="Dual Point" className="absolute" style={{ left: "37.5%", top: "10.8%", width: "25%", height: "6.4%" }} />
-          <a href="#como-jugar" aria-label="Smart Point" className="absolute" style={{ left: "64%", top: "10.8%", width: "25.5%", height: "6.4%" }} />
+          {/* MY 50 POINTS brand */}
+          <div className="mt-6 sm:mt-10 max-w-2xl">
+            <MyFiftyPointsBrand tagline={t("hero.tagline")} />
+          </div>
 
           {/* go-to dots */}
-          <a href="#modalidades" aria-label="Modalidades" className="absolute" style={{ left: "12.5%", top: "43%", width: "4%", height: "4%" }} />
-          <a href="#torneos-en-vivo" aria-label="Torneos en vivo" className="absolute" style={{ left: "17%", top: "43%", width: "4%", height: "4%" }} />
-          <a href="#como-jugar" aria-label="Cómo jugar" className="absolute" style={{ left: "21.5%", top: "43%", width: "4%", height: "4%" }} />
+          <div className="mt-4 flex items-center gap-3">
+            <span className="italic text-white/90 text-xl font-medium">go to</span>
+            <a href="#modalidades" aria-label="Modalidades" className="w-3 h-3 rounded-full bg-[#7c3aed] block hover:scale-125 transition-transform" />
+            <a href="#torneos-en-vivo" aria-label="Torneos en vivo" className="w-3 h-3 rounded-full bg-[#22d3ee] block hover:scale-125 transition-transform" />
+            <a href="#como-jugar" aria-label="Cómo jugar" className="w-3 h-3 rounded-full bg-[#f5b301] block hover:scale-125 transition-transform" />
+          </div>
 
-          {/* Language-switch confirmation toast */}
-          {langToast && (
-            <div
-              role="status"
-              className="absolute left-1/2 -translate-x-1/2 rounded-full border-2 border-[#a855f7] bg-black/85 px-[5cqw] py-[2cqw] text-white font-black whitespace-nowrap shadow-[0_0_22px_rgba(168,85,247,0.7)]"
-              style={{ bottom: "24%", fontSize: "3.6cqw" }}
-            >
-              {langToast === "en" ? "English enabled — scroll down" : "Español activado — desplázate"}
+          <div className="flex-1 min-h-6" />
+
+          {/* TORNEO banner */}
+          <div className="w-full max-w-3xl mx-auto rounded-2xl border-2 border-white/90 bg-black/70 backdrop-blur-md px-6 py-4 text-center shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+            <div className="flex items-center justify-center gap-4 sm:gap-6">
+              <span className="italic font-black text-white tracking-wide text-4xl sm:text-6xl">TORNEO</span>
+              <div className="flex flex-col w-[74px] rounded-md overflow-hidden border border-white/20" aria-hidden>
+                <div className="bg-[#7c3aed] h-[20px] flex items-center justify-center">
+                  <span className="text-[9px] font-black text-white/90">★★★</span>
+                </div>
+                <div className="bg-[#22d3ee] h-[26px] flex items-center justify-center">
+                  <span className="text-black font-black text-lg leading-none">50</span>
+                </div>
+                <div className="bg-[#f5b301] h-[20px] flex items-center justify-center">
+                  <span className="text-[8px] font-black text-black">POINTS</span>
+                </div>
+              </div>
+              <div className="relative" aria-hidden>
+                <Trophy className="w-12 h-12 sm:w-14 sm:h-14 text-[#f5b301] drop-shadow-[0_0_12px_rgba(245,179,1,0.8)]" strokeWidth={1.6} />
+                <span className="absolute top-1 left-1/2 -translate-x-1/2 text-black font-black text-sm bg-[#f5b301] rounded-full w-5 h-5 flex items-center justify-center">1</span>
+              </div>
             </div>
-          )}
+            <div className="mt-1 text-sm sm:text-base font-bold">
+              <span className="text-[#c084fc]">{t("hero.sloganStrategy")}. </span>
+              <span className="text-[#22d3ee]">{t("hero.sloganPoints")}. </span>
+              <span className="text-[#facc15]">{t("hero.sloganGame")}.</span>
+            </div>
+          </div>
         </div>
       </section>
 
