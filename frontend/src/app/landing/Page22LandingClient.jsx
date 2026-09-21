@@ -91,9 +91,9 @@ export default function Page22LandingClient() {
           <a href="#como-jugar" aria-label="Smart Point" className="absolute" style={{ left: "64%", top: "10.8%", width: "25.5%", height: "6.4%" }} />
 
           {/* go-to dots */}
-          <a href="#modalidades" aria-label="Modalidades" className="absolute" style={{ left: "13%", top: "43.1%", width: "3.2%", height: "2.4%" }} />
-          <a href="#torneos-en-vivo" aria-label="Torneos en vivo" className="absolute" style={{ left: "17.5%", top: "43.1%", width: "3.2%", height: "2.4%" }} />
-          <a href="#como-jugar" aria-label="Cómo jugar" className="absolute" style={{ left: "21.8%", top: "43.1%", width: "3.2%", height: "2.4%" }} />
+          <a href="#modalidades" aria-label="Modalidades" className="absolute" style={{ left: "12.5%", top: "43%", width: "4%", height: "4%" }} />
+          <a href="#torneos-en-vivo" aria-label="Torneos en vivo" className="absolute" style={{ left: "17%", top: "43%", width: "4%", height: "4%" }} />
+          <a href="#como-jugar" aria-label="Cómo jugar" className="absolute" style={{ left: "21.5%", top: "43%", width: "4%", height: "4%" }} />
 
           {/* Language-switch confirmation toast */}
           {langToast && (
@@ -122,36 +122,47 @@ export default function Page22LandingClient() {
             <div className="w-full h-3 bg-[#ffed00] shadow-[0_0_12px_#ffed00]" />
           </div>
 
-          {/* Exact Figma modality cards with functional overlays */}
+          {/* Exact Figma modality cards with functional overlays.
+              Button zones measured pixel-exact from the slice files
+              (baked buttons sit at 57.9–75.2% of card height). */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full mt-8 items-start">
             {[
-              { src: "/figma/page22/modality_1_card.png", ratio: "458/625", login: true, register: true, alt: "Modalidad 1 — Torneo con premio" },
-              { src: "/figma/page22/modality_2_card.png", ratio: "479/625", login: true, register: true, alt: "Modalidad 2 — Torneo gratis" },
-              { src: "/figma/page22/modality_3_card.png", ratio: "479/625", login: true, register: true, alt: "Modalidad 3 — Torneo especial" },
-              { src: "/figma/page22/modality_4_card.png", ratio: "500/625", guest: true, alt: "Modalidad 4 — Torneo gratis sin registro" },
+              { src: "/figma/page22/modality_1_card.png", login: true, regColor: "text-[#8b5cf6]", alt: "Modalidad 1 — Torneo con premio" },
+              { src: "/figma/page22/modality_2_card.png", login: true, regColor: "text-[#00e5ff]", alt: "Modalidad 2 — Torneo gratis" },
+              { src: "/figma/page22/modality_3_card.png", login: true, regColor: "text-[#f5b301]", alt: "Modalidad 3 — Torneo especial" },
+              { src: "/figma/page22/modality_4_card.png", guest: true, alt: "Modalidad 4 — Torneo gratis sin registro" },
             ].map((c) => (
-              <div key={c.src} className="relative w-full bg-black" style={{ aspectRatio: "458/625" }}>
-                <Image
-                  src={c.src}
-                  alt={c.alt}
-                  fill
-                  sizes="(max-width: 1024px) 50vw, 25vw"
-                  className="object-contain select-none"
-                  draggable={false}
-                />
-                {c.login && (
-                  <Link href="/login" aria-label="Iniciar sesión" className="absolute" style={{ left: "2%", top: "50%", width: "96%", height: "21%" }} />
-                )}
-                {c.register && (
-                  <Link href="/register" aria-label="Regístrate" className="absolute" style={{ left: "12%", top: "67%", width: "76%", height: "12%" }} />
-                )}
-                {c.guest && (
-                  <button
-                    onClick={() => setShowGuestModal(true)}
-                    aria-label={t("figmaUI.page22.modalities.m4.cta")}
-                    className="absolute cursor-pointer"
-                    style={{ left: "2%", top: "50%", width: "96%", height: "21%" }}
+              <div key={c.src} className="flex flex-col items-center">
+                <div className="relative w-full bg-black" style={{ aspectRatio: "458/625" }}>
+                  <Image
+                    src={c.src}
+                    alt={c.alt}
+                    fill
+                    sizes="(max-width: 1024px) 50vw, 25vw"
+                    className="object-contain select-none"
+                    draggable={false}
                   />
+                  {c.login && (
+                    <Link href="/login" aria-label="Iniciar sesión" className="absolute" style={{ left: "2%", top: "56%", width: "96%", height: "21%" }} />
+                  )}
+                  {c.guest && (
+                    <button
+                      onClick={() => setShowGuestModal(true)}
+                      aria-label={t("figmaUI.page22.modalities.m4.cta")}
+                      className="absolute cursor-pointer"
+                      style={{ left: "2%", top: "56%", width: "96%", height: "21%" }}
+                    />
+                  )}
+                </div>
+                {c.login ? (
+                  <Link
+                    href="/register"
+                    className={`mt-2 text-lg font-black uppercase underline underline-offset-4 ${c.regColor}`}
+                  >
+                    {t("figmaUI.page22.modalities.m1.register")}
+                  </Link>
+                ) : (
+                  <span className="mt-2 text-lg font-black uppercase select-none text-transparent" aria-hidden>.</span>
                 )}
               </div>
             ))}
