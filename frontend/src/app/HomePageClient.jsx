@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Trophy,
   LayoutGrid,
@@ -247,25 +248,17 @@ export default function HomePageClient({ initialTournaments = [] }) {
             1. TOP HEADER BANNER: PÁGINA PRINCIPAL
             ========================================================= */}
         <section className="flex flex-col items-center">
-          <div className="w-full max-w-4xl py-3 px-6 rounded-2xl border-2 border-purple-500/70 bg-[#0e071c] shadow-[0_0_30px_rgba(168,85,247,0.35)] flex items-center justify-between">
-            {/* Left 3 Stripes */}
-            <div className="flex flex-col gap-1 w-12 sm:w-20">
-              <div className="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
-              <div className="h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-              <div className="h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
-            </div>
-
+          <div className="w-full max-w-4xl py-4 px-6 rounded-2xl bg-white text-center shadow-[0_0_40px_rgba(255,255,255,0.25)]">
             {/* Center Title */}
-            <h1 className="text-xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider text-white text-center drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider text-black text-center">
               {t("figmaUI.page27.pageTitle")}
             </h1>
-
-            {/* Right 3 Stripes */}
-            <div className="flex flex-col gap-1 w-12 sm:w-20">
-              <div className="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
-              <div className="h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-              <div className="h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
-            </div>
+          </div>
+          {/* Neon stripes under header — same as landing cover */}
+          <div className="w-full max-w-4xl mt-4 space-y-1.5" aria-hidden>
+            <div className="w-full h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+            <div className="w-full h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+            <div className="w-full h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
           </div>
 
           {/* Quick Floating Action Buttons: Guest, Guide & Page 22 Landing */}
@@ -292,6 +285,26 @@ export default function HomePageClient({ initialTournaments = [] }) {
               <span>PÁG. 22: NEON RACER</span>
             </Link>
             <LanguageToggle />
+          </div>
+        </section>
+
+        {/* Neon strategy strip — same Figma art as the landing cover */}
+        <section className="w-full flex flex-col items-center -mt-2">
+          <Link href="/landing#como-jugar" className="block w-full max-w-4xl" aria-label="Cómo jugar — Full, Dual y Smart Point">
+            <Image
+              src="/figma/page22/top_strategy_slips.png"
+              alt="Full Point, Dual Point y Smart Point"
+              width={1562}
+              height={271}
+              sizes="(max-width: 896px) 100vw, 896px"
+              className="w-full h-auto block select-none hover:brightness-110 transition-all"
+              draggable={false}
+            />
+          </Link>
+          <div className="w-full max-w-4xl mt-3 space-y-1.5" aria-hidden>
+            <div className="w-full h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+            <div className="w-full h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+            <div className="w-full h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
           </div>
         </section>
 
@@ -747,26 +760,27 @@ export default function HomePageClient({ initialTournaments = [] }) {
             5. TORNEOS DISPONIBLES MASTER SECTION
             ========================================================= */}
         <section className="w-full flex flex-col gap-8">
+          {/* Neon stats ribbon — same Figma art as the landing cover */}
+          <Image
+            src="/figma/page22/stats_ribbon.png"
+            alt="Muchos hipódromos, torneos, 7 carreras, ranking en vivo, jugadas gratis"
+            width={2634}
+            height={292}
+            sizes="(max-width: 1360px) 100vw, 1360px"
+            className="w-full h-auto block select-none"
+            draggable={false}
+          />
           {/* Top Title Banner with Stripes */}
           <div className="flex flex-col items-center gap-3">
-            <div className="w-full max-w-4xl py-3 px-6 rounded-2xl border-2 border-purple-500/70 bg-[#0e071c] shadow-[0_0_30px_rgba(168,85,247,0.35)] flex items-center justify-between">
-              {/* Left stripes */}
-              <div className="flex flex-col gap-1 w-12 sm:w-20">
-                <div className="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
-                <div className="h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-                <div className="h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
-              </div>
-
-              <h2 className="text-xl sm:text-3xl font-black uppercase tracking-wider text-white text-center">
+            <div className="w-full max-w-4xl py-4 px-6 rounded-2xl bg-white text-center shadow-[0_0_40px_rgba(255,255,255,0.25)]">
+              <h2 className="text-xl sm:text-3xl font-black uppercase tracking-wider text-black text-center">
                 {t("figmaUI.page27.tournamentsTitle")}
               </h2>
-
-              {/* Right stripes */}
-              <div className="flex flex-col gap-1 w-12 sm:w-20">
-                <div className="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
-                <div className="h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-                <div className="h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
-              </div>
+            </div>
+            <div className="w-full max-w-4xl space-y-1.5" aria-hidden>
+              <div className="w-full h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+              <div className="w-full h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+              <div className="w-full h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
             </div>
 
             {/* Glowing Ribbon: TIENES 3 TICKETS GRATIS EN ESTOS TORNEOS */}
