@@ -8,11 +8,14 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { getTournamentById, getRaceById } from '@/frontend/lib/data/raceData';
-import { fetchJson } from '@/frontend/lib/api/client';
+import { fetchJson, fetchAuthJson } from '@/frontend/lib/api/client';
+import { useAuth } from '@/frontend/contexts/AuthContext';
 import RaceCard from '@/frontend/components/tournament/RaceCard';
 import { strategies } from '@/frontend/components/tournament/PickSelector';
 import TicketSummary from '@/frontend/components/tournament/TicketSummary';
 import TicketConfirmation from '@/frontend/components/tournament/TicketConfirmation';
+
+const BACKEND_STRATEGY = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
 
 export default function RaceClient() {
   const params = useParams();
@@ -25,6 +28,8 @@ export default function RaceClient() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [nowTs, setNowTs] = useState(() => Date.now());
   const [shares, setShares] = useState(null);
+  const [saveState, setSaveState] = useState({ phase: 'idle', message: '' });
+  const { token, ensureGuestSession, playAsGuest } = useAuth();
 
   // Live clock for the CIERRE EN countdown
   useEffect(() => {
@@ -68,9 +73,52 @@ export default function RaceClient() {
     setSelectedHorses([]);
   }, []);
 
-  const handleConfirm = useCallback(() => {
-    setShowConfirmation(true);
-  }, []);
+  const handleConfirm = useCallback(async () => {
+    if (!isPicksComplete) return;
+    setSaveState({ phase: 'saving', message: '' });
+    try {
+      // Session (registered or M4 guest) — required to persist the ticket
+      const session = await ensureGuestSession();
+      if (!session?.token && !token) {
+        setSaveState({ phase: 'needs-auth', message: '' });
+        return;
+      }
+      // Resolve the demo sheet against the live backend by track + race number,
+      // then map demo picks to real runner ids by post position.
+      const data = await fetchJson('/tournaments', { cache: 'no-store' });
+      const list = data?.tournaments || [];
+      const backendTournament = list.find((t) => t.track === tournament.track);
+      if (!backendTournament) {
+        throw new Error('Este hipódromo no tiene torneo activo en el backend');
+      }
+      const detail = await fetchJson(`/tournaments/${backendTournament.slug}`, { cache: 'no-store' });
+      const backendRace = (detail?.tournament?.races || []).find((r) => r.raceNumber === race.number);
+      if (!backendRace) {
+        throw new Error('Esta carrera no existe en el torneo activo del backend');
+      }
+      const byPost = new Map((backendRace.horses || []).map((h) => [h.postPosition, h.id]));
+      const runnerIds = selectedHorses.map((id) => {
+        const picked = race.horses.find((h) => h.id === id);
+        return picked ? byPost.get(picked.postPosition) : undefined;
+      });
+      if (runnerIds.some((v) => v == null)) {
+        throw new Error('Algún caballo elegido no existe en la carrera oficial');
+      }
+      await fetchAuthJson('/tickets', {
+        method: 'POST',
+        body: JSON.stringify({
+          raceId: backendRace.id,
+          strategy: BACKEND_STRATEGY[activeStrategy],
+          picks: runnerIds,
+          ticketNumber: 1,
+        }),
+      });
+      setSaveState({ phase: 'saved', message: '' });
+      setShowConfirmation(true);
+    } catch (err) {
+      setSaveState({ phase: 'error', message: err?.message || 'No se pudo guardar el boleto' });
+    }
+  }, [isPicksComplete, ensureGuestSession, token, tournament, race, selectedHorses, activeStrategy]);
 
   const handleCloseConfirmation = useCallback(() => {
     setShowConfirmation(false);
@@ -283,12 +331,53 @@ export default function RaceClient() {
               <button
                 type="button"
                 onClick={handleConfirm}
-                disabled={!isPicksComplete}
+                disabled={!isPicksComplete || saveState.phase === 'saving'}
                 className="rounded-xl border-2 border-purple-400 bg-purple-600 hover:bg-purple-500 text-white text-sm font-black uppercase tracking-widest py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_18px_rgba(168,85,247,0.45)]"
               >
-                OK
+                {saveState.phase === 'saving' ? 'Guardando…' : 'OK'}
               </button>
             </div>
+
+            {/* Persist status — honest backend feedback, never silent */}
+            {saveState.phase === 'saved' && (
+              <p className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-2.5 text-emerald-300 text-xs font-bold text-center" role="status">
+                ✓ Boleto guardado en el torneo oficial
+              </p>
+            )}
+            {saveState.phase === 'error' && (
+              <p className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-2.5 text-red-300 text-xs font-bold text-center" role="alert">
+                {saveState.message}
+              </p>
+            )}
+            {saveState.phase === 'needs-auth' && (
+              <div className="rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-center">
+                <p className="text-amber-200 text-xs font-bold mb-2">
+                  Inicia sesión o entra como invitado para guardar tu boleto
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await playAsGuest();
+                        setSaveState({ phase: 'idle', message: '' });
+                      } catch {
+                        setSaveState({ phase: 'error', message: 'No se pudo crear la sesión de invitado' });
+                      }
+                    }}
+                    className="rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase px-4 py-2 cursor-pointer"
+                  >
+                    Entrar como invitado
+                  </button>
+                  <Link
+                    href="/login"
+                    className="rounded-lg border border-purple-400/60 text-purple-200 text-xs font-black uppercase px-4 py-2"
+                  >
+                    Iniciar sesión
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Community strategy shares — live backend aggregates */}
             <div className="grid grid-cols-3 gap-2">
