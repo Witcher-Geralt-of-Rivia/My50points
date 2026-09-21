@@ -10,8 +10,9 @@ def test_health_check(client):
 def test_guest_registration_api(client):
     """
     POST /api/auth/guest should return a valid session token and a high-entropy guest token.
+    birthYear is mandatory (server-side 18+ gate).
     """
-    response = client.post("/api/auth/guest", json={})
+    response = client.post("/api/auth/guest", json={"birthYear": 1995})
     assert response.status_code == 200
     data = response.json()
 
@@ -25,6 +26,15 @@ def test_guest_registration_api(client):
     assert guest_token.startswith("50P-")
     # High-entropy token length check (50P- + 12 hex chars = 16 chars)
     assert len(guest_token) == 16
+
+
+def test_guest_age_gate_rejects_minors_and_missing_dob(client):
+    """Server-side 18+: missing birthYear -> 400, under-18 -> 403."""
+    from datetime import datetime, timezone
+    current_year = datetime.now(timezone.utc).year
+    assert client.post("/api/auth/guest", json={}).status_code == 400
+    assert client.post("/api/auth/guest", json={"birthYear": current_year - 10}).status_code == 403
+    assert client.post("/api/auth/guest", json={"birthYear": current_year - 18}).status_code == 200
 
 
 def test_admin_route_security(client):
@@ -50,7 +60,7 @@ def test_guest_recent_by_ip_does_not_expose_tokens(client):
     and its Swagger/OpenAPI schema must strictly document only username.
     """
     # 1. Create a guest session
-    create_resp = client.post("/api/auth/guest", json={"username": "SecretRunner"})
+    create_resp = client.post("/api/auth/guest", json={"username": "SecretRunner", "birthYear": 1990})
     assert create_resp.status_code == 200
     created_data = create_resp.json()
     assert "guestToken" in created_data

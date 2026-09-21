@@ -21,11 +21,18 @@ class RaceResultItem(BaseModel):
     horseId: int
 
 
+class ResultDividendItem(BaseModel):
+    horseId: int
+    dividend: float
+    winPayoff: float | None = None
+
+
 class RaceResultBody(BaseModel):
     results: list[RaceResultItem]
+    dividends: list[ResultDividendItem] | None = None
 
 
-def post_race_result(race_id: int, results: list, db: Session):
+def post_race_result(race_id: int, results: list, db: Session, dividends: list | None = None):
     if not results or len(results) < 3:
         raise HTTPException(status_code=400, detail="At least 3 finishing positions required")
 
@@ -44,6 +51,37 @@ def post_race_result(race_id: int, results: list, db: Session):
 
     race.status = "finished"
     db.flush()
+
+    # Freeze official dividends FIRST so scoring below can only read the table.
+    # Any dividend supplied with the result is written immutably (upsert =
+    # delete + insert, so steward corrections replace rather than append).
+    # Without frozen rows, scoring would fall back to mutable live odds —
+    # that fallback must never decide an already-scored result.
+    winner_ids = {
+        (x["horseId"] if isinstance(x, dict) else x.horseId)
+        for x in result_dicts
+        if (x["position"] if isinstance(x, dict) else x.position) == 1
+    }
+    if dividends:
+        horse_ids = {h.id for h in race.horses}
+        for d in dividends:
+            hid = d["horseId"] if isinstance(d, dict) else d.horseId
+            div = d["dividend"] if isinstance(d, dict) else d.dividend
+            payoff = d.get("winPayoff") if isinstance(d, dict) else d.winPayoff
+            if hid not in horse_ids or not div or float(div) <= 0:
+                continue
+            db.query(OfficialDividend).filter(
+                OfficialDividend.raceId == race_id,
+                OfficialDividend.horseId == hid,
+            ).delete()
+            db.add(OfficialDividend(
+                raceId=race_id,
+                horseId=hid,
+                winPayoff=float(payoff) if payoff else round(float(div) * 2.0, 2),
+                dividend=float(div),
+                isDeadHeat=len(winner_ids) > 1 and hid in winner_ids,
+            ))
+        db.flush()
 
     official_div_records = db.query(OfficialDividend).filter(OfficialDividend.raceId == race_id).all()
     official_divs = {d.horseId: d.dividend for d in official_div_records}
@@ -183,4 +221,9 @@ def post_race_result(race_id: int, results: list, db: Session):
 
 @router.post("/{race_id}/result", dependencies=[Depends(require_admin)])
 def race_result(race_id: int, body: RaceResultBody, db: Session = Depends(get_db)):
-    return post_race_result(race_id, [r.model_dump() for r in body.results], db)
+    return post_race_result(
+        race_id,
+        [r.model_dump() for r in body.results],
+        db,
+        dividends=[d.model_dump() for d in (body.dividends or [])] or None,
+    )

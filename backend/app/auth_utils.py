@@ -24,9 +24,7 @@ def guest_expires_at(created_at: datetime | None) -> datetime:
 
 
 def is_guest_expired(created_at: datetime | None) -> bool:
-    """Check if guest session is expired. Disabled by default until guest claim limits are confirmed."""
-    if not settings.enforce_guest_claim_limit:
-        return False
+    """Guest identities always die at 12 h (M4 rule) — no opt-out flag."""
     return datetime.now(timezone.utc) >= guest_expires_at(created_at)
 
 

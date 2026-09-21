@@ -28,7 +28,7 @@ def _santa_race_1(db):
 
 
 def test_official_dividend_frozen_and_odds_immune(client, db):
-    user = _member(db)
+    user = _member(db, "div_prover")
     token = sign_token(user.id, user.username)
     race, horses = _santa_race_1(db)
     winner = horses[0]
@@ -72,3 +72,58 @@ def test_official_dividend_frozen_and_odds_immune(client, db):
     assert ticket.pointsEarned == 300
     # And the simulate endpoint never rewrites live odds itself.
     assert db.query(Horse).filter(Horse.id == winner.id).first().odds == 99.0
+
+
+def test_real_race_result_path_freezes_dividends(client, db):
+    """P0-1: /api/races/{id}/result must freeze dividends exactly like simulate.
+
+    Posting positions + dividends on the production path writes the immutable
+    table; later odds moves cannot change the scored result.
+    """
+    user = _member(db, "div_real_path")
+    token = sign_token(user.id, user.username)
+    race, horses = _santa_race_1(db)
+    winner = horses[1]
+    others = [h for h in horses if h.id != winner.id][:2]
+
+    res = client.post(
+        "/api/tickets",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"raceId": race.id, "strategy": "full_point", "picks": [winner.id], "ticketNumber": 1},
+    )
+    assert res.status_code == 200, res.text
+
+    res = client.post(
+        f"/api/races/{race.id}/result",
+        headers={"x-admin-secret": "test-admin-secret"},
+        json={
+            "results": [
+                {"position": 1, "horseId": winner.id},
+                {"position": 2, "horseId": others[0].id},
+                {"position": 3, "horseId": others[1].id},
+            ],
+            "dividends": [{"horseId": winner.id, "dividend": 5.0}],
+        },
+    )
+    assert res.status_code == 200, res.text
+
+    ticket = db.query(Ticket).filter(Ticket.userId == user.id, Ticket.raceId == race.id).first()
+    assert ticket.pointsEarned == round(50 * 5.0)
+
+    db.query(Horse).filter(Horse.id == winner.id).update({"odds": 42.0})
+    db.commit()
+    res = client.post(
+        f"/api/races/{race.id}/result",
+        headers={"x-admin-secret": "test-admin-secret"},
+        json={
+            "results": [
+                {"position": 1, "horseId": winner.id},
+                {"position": 2, "horseId": others[0].id},
+                {"position": 3, "horseId": others[1].id},
+            ],
+            "dividends": [{"horseId": winner.id, "dividend": 5.0}],
+        },
+    )
+    assert res.status_code == 200, res.text
+    db.refresh(ticket)
+    assert ticket.pointsEarned == round(50 * 5.0)

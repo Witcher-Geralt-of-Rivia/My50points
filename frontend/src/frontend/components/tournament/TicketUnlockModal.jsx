@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Lock } from "lucide-react";
 import { fetchAuthJson } from "@/frontend/lib/api/client";
 import RewardedAdSlot from "@/frontend/components/ads/RewardedAdSlot";
@@ -8,21 +8,39 @@ import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 
 /**
  * M2 ad-gated unlock for Tickets 2 & 3 (Phase 1 §9).
- * The ad view itself never blocks play; only a completed view calls
- * POST /tickets/ad-unlock, and the server issues the entitlement record.
- * Guests (M4) can never unlock extra tickets — enforced server-side too.
+ * Proof-of-watch handshake: a server-signed challenge is issued when the
+ * modal opens and only honored after a complete 5s+ view. Direct calls
+ * without watching always fail server-side (402/403/400).
  */
 export default function TicketUnlockModal({ ticketNumber, tournamentId, tournamentName, onClose, onUnlocked }) {
   const { t } = useLanguage();
   const [phase, setPhase] = useState("ad"); // ad | saving | done | error
   const [message, setMessage] = useState("");
+  const [challenge, setChallenge] = useState(null);
+
+  useEffect(() => {
+    let live = true;
+    fetchAuthJson(`/tickets/ad-challenge?tournamentId=${tournamentId}&ticketNumber=${ticketNumber}`)
+      .then((d) => {
+        if (live) setChallenge(d?.adToken || null);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [tournamentId, ticketNumber]);
 
   const handleReward = async () => {
+    if (!challenge) {
+      setPhase("error");
+      setMessage(t("ads.failed"));
+      return;
+    }
     setPhase("saving");
     try {
       await fetchAuthJson("/tickets/ad-unlock", {
         method: "POST",
-        body: JSON.stringify({ tournamentId, ticketNumber }),
+        body: JSON.stringify({ tournamentId, ticketNumber, adToken: challenge }),
       });
       setPhase("done");
       onUnlocked?.(ticketNumber);

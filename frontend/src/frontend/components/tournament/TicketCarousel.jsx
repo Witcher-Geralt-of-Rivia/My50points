@@ -48,7 +48,8 @@ export default function TicketCarousel({
           const isSubmitted = ticketData.isSubmitted || false;
           const ticketPicksCount = ticketData.picksCount || (isActive ? completedCount : 0);
           const isComplete = ticketPicksCount >= totalRaces;
-          const isLocked = Boolean(lockedTickets[t.id]) || (isGuest && t.id > 1);
+          // Guests (M4) unlock Tickets 2 & 3 with one ad view each — same as M2.
+          const isLocked = Boolean(lockedTickets[t.id]);
 
           let statusText = isEn ? "AVAILABLE" : "DISPONIBLE";
           let statusBg = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
@@ -71,7 +72,7 @@ export default function TicketCarousel({
               type="button"
               onClick={() => {
                 if (isLocked) {
-                  if (!isGuest) onUnlockRequest?.(t.id);
+                  onUnlockRequest?.(t.id);
                   return;
                 }
                 if (onSelectTicket) onSelectTicket(t.id);
@@ -122,15 +123,10 @@ export default function TicketCarousel({
                 >
                   {statusText}
                 </div>
-                {isLocked && !isGuest && (
+                {isLocked && (
                   <span className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-400/15 border border-amber-400/50 px-3 py-1.5 text-[11px] font-black uppercase text-amber-300">
                     <Play className="w-3.5 h-3.5" />
                     <span>{isEn ? "Watch ad to unlock" : "Ver anuncio para desbloquear"}</span>
-                  </span>
-                )}
-                {isLocked && isGuest && (
-                  <span className="mt-2 block text-[11px] font-bold text-zinc-400">
-                    {isEn ? "Ticket 1 only — register for more" : "Solo Ticket 1 — regístrate para más"}
                   </span>
                 )}
               </div>

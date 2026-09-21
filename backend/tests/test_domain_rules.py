@@ -236,8 +236,22 @@ def test_aggregate_ticket_lifecycle_and_race1_lock(client, db):
     resp = client.post("/api/tickets/aggregate", json=payload_t2, headers=headers)
     assert resp.status_code == 402
 
-    # 4. Request ad-unlock
-    resp_ad = client.post("/api/tickets/ad-unlock", json={"tournamentId": tourn.id, "ticketNumber": 2}, headers=headers)
+    # 4. Request ad-unlock with genuine completed-view proof
+    import jwt as _jwt
+    from app.config import settings as _settings
+    _aged = datetime.now(timezone.utc) - timedelta(seconds=30)
+    _proof = _jwt.encode(
+        {"purpose": "ad-challenge", "userId": user.id,
+         "tournamentId": tourn.id, "ticketNumber": 2,
+         "iat": _aged, "exp": _aged + timedelta(minutes=10)},
+        _settings.jwt_secret,
+        algorithm="HS256",
+    )
+    if not isinstance(_proof, str):
+        _proof = _proof.decode()
+    resp_ad = client.post("/api/tickets/ad-unlock",
+                          json={"tournamentId": tourn.id, "ticketNumber": 2, "adToken": _proof},
+                          headers=headers)
     assert resp_ad.status_code == 200
     assert resp_ad.json()["unlocked"] is True
 
@@ -311,11 +325,32 @@ def test_guest_claim_and_discard_flow(client, db):
     sub_resp = client.post("/api/tickets/aggregate", json=guest_payload, headers=guest_headers)
     assert sub_resp.status_code == 200
 
-    # Guest cannot submit Ticket 2 (M4 limit)
+    # Guest Ticket 2 without an ad proof is locked (402), like M2.
     guest_t2 = dict(guest_payload, ticketNumber=2)
     sub_t2_resp = client.post("/api/tickets/aggregate", json=guest_t2, headers=guest_headers)
-    assert sub_t2_resp.status_code == 403
-    assert "Guest accounts (Modalidad 4) are restricted to 1 ticket" in sub_t2_resp.json()["detail"]
+    assert sub_t2_resp.status_code == 402
+
+    # Guest unlocks Ticket 2 with a genuine completed-view proof, then submits.
+    import jwt as _jwt2
+    from app.config import settings as _settings2
+    _aged2 = datetime.now(timezone.utc) - timedelta(seconds=30)
+    _proof2 = _jwt2.encode(
+        {"purpose": "ad-challenge", "userId": guest_data["user"]["id"],
+         "tournamentId": tourn.id, "ticketNumber": 2,
+         "iat": _aged2, "exp": _aged2 + timedelta(minutes=10)},
+        _settings2.jwt_secret,
+        algorithm="HS256",
+    )
+    if not isinstance(_proof2, str):
+        _proof2 = _proof2.decode()
+    unlock_resp = client.post(
+        "/api/tickets/ad-unlock",
+        json={"tournamentId": tourn.id, "ticketNumber": 2, "adToken": _proof2},
+        headers=guest_headers,
+    )
+    assert unlock_resp.status_code == 200
+    sub_t2_ok = client.post("/api/tickets/aggregate", json=guest_t2, headers=guest_headers)
+    assert sub_t2_ok.status_code == 200
 
     # 2. Create Registered User and Claim Guest's Tickets
     reg_user = User(username="permanent_user", gameMode=2, isGuest=False)

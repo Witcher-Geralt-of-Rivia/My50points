@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth_utils import require_admin
 from app.database import get_db
-from app.models import Horse, Race, OfficialDividend
+from app.models import Horse, Race
 from app.routers.races import post_race_result
 from app.seed import run_seed
 from app.services.tournament_sync import sync_live_tournaments
@@ -53,18 +53,6 @@ def simulate_race_result(body: SimulateRaceResultBody, db: Session = Depends(get
         raise HTTPException(status_code=400, detail="Winner horse not in this race")
 
     dividend = float(body.officialDividend)
-    db.query(OfficialDividend).filter(
-        OfficialDividend.raceId == body.raceId,
-        OfficialDividend.horseId == winner.id,
-    ).delete()
-    db.add(OfficialDividend(
-        raceId=body.raceId,
-        horseId=winner.id,
-        winPayoff=round(dividend * 2.0, 2),
-        dividend=dividend,
-        isDeadHeat=False,
-    ))
-    db.flush()
 
     others = [h for h in horses if h.id != winner.id]
     if len(others) < 2:
@@ -75,4 +63,11 @@ def simulate_race_result(body: SimulateRaceResultBody, db: Session = Depends(get
         {"position": 2, "horseId": others[0].id},
         {"position": 3, "horseId": others[1].id},
     ]
-    return post_race_result(body.raceId, results, db)
+    # Single write path: post_race_result freezes the dividend table first,
+    # then scores exclusively from it.
+    return post_race_result(
+        body.raceId,
+        results,
+        db,
+        dividends=[{"horseId": winner.id, "dividend": dividend}],
+    )

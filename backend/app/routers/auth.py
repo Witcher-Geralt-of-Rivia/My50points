@@ -295,6 +295,18 @@ class GuestBody(BaseModel):
     birthYear: int | None = None
 
 
+def _require_adult_birth_year(birth_year: int | None) -> int:
+    """Server-side 18+ gate (Phase 1): birth year is mandatory for guests."""
+    if birth_year is None:
+        raise HTTPException(status_code=400, detail="birthYear is required (18+ only)")
+    current_year = datetime.now(timezone.utc).year
+    if not (1900 <= birth_year <= current_year):
+        raise HTTPException(status_code=400, detail="Invalid birth year")
+    if current_year - birth_year < 18:
+        raise HTTPException(status_code=403, detail="Guests must be 18 or older")
+    return birth_year
+
+
 @router.post("/guest")
 def guest(request: Request, body: GuestBody | None = None, db: Session = Depends(get_db)):
     cleanup_expired_guests(db)
@@ -306,9 +318,7 @@ def guest(request: Request, body: GuestBody | None = None, db: Session = Depends
         # registrado) se genera una variante única (nuglas.1, nuglas.2...). Un guest que
         # regresa recupera su sesión con su guestToken vía /auth/guest/resume, no por nombre.
         alias = _unique_alias(db, custom_username)
-        birth_year = body.birthYear
-        if birth_year is not None and not (1900 <= birth_year <= datetime.utcnow().year):
-            raise HTTPException(status_code=400, detail="Invalid birth year")
+        birth_year = _require_adult_birth_year(body.birthYear)
         country = (body.country or "").strip()[:60] or None
         guest_token = generate_guest_token()
         user = User(
@@ -338,7 +348,8 @@ def guest(request: Request, body: GuestBody | None = None, db: Session = Depends
             "user": _guest_payload(user, guest_token),
         }
 
-    # Fallback to random username generation
+    # Fallback to random username generation (DOB still mandatory: 18+ only).
+    birth_year = _require_adult_birth_year(body.birthYear if body else None)
     for _ in range(10):
         username = generate_guest_username()
         if db.query(User).filter(User.username == username).first():
@@ -350,6 +361,7 @@ def guest(request: Request, body: GuestBody | None = None, db: Session = Depends
             guestToken=guest_token,
             avatarColor=random.choice(COLORS),
             gameMode=1,
+            birthYear=birth_year,
         )
         db.add(user)
         db.flush()
