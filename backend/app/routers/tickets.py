@@ -220,7 +220,9 @@ def submit_tournament_ticket(
         except ValueError:
             pass
 
-    # M2 Registered entitlement: Ticket 1 is free, Tickets 2 & 3 require ad token / unlock
+    # M2 Registered entitlement: Ticket 1 is free, Tickets 2 & 3 require a
+    # prior /ad-unlock record. A bare adToken string never unlocks anything —
+    # only the server-issued unlock row created by POST /ad-unlock counts.
     is_ad_unlocked = False
     if not user.isGuest and ticket_number > 1:
         existing_agg = (
@@ -233,8 +235,6 @@ def submit_tournament_ticket(
             .first()
         )
         if existing_agg and existing_agg.isAdUnlocked:
-            is_ad_unlocked = True
-        elif body.adToken:
             is_ad_unlocked = True
         else:
             raise HTTPException(
@@ -582,3 +582,36 @@ def list_tickets(
         })
 
     return {"tickets": formatted_tickets}
+
+
+@router.get("/unlocks")
+def ticket_unlocks(
+    tournamentId: int = Query(...),
+    payload: dict = Depends(get_bearer_user),
+    db: Session = Depends(get_db),
+):
+    """Ad-entitlement status for Tickets 2 & 3 (M2: ad-unlocked, M4/guests: never).
+
+    Ticket 1 is always available. Guests are restricted to Ticket 1 by the
+    submit endpoints regardless of this map.
+    """
+    user = db.query(User).filter(User.id == payload["userId"]).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    rows = (
+        db.query(TournamentTicket)
+        .filter(
+            TournamentTicket.userId == user.id,
+            TournamentTicket.tournamentId == tournamentId,
+            TournamentTicket.ticketNumber.in_([2, 3]),
+        )
+        .all()
+    )
+    unlocked = {r.ticketNumber: bool(r.isAdUnlocked) for r in rows}
+    return {
+        "tournamentId": tournamentId,
+        "ticket1": True,
+        "ticket2": unlocked.get(2, False),
+        "ticket3": unlocked.get(3, False),
+        "guestRestricted": bool(user.isGuest),
+    }

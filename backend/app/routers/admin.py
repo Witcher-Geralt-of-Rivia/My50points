@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth_utils import require_admin
 from app.database import get_db
-from app.models import Horse, Race
+from app.models import Horse, Race, OfficialDividend
 from app.routers.races import post_race_result
 from app.seed import run_seed
 from app.services.tournament_sync import sync_live_tournaments
@@ -31,7 +31,13 @@ def sync_racing(db: Session = Depends(get_db)):
 
 @router.post("/simulate/race-result", dependencies=[Depends(require_admin)])
 def simulate_race_result(body: SimulateRaceResultBody, db: Session = Depends(get_db)):
-    """Set winner + dividend, then score all picks for that race."""
+    """Freeze the official dividend, then score all picks for that race.
+
+    The dividend is written to the immutable OfficialDividend table (derived
+    from the $2 Win payoff base) and scoring reads ONLY that table. Live
+    Horse.odds are never mutated here, so later odds moves cannot rewrite
+    history — re-posting a corrected result rescoring is idempotent.
+    """
     race = (
         db.query(Race)
         .options(joinedload(Race.horses))
@@ -46,7 +52,18 @@ def simulate_race_result(body: SimulateRaceResultBody, db: Session = Depends(get
     if not winner:
         raise HTTPException(status_code=400, detail="Winner horse not in this race")
 
-    winner.odds = float(body.officialDividend)
+    dividend = float(body.officialDividend)
+    db.query(OfficialDividend).filter(
+        OfficialDividend.raceId == body.raceId,
+        OfficialDividend.horseId == winner.id,
+    ).delete()
+    db.add(OfficialDividend(
+        raceId=body.raceId,
+        horseId=winner.id,
+        winPayoff=round(dividend * 2.0, 2),
+        dividend=dividend,
+        isDeadHeat=False,
+    ))
     db.flush()
 
     others = [h for h in horses if h.id != winner.id]
