@@ -248,17 +248,26 @@ export default function HomePageClient({ initialTournaments = [] }) {
             1. TOP HEADER BANNER: PÁGINA PRINCIPAL
             ========================================================= */}
         <section className="flex flex-col items-center">
-          <div className="w-full max-w-4xl py-4 px-6 rounded-2xl bg-white text-center shadow-[0_0_40px_rgba(255,255,255,0.25)]">
+          {/* PÁGINA PRINCIPAL header bar — black with white title, neon stripes inside */}
+          <div className="w-full py-3.5 px-4 sm:px-8 rounded-xl border border-purple-900/60 bg-black shadow-[0_0_30px_rgba(168,85,247,0.35)] flex items-center justify-between gap-3">
+            {/* Left stripes */}
+            <div className="flex flex-col gap-1 w-10 sm:w-24 shrink-0" aria-hidden>
+              <div className="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+              <div className="h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+              <div className="h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
+            </div>
+
             {/* Center Title */}
-            <h1 className="text-xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider text-black text-center">
+            <h1 className="text-lg sm:text-3xl md:text-4xl font-black uppercase tracking-wider text-white text-center">
               {t("figmaUI.page27.pageTitle")}
             </h1>
-          </div>
-          {/* Neon stripes under header — same as landing cover */}
-          <div className="w-full max-w-4xl mt-4 space-y-1.5" aria-hidden>
-            <div className="w-full h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
-            <div className="w-full h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-            <div className="w-full h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
+
+            {/* Right stripes */}
+            <div className="flex flex-col gap-1 w-10 sm:w-24 shrink-0" aria-hidden>
+              <div className="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+              <div className="h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+              <div className="h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
+            </div>
           </div>
 
           {/* Quick Floating Action Buttons: Guest, Guide & Page 22 Landing */}
@@ -288,26 +297,6 @@ export default function HomePageClient({ initialTournaments = [] }) {
           </div>
         </section>
 
-        {/* Neon strategy strip — same Figma art as the landing cover */}
-        <section className="w-full flex flex-col items-center -mt-2">
-          <Link href="/landing#como-jugar" className="block w-full max-w-4xl" aria-label="Cómo jugar — Full, Dual y Smart Point">
-            <Image
-              src="/figma/page22/top_strategy_slips.png"
-              alt="Full Point, Dual Point y Smart Point"
-              width={1562}
-              height={271}
-              sizes="(max-width: 896px) 100vw, 896px"
-              className="w-full h-auto block select-none hover:brightness-110 transition-all"
-              draggable={false}
-            />
-          </Link>
-          <div className="w-full max-w-4xl mt-3 space-y-1.5" aria-hidden>
-            <div className="w-full h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
-            <div className="w-full h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-            <div className="w-full h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
-          </div>
-        </section>
-
         {/* =========================================================
             2. PANTALLAS DE INFORMACIÓN DEL JUEGO / PUBLICIDAD (2x2 Grid)
             ========================================================= */}
@@ -316,22 +305,13 @@ export default function HomePageClient({ initialTournaments = [] }) {
             {/* Promo Card 1: Modalidad 4 */}
             <div
               onClick={() => setShowGuestModal(true)}
-              className="group relative h-48 sm:h-56 rounded-3xl border-2 border-purple-500/60 bg-gradient-to-br from-[#1c0836] via-[#100521] to-[#080212] p-6 shadow-[0_0_30px_rgba(147,51,234,0.25)] hover:shadow-[0_0_45px_rgba(147,51,234,0.5)] hover:border-purple-400 transition-all cursor-pointer overflow-hidden flex flex-col justify-end"
+              className="group relative h-36 sm:h-44 rounded-xl border-2 border-purple-500/70 bg-black p-4 shadow-[0_0_25px_rgba(147,51,234,0.25)] hover:border-purple-400 hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center text-center"
             >
-              {/* Coded ambient glowing graphics */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl border border-purple-500/30 bg-purple-900/20 flex items-center justify-center text-purple-400 opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all">
-                <Users className="w-10 h-10 stroke-[1.5]" />
-              </div>
-
-              <div className="relative z-10">
-                <span className="inline-block px-3 py-1 rounded-full bg-purple-600 text-white font-black text-[10px] uppercase tracking-wider mb-2 shadow-[0_0_10px_rgba(147,51,234,0.6)]">
-                  MODALIDAD 4
-                </span>
-                <h3 className="text-lg sm:text-xl font-black uppercase tracking-wide text-white group-hover:text-purple-300 transition-colors">
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
                   {t("figmaUI.page27.promos.card1Title")}
                 </h3>
-                <p className="text-xs text-zinc-300 mt-1 max-w-lg">
+                <p className="text-[11px] text-zinc-400 max-w-xs">
                   {t("figmaUI.page27.promos.card1Sub")}
                 </p>
               </div>
@@ -340,43 +320,25 @@ export default function HomePageClient({ initialTournaments = [] }) {
             {/* Promo Card 2: 50 Points Challenge */}
             <div
               onClick={() => setShowGuideModal(true)}
-              className="group relative h-48 sm:h-56 rounded-3xl border-2 border-amber-500/60 bg-gradient-to-br from-[#2b1605] via-[#180b02] to-[#0d0501] p-6 shadow-[0_0_30px_rgba(245,158,11,0.25)] hover:shadow-[0_0_45px_rgba(245,158,11,0.5)] hover:border-amber-400 transition-all cursor-pointer overflow-hidden flex flex-col justify-end"
+              className="group relative h-36 sm:h-44 rounded-xl border-2 border-purple-500/70 bg-black p-4 shadow-[0_0_25px_rgba(147,51,234,0.25)] hover:border-purple-400 hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center text-center"
             >
-              {/* Coded ambient glowing graphics */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/20 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl border border-amber-500/30 bg-amber-900/20 flex items-center justify-center text-amber-400 opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all">
-                <Flame className="w-10 h-10 stroke-[1.5]" />
-              </div>
-
-              <div className="relative z-10">
-                <span className="inline-block px-3 py-1 rounded-full bg-amber-500 text-black font-black text-[10px] uppercase tracking-wider mb-2 shadow-[0_0_10px_rgba(245,158,11,0.6)]">
-                  ESTRATEGIAS
-                </span>
-                <h3 className="text-lg sm:text-xl font-black uppercase tracking-wide text-white group-hover:text-amber-300 transition-colors">
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
                   {t("figmaUI.page27.promos.card2Title")}
                 </h3>
-                <p className="text-xs text-zinc-300 mt-1 max-w-lg">
+                <p className="text-[11px] text-zinc-400 max-w-xs">
                   {t("figmaUI.page27.promos.card2Sub")}
                 </p>
               </div>
             </div>
 
             {/* Promo Card 3: 7 Carreras Oficiales */}
-            <div className="group relative h-48 sm:h-56 rounded-3xl border-2 border-cyan-500/60 bg-gradient-to-br from-[#07202e] via-[#04121a] to-[#020a0f] p-6 shadow-[0_0_30px_rgba(6,182,212,0.25)] hover:shadow-[0_0_45px_rgba(6,182,212,0.5)] hover:border-cyan-400 transition-all overflow-hidden flex flex-col justify-end">
-              {/* Coded ambient glowing graphics */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-600/20 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl border border-cyan-500/30 bg-cyan-900/20 flex items-center justify-center text-cyan-400 opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all">
-                <Zap className="w-10 h-10 stroke-[1.5]" />
-              </div>
-
-              <div className="relative z-10">
-                <span className="inline-block px-3 py-1 rounded-full bg-cyan-500 text-black font-black text-[10px] uppercase tracking-wider mb-2 shadow-[0_0_10px_rgba(6,182,212,0.6)]">
-                  HIPÓDROMOS
-                </span>
-                <h3 className="text-lg sm:text-xl font-black uppercase tracking-wide text-white group-hover:text-cyan-300 transition-colors">
+            <div className="group relative h-36 sm:h-44 rounded-xl border-2 border-purple-500/70 bg-black p-4 shadow-[0_0_25px_rgba(147,51,234,0.25)] hover:border-purple-400 hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all overflow-hidden flex flex-col items-center justify-center text-center">
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
                   {t("figmaUI.page27.promos.card3Title")}
                 </h3>
-                <p className="text-xs text-zinc-300 mt-1 max-w-lg">
+                <p className="text-[11px] text-zinc-400 max-w-xs">
                   {t("figmaUI.page27.promos.card3Sub")}
                 </p>
               </div>
@@ -385,22 +347,13 @@ export default function HomePageClient({ initialTournaments = [] }) {
             {/* Promo Card 4: Ranking Global & Premios */}
             <Link
               href="/leaderboard"
-              className="group relative h-48 sm:h-56 rounded-3xl border-2 border-emerald-500/60 bg-gradient-to-br from-[#082416] via-[#04140c] to-[#020a06] p-6 shadow-[0_0_30px_rgba(16,185,129,0.25)] hover:shadow-[0_0_45px_rgba(16,185,129,0.5)] hover:border-emerald-400 transition-all overflow-hidden flex flex-col justify-end"
+              className="group relative h-36 sm:h-44 rounded-xl border-2 border-purple-500/70 bg-black p-4 shadow-[0_0_25px_rgba(147,51,234,0.25)] hover:border-purple-400 hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all overflow-hidden flex flex-col items-center justify-center text-center"
             >
-              {/* Coded ambient glowing graphics */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl border border-emerald-500/30 bg-emerald-900/20 flex items-center justify-center text-emerald-400 opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all">
-                <Trophy className="w-10 h-10 stroke-[1.5]" />
-              </div>
-
-              <div className="relative z-10">
-                <span className="inline-block px-3 py-1 rounded-full bg-emerald-500 text-black font-black text-[10px] uppercase tracking-wider mb-2 shadow-[0_0_10px_rgba(16,185,129,0.6)]">
-                  CLASIFICACIÓN
-                </span>
-                <h3 className="text-lg sm:text-xl font-black uppercase tracking-wide text-white group-hover:text-emerald-300 transition-colors">
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
                   {t("figmaUI.page27.promos.card4Title")}
                 </h3>
-                <p className="text-xs text-zinc-300 mt-1 max-w-lg">
+                <p className="text-[11px] text-zinc-400 max-w-xs">
                   {t("figmaUI.page27.promos.card4Sub")}
                 </p>
               </div>
@@ -412,28 +365,16 @@ export default function HomePageClient({ initialTournaments = [] }) {
             3. TU CAMINO EN EL TORNEO (7 Step Tracker)
             ========================================================= */}
         <section className="relative w-full flex flex-col items-center">
-          <div className="w-full rounded-3xl border-2 border-purple-500/70 bg-[#0d071b] p-4 sm:p-6 shadow-[0_0_35px_rgba(147,51,234,0.3)]">
-            {/* Header with stripes */}
-            <div className="flex items-center justify-between pb-4 sm:pb-6 border-b border-purple-500/20">
-              <div className="flex flex-col gap-1 w-10 sm:w-16">
-                <div className="h-1 rounded-full bg-purple-500" />
-                <div className="h-1 rounded-full bg-cyan-400" />
-                <div className="h-1 rounded-full bg-amber-400" />
-              </div>
+          {/* Slim title bar — TU CAMINO EN EL TORNEO */}
+          <div className="w-full py-2.5 px-4 rounded-lg border border-purple-900/60 bg-black text-center">
+            <h2 className="text-sm sm:text-xl font-black uppercase tracking-widest text-white">
+              {t("figmaUI.page27.journeyTitle")}
+            </h2>
+          </div>
 
-              <h2 className="text-base sm:text-2xl font-black uppercase tracking-widest text-white text-center">
-                {t("figmaUI.page27.journeyTitle")}
-              </h2>
-
-              <div className="flex flex-col gap-1 w-10 sm:w-16">
-                <div className="h-1 rounded-full bg-purple-500" />
-                <div className="h-1 rounded-full bg-cyan-400" />
-                <div className="h-1 rounded-full bg-amber-400" />
-              </div>
-            </div>
-
+          <div className="w-full mt-3">
             {/* 7 Steps Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 mt-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
               {/* Step 1: MODALIDAD */}
               <div
                 onClick={() => setSelectedModality(1)}
@@ -522,7 +463,7 @@ export default function HomePageClient({ initialTournaments = [] }) {
             </div>
           </div>
 
-          {/* Downward pointing purple chevron pointer */}
+          {/* Downward pointing chevron connector */}
           <div className="w-10 h-10 -mt-5 z-20 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.8)] border-2 border-[#07040d]">
             <ChevronDown className="w-6 h-6 stroke-[3]" />
           </div>
@@ -760,16 +701,6 @@ export default function HomePageClient({ initialTournaments = [] }) {
             5. TORNEOS DISPONIBLES MASTER SECTION
             ========================================================= */}
         <section className="w-full flex flex-col gap-8">
-          {/* Neon stats ribbon — same Figma art as the landing cover */}
-          <Image
-            src="/figma/page22/stats_ribbon.png"
-            alt="Muchos hipódromos, torneos, 7 carreras, ranking en vivo, jugadas gratis"
-            width={2634}
-            height={292}
-            sizes="(max-width: 1360px) 100vw, 1360px"
-            className="w-full h-auto block select-none"
-            draggable={false}
-          />
           {/* Top Title Banner with Stripes */}
           <div className="flex flex-col items-center gap-3">
             <div className="w-full max-w-4xl py-4 px-6 rounded-2xl bg-white text-center shadow-[0_0_40px_rgba(255,255,255,0.25)]">
@@ -784,7 +715,7 @@ export default function HomePageClient({ initialTournaments = [] }) {
             </div>
 
             {/* Glowing Ribbon: TIENES 3 TICKETS GRATIS EN ESTOS TORNEOS */}
-            <div className="py-2 px-6 rounded-full bg-purple-950/80 border-2 border-purple-500 text-purple-200 font-black text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(168,85,247,0.4)] flex items-center gap-2">
+            <div className="py-2 px-6 rounded-full bg-white border-2 border-purple-500 text-purple-900 font-black text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(168,85,247,0.4)] flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
               <span>{t("figmaUI.page27.tournamentsBanner")}</span>
               <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
@@ -794,37 +725,19 @@ export default function HomePageClient({ initialTournaments = [] }) {
           {/* =======================================================
               SECTION A: TORNEOS DISPONIBLES HOY (Purple Theme)
               ======================================================= */}
-          <div className="w-full rounded-3xl border-2 border-purple-600 bg-[#0c0618] p-4 sm:p-6 shadow-[0_0_35px_rgba(147,51,234,0.35)] relative">
-            {/* Header with Trophy Badge & Carousel Navigation */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.8)]">
-                  <Trophy className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
-                  {t("figmaUI.page27.tournamentsToday")}
-                </h3>
+          <div className="w-full rounded-3xl border-2 border-purple-600 bg-white shadow-[0_0_35px_rgba(147,51,234,0.35)] relative overflow-visible">
+            {/* Colored header bar with trophy */}
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 rounded-t-[1.3rem] bg-gradient-to-r from-purple-700 via-purple-800 to-[#2a0a5e]">
+              <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.8)] shrink-0">
+                <Trophy className="w-5 h-5 text-white" />
               </div>
-
-              {/* Carousel Arrows */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setTodayPage((p) => Math.max(0, p - 1))}
-                  disabled={todayPage === 0}
-                  className="w-9 h-9 rounded-full bg-purple-900/60 border border-purple-500 text-purple-200 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-800 transition-all cursor-pointer shadow-[0_0_10px_rgba(147,51,234,0.3)]"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setTodayPage((p) => p + 1)}
-                  disabled={todayPage >= Math.ceil(todayList.length / 4) - 1}
-                  className="w-9 h-9 rounded-full bg-purple-900/60 border border-purple-500 text-purple-200 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-800 transition-all cursor-pointer shadow-[0_0_10px_rgba(147,51,234,0.3)]"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+              <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
+                {t("figmaUI.page27.tournamentsToday")}
+              </h3>
             </div>
 
+            {/* White body with cards */}
+            <div className="p-4 sm:p-6 bg-white rounded-b-[1.3rem]">
             {/* Grid of Tournament Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {todayList.slice(todayPage * 4, todayPage * 4 + 4).map((tItem, i) => (
@@ -835,6 +748,45 @@ export default function HomePageClient({ initialTournaments = [] }) {
                 />
               ))}
             </div>
+            </div>
+
+            {/* Mobile carousel arrows */}
+            <div className="flex md:hidden items-center justify-center gap-3 pb-4 bg-white rounded-b-[1.3rem]">
+              <button
+                onClick={() => setTodayPage((p) => Math.max(0, p - 1))}
+                disabled={todayPage === 0}
+                aria-label="Anterior"
+                className="w-9 h-9 rounded-full bg-black border-2 border-purple-500 text-purple-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setTodayPage((p) => p + 1)}
+                disabled={todayPage >= Math.ceil(todayList.length / 4) - 1}
+                aria-label="Siguiente"
+                className="w-9 h-9 rounded-full bg-black border-2 border-purple-500 text-purple-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Edge carousel arrows */}
+            <button
+              onClick={() => setTodayPage((p) => Math.max(0, p - 1))}
+              disabled={todayPage === 0}
+              aria-label="Anterior"
+              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-purple-500 text-purple-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(147,51,234,0.6)]"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setTodayPage((p) => p + 1)}
+              disabled={todayPage >= Math.ceil(todayList.length / 4) - 1}
+              aria-label="Siguiente"
+              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-purple-500 text-purple-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(147,51,234,0.6)]"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Section Connector */}
@@ -847,37 +799,19 @@ export default function HomePageClient({ initialTournaments = [] }) {
           {/* =======================================================
               SECTION B: PRÓXIMOS TORNEOS DISPONIBLES (Cyan Theme)
               ======================================================= */}
-          <div className="w-full rounded-3xl border-2 border-cyan-500 bg-[#06121c] p-4 sm:p-6 shadow-[0_0_35px_rgba(6,182,212,0.35)] relative">
-            {/* Header with Trophy Badge & Carousel Navigation */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500 text-black flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.8)]">
-                  <Trophy className="w-5 h-5 text-black" />
-                </div>
-                <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
-                  {t("figmaUI.page27.tournamentsUpcoming")}
-                </h3>
+          <div className="w-full rounded-3xl border-2 border-cyan-500 bg-white shadow-[0_0_35px_rgba(6,182,212,0.35)] relative overflow-visible">
+            {/* Colored header bar with trophy */}
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 rounded-t-[1.3rem] bg-gradient-to-r from-cyan-500 via-cyan-600 to-[#0a4a56]">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500 text-black flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.8)] shrink-0">
+                <Trophy className="w-5 h-5 text-black" />
               </div>
-
-              {/* Carousel Arrows */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setUpcomingPage((p) => Math.max(0, p - 1))}
-                  disabled={upcomingPage === 0}
-                  className="w-9 h-9 rounded-full bg-cyan-950/60 border border-cyan-400 text-cyan-200 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cyan-900 transition-all cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.3)]"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setUpcomingPage((p) => p + 1)}
-                  disabled={upcomingPage >= Math.ceil(upcomingList.length / 4) - 1}
-                  className="w-9 h-9 rounded-full bg-cyan-950/60 border border-cyan-400 text-cyan-200 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cyan-900 transition-all cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.3)]"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+              <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
+                {t("figmaUI.page27.tournamentsUpcoming")}
+              </h3>
             </div>
 
+            {/* White body with cards */}
+            <div className="p-4 sm:p-6 bg-white rounded-b-[1.3rem]">
             {/* Grid of Tournament Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {upcomingList.slice(upcomingPage * 4, upcomingPage * 4 + 4).map((tItem, i) => (
@@ -888,6 +822,45 @@ export default function HomePageClient({ initialTournaments = [] }) {
                 />
               ))}
             </div>
+            </div>
+
+            {/* Mobile carousel arrows */}
+            <div className="flex md:hidden items-center justify-center gap-3 pb-4 bg-white rounded-b-[1.3rem]">
+              <button
+                onClick={() => setUpcomingPage((p) => Math.max(0, p - 1))}
+                disabled={upcomingPage === 0}
+                aria-label="Anterior"
+                className="w-9 h-9 rounded-full bg-black border-2 border-cyan-400 text-cyan-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setUpcomingPage((p) => p + 1)}
+                disabled={upcomingPage >= Math.ceil(upcomingList.length / 4) - 1}
+                aria-label="Siguiente"
+                className="w-9 h-9 rounded-full bg-black border-2 border-cyan-400 text-cyan-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Edge carousel arrows */}
+            <button
+              onClick={() => setUpcomingPage((p) => Math.max(0, p - 1))}
+              disabled={upcomingPage === 0}
+              aria-label="Anterior"
+              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-cyan-400 text-cyan-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cyan-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.6)]"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setUpcomingPage((p) => p + 1)}
+              disabled={upcomingPage >= Math.ceil(upcomingList.length / 4) - 1}
+              aria-label="Siguiente"
+              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-cyan-400 text-cyan-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cyan-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.6)]"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Section Connector */}
@@ -900,37 +873,19 @@ export default function HomePageClient({ initialTournaments = [] }) {
           {/* =======================================================
               SECTION C: TORNEOS FINALIZADOS (Gold/Yellow Theme)
               ======================================================= */}
-          <div className="w-full rounded-3xl border-2 border-amber-400 bg-[#140e04] p-4 sm:p-6 shadow-[0_0_35px_rgba(251,191,36,0.35)] relative">
-            {/* Header with Trophy Badge & Carousel Navigation */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-400 text-black flex items-center justify-center shadow-[0_0_15px_rgba(251,191,36,0.8)]">
-                  <Trophy className="w-5 h-5 text-black" />
-                </div>
-                <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
-                  {t("figmaUI.page27.tournamentsFinished")}
-                </h3>
+          <div className="w-full rounded-3xl border-2 border-amber-400 bg-white shadow-[0_0_35px_rgba(251,191,36,0.35)] relative overflow-visible">
+            {/* Colored header bar with trophy */}
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 rounded-t-[1.3rem] bg-gradient-to-r from-amber-400 via-amber-500 to-[#5e4a00]">
+              <div className="w-10 h-10 rounded-xl bg-amber-400 text-black flex items-center justify-center shadow-[0_0_15px_rgba(251,191,36,0.8)] shrink-0">
+                <Trophy className="w-5 h-5 text-black" />
               </div>
-
-              {/* Carousel Arrows */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setFinishedPage((p) => Math.max(0, p - 1))}
-                  disabled={finishedPage === 0}
-                  className="w-9 h-9 rounded-full bg-amber-950/60 border border-amber-400 text-amber-200 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-900 transition-all cursor-pointer shadow-[0_0_10px_rgba(251,191,36,0.3)]"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setFinishedPage((p) => p + 1)}
-                  disabled={finishedPage >= Math.ceil(finishedList.length / 4) - 1}
-                  className="w-9 h-9 rounded-full bg-amber-950/60 border border-amber-400 text-amber-200 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-900 transition-all cursor-pointer shadow-[0_0_10px_rgba(251,191,36,0.3)]"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+              <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
+                {t("figmaUI.page27.tournamentsFinished")}
+              </h3>
             </div>
 
+            {/* White body with cards */}
+            <div className="p-4 sm:p-6 bg-white rounded-b-[1.3rem]">
             {/* Grid of Tournament Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {finishedList.slice(finishedPage * 4, finishedPage * 4 + 4).map((tItem, i) => (
@@ -941,6 +896,45 @@ export default function HomePageClient({ initialTournaments = [] }) {
                 />
               ))}
             </div>
+            </div>
+
+            {/* Mobile carousel arrows */}
+            <div className="flex md:hidden items-center justify-center gap-3 pb-4 bg-white rounded-b-[1.3rem]">
+              <button
+                onClick={() => setFinishedPage((p) => Math.max(0, p - 1))}
+                disabled={finishedPage === 0}
+                aria-label="Anterior"
+                className="w-9 h-9 rounded-full bg-black border-2 border-amber-400 text-amber-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setFinishedPage((p) => p + 1)}
+                disabled={finishedPage >= Math.ceil(finishedList.length / 4) - 1}
+                aria-label="Siguiente"
+                className="w-9 h-9 rounded-full bg-black border-2 border-amber-400 text-amber-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Edge carousel arrows */}
+            <button
+              onClick={() => setFinishedPage((p) => Math.max(0, p - 1))}
+              disabled={finishedPage === 0}
+              aria-label="Anterior"
+              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-amber-400 text-amber-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(251,191,36,0.6)]"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setFinishedPage((p) => p + 1)}
+              disabled={finishedPage >= Math.ceil(finishedList.length / 4) - 1}
+              aria-label="Siguiente"
+              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-amber-400 text-amber-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(251,191,36,0.6)]"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
         </section>
       </div>

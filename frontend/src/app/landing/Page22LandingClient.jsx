@@ -117,9 +117,9 @@ export default function Page22LandingClient() {
             </h2>
           </div>
           <div className="w-full mt-5 space-y-2" aria-hidden>
-            <div className="w-full h-3 rounded-sm bg-[#e041e8] shadow-[0_0_12px_#e041e8]" />
-            <div className="w-full h-3 rounded-sm bg-[#00e5ff] shadow-[0_0_12px_#00e5ff]" />
-            <div className="w-full h-3 rounded-sm bg-[#ffed00] shadow-[0_0_12px_#ffed00]" />
+            <div className="w-full h-3 bg-[#e041e8] shadow-[0_0_12px_#e041e8]" />
+            <div className="w-full h-3 bg-[#00e5ff] shadow-[0_0_12px_#00e5ff]" />
+            <div className="w-full h-3 bg-[#ffed00] shadow-[0_0_12px_#ffed00]" />
           </div>
 
           {/* Exact Figma modality cards with functional overlays */}
