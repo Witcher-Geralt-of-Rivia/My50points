@@ -65,6 +65,7 @@ def _guest_payload(user: User, guest_token: str | None = None) -> dict:
         "avatarColor": user.avatarColor,
         "isGuest": user.isGuest,
         "gameMode": user.gameMode,
+        "role": getattr(user, "role", "member") or "member",
         "guestToken": guest_token or user.guestToken,
         "createdAt": created.isoformat() if created else None,
         "expiresAt": guest_expires_at(created).isoformat(),
@@ -111,6 +112,7 @@ def login(body: LoginBody, db: Session = Depends(get_db)):
             "avatarColor": user.avatarColor,
             "isGuest": user.isGuest,
             "gameMode": user.gameMode,
+            "role": getattr(user, "role", "member") or "member",
         },
     }
 
@@ -152,6 +154,7 @@ def register(body: RegisterBody, db: Session = Depends(get_db)):
             "avatarColor": user.avatarColor,
             "isGuest": user.isGuest,
             "gameMode": user.gameMode,
+            "role": getattr(user, "role", "member") or "member",
         },
     }
 
@@ -174,6 +177,7 @@ def me(payload: dict = Depends(get_bearer_user), db: Session = Depends(get_db)):
             "avatarColor": user.avatarColor,
             "isGuest": user.isGuest,
             "gameMode": user.gameMode,
+            "role": getattr(user, "role", "member") or "member",
             "guestToken": user.guestToken if user.isGuest else None,
             "createdAt": user.createdAt.isoformat() if user.createdAt else None,
             "expiresAt": guest_expires_at(user.createdAt).isoformat() if user.isGuest else None,

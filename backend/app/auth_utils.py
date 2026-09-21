@@ -3,9 +3,14 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException
+from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.database import get_db
+from app.models import User
+
+ADMIN_ROLES = ("admin", "founder")
 
 STRATEGIES = ("full_point", "dual_point", "smart_pick")
 
@@ -109,15 +114,32 @@ def optional_bearer_user(authorization: str | None = Header(default=None)) -> di
     return payload
 
 
-def require_admin(x_admin_secret: str | None = Header(default=None, alias="x-admin-secret")):
+def require_admin(
+    x_admin_secret: str | None = Header(default=None, alias="x-admin-secret"),
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    """Admin gate: shared secret (server-to-server) OR Bearer JWT of an admin/founder user.
+
+    The shared secret must never ship in browser code — browsers authenticate
+    with their user JWT and the user's DB role. The secret path stays for
+    scripts/ops tooling that cannot hold a user session.
+    """
     expected = settings.admin_secret
+    if expected and x_admin_secret and secrets.compare_digest(x_admin_secret, expected):
+        return {"via": "secret"}
+    if isinstance(authorization, str) and authorization.startswith("Bearer "):
+        payload = verify_token(authorization[7:])
+        if payload and payload.get("userId"):
+            user = db.query(User).filter(User.id == payload["userId"]).first()
+            if user and getattr(user, "role", "member") in ADMIN_ROLES:
+                return {"via": "jwt", "userId": user.id}
     if not expected:
         raise HTTPException(
             status_code=503,
             detail="Admin access is disabled because ADMIN_SECRET is not configured."
         )
-    if not x_admin_secret or not secrets.compare_digest(x_admin_secret, expected):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    raise HTTPException(status_code=403, detail="Forbidden")
 
 
 def generate_guest_token() -> str:

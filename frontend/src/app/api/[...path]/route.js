@@ -26,6 +26,9 @@ async function proxy(request, context) {
   const headers = new Headers();
   request.headers.forEach((value, key) => {
     if (key.toLowerCase() === 'host') return;
+    // Never forward a client-supplied admin secret: browsers authenticate
+    // with their user JWT and the backend checks the DB role instead.
+    if (key.toLowerCase() === 'x-admin-secret') return;
     headers.set(key, value);
   });
 
