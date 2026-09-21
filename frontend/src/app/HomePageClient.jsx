@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import AnimateInView from "@/frontend/components/ui/AnimateInView";
 import FigmaTournamentCard from "@/frontend/components/home/FigmaTournamentCard";
+import LanguageToggle from "@/frontend/components/layout/LanguageToggle";
 import AgeVerificationModal from "@/frontend/components/modals/AgeVerificationModal";
 import GuestOnboardingModal from "@/frontend/components/modals/GuestOnboardingModal";
 import TournamentGuideModal from "@/frontend/components/modals/TournamentGuideModal";
@@ -290,6 +291,7 @@ export default function HomePageClient({ initialTournaments = [] }) {
               <Sparkles className="w-4 h-4 text-amber-400" />
               <span>PÁG. 22: NEON RACER</span>
             </Link>
+            <LanguageToggle />
           </div>
         </section>
 

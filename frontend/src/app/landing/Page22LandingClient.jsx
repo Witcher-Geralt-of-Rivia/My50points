@@ -31,7 +31,20 @@ export default function Page22LandingClient() {
       <GuestOnboardingModal isOpen={showGuestModal} onClose={() => setShowGuestModal(false)} />
 
       {/* ================= HERO — exact Figma slice ================= */}
-      <section className="w-full bg-black">
+      <section className="w-full bg-black relative overflow-hidden">
+        {/* Ambient fill: blurred stretch of the same art, so wide screens
+            get neon ambience instead of flat black bars beside the portrait hero */}
+        <div className="absolute inset-0" aria-hidden>
+          <Image
+            src="/figma/page22/p22_hero_full.png"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover opacity-60 blur-2xl scale-110 select-none"
+            draggable={false}
+          />
+          <div className="absolute inset-0 bg-black/55" />
+        </div>
         <div className="relative mx-auto w-[min(100%,78svh)] aspect-[2717/3916] [container-type:inline-size]">
           <Image
             src="/figma/page22/p22_hero_full.png"
