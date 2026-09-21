@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Ticket, CheckCircle2, ChevronDown } from 'lucide-react';
+import { Ticket, CheckCircle2, ChevronDown, Lock, Play } from 'lucide-react';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
 
 export default function TicketCarousel({
@@ -10,6 +10,9 @@ export default function TicketCarousel({
   ticketsState = {},
   totalRaces = 7,
   completedCount = 0,
+  lockedTickets = {},
+  isGuest = false,
+  onUnlockRequest,
 }) {
   const { language } = useLanguage();
   const isEn = language === 'en';
@@ -45,11 +48,15 @@ export default function TicketCarousel({
           const isSubmitted = ticketData.isSubmitted || false;
           const ticketPicksCount = ticketData.picksCount || (isActive ? completedCount : 0);
           const isComplete = ticketPicksCount >= totalRaces;
+          const isLocked = Boolean(lockedTickets[t.id]) || (isGuest && t.id > 1);
 
           let statusText = isEn ? "AVAILABLE" : "DISPONIBLE";
           let statusBg = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
 
-          if (isSubmitted) {
+          if (isLocked) {
+            statusText = isEn ? "LOCKED" : "BLOQUEADO";
+            statusBg = "bg-zinc-500/20 text-zinc-300 border-zinc-500/40";
+          } else if (isSubmitted) {
             statusText = isEn ? "SUBMITTED" : "USADO";
             statusBg = "bg-purple-600/30 text-purple-200 border-purple-400/50";
           } else if (ticketPicksCount > 0) {
@@ -62,13 +69,27 @@ export default function TicketCarousel({
               key={t.id}
               id={`ticket-voucher-${t.id}`}
               type="button"
-              onClick={() => onSelectTicket && onSelectTicket(t.id)}
-              className={`flex flex-col items-center p-5 rounded-2xl border-2 transition-all cursor-pointer relative overflow-hidden text-center group ${
-                isActive
-                  ? 'border-purple-400 bg-gradient-to-b from-[#1c1836] via-[#121124] to-[#0d0d17] shadow-[0_0_30px_rgba(168,85,247,0.35)] ring-2 ring-purple-400/50 scale-[1.02]'
-                  : 'border-white/15 bg-gradient-to-b from-slate-900/90 to-slate-950/90 hover:border-purple-400/40 hover:bg-slate-900'
+              onClick={() => {
+                if (isLocked) {
+                  if (!isGuest) onUnlockRequest?.(t.id);
+                  return;
+                }
+                if (onSelectTicket) onSelectTicket(t.id);
+              }}
+              className={`flex flex-col items-center p-5 rounded-2xl border-2 transition-all relative overflow-hidden text-center group ${
+                isLocked
+                  ? 'border-white/10 bg-slate-950/60 cursor-pointer'
+                  : isActive
+                  ? 'border-purple-400 bg-gradient-to-b from-[#1c1836] via-[#121124] to-[#0d0d17] shadow-[0_0_30px_rgba(168,85,247,0.35)] ring-2 ring-purple-400/50 scale-[1.02] cursor-pointer'
+                  : 'border-white/15 bg-gradient-to-b from-slate-900/90 to-slate-950/90 hover:border-purple-400/40 hover:bg-slate-900 cursor-pointer'
               }`}
             >
+              {isLocked && (
+                <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/70 border border-amber-400/50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                  <Lock className="w-3 h-3" />
+                  <span>{isEn ? "Ad" : "Anuncio"}</span>
+                </span>
+              )}
               {/* Notch Cutout Left & Right */}
               <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-950 border border-white/20" />
               <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-950 border border-white/20" />
@@ -101,6 +122,17 @@ export default function TicketCarousel({
                 >
                   {statusText}
                 </div>
+                {isLocked && !isGuest && (
+                  <span className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-400/15 border border-amber-400/50 px-3 py-1.5 text-[11px] font-black uppercase text-amber-300">
+                    <Play className="w-3.5 h-3.5" />
+                    <span>{isEn ? "Watch ad to unlock" : "Ver anuncio para desbloquear"}</span>
+                  </span>
+                )}
+                {isLocked && isGuest && (
+                  <span className="mt-2 block text-[11px] font-bold text-zinc-400">
+                    {isEn ? "Ticket 1 only — register for more" : "Solo Ticket 1 — regístrate para más"}
+                  </span>
+                )}
               </div>
 
               {/* Progress Bar & Counter */}

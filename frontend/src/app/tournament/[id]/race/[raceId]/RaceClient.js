@@ -16,6 +16,7 @@ import TicketSummary from '@/frontend/components/tournament/TicketSummary';
 import TicketConfirmation from '@/frontend/components/tournament/TicketConfirmation';
 
 const BACKEND_STRATEGY = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
+const UI_STRATEGY = { full_point: 'full', dual_point: 'dual', smart_pick: 'smart' };
 
 export default function RaceClient() {
   const params = useParams();
@@ -29,7 +30,69 @@ export default function RaceClient() {
   const [nowTs, setNowTs] = useState(() => Date.now());
   const [shares, setShares] = useState(null);
   const [saveState, setSaveState] = useState({ phase: 'idle', message: '' });
+  const [backendCtx, setBackendCtx] = useState(null);
+  const [savedTickets, setSavedTickets] = useState([]);
+  const [aggregateState, setAggregateState] = useState({ phase: 'idle', message: '' });
   const { token, ensureGuestSession, playAsGuest } = useAuth();
+
+  // Resolve the demo sheet against the live backend tournament (by track):
+  // backend tournament id + races with runner ids, for load + submit + aggregate.
+  const loadBackendCtx = useCallback(async () => {
+    const data = await fetchJson('/tournaments', { cache: 'no-store' });
+    const list = data?.tournaments || [];
+    const bt = list.find((t) => t.track === tournament.track);
+    if (!bt) throw new Error('Este hipódromo no tiene torneo activo en el backend');
+    const detail = await fetchJson(`/tournaments/${bt.slug}`, { cache: 'no-store' });
+    const races = (detail?.tournament?.races || []).map((r) => ({
+      id: r.id,
+      raceNumber: r.raceNumber,
+      horses: (r.horses || []).map((h) => ({ id: h.id, postPosition: h.postPosition })),
+    }));
+    const ctx = { tournamentId: detail?.tournament?.id ?? bt.id, races };
+    setBackendCtx(ctx);
+    return ctx;
+  }, [tournament.track]);
+
+  // Load already-saved picks for this race so refresh never loses them.
+  const loadSavedPicks = useCallback(async (ctx) => {
+    const res = await fetchAuthJson(`/tickets?tournamentId=${ctx.tournamentId}`, { cache: 'no-store' });
+    const all = res?.tickets || res || [];
+    const mine = Array.isArray(all) ? all.filter((t) => (t.ticketNumber ?? 1) === 1) : [];
+    setSavedTickets(mine);
+    const saved = mine.find((t) => t.raceNumber === race.number);
+    if (saved && Array.isArray(saved.picks) && saved.picks.length > 0) {
+      const backendRace = ctx.races.find((r) => r.raceNumber === race.number);
+      const postById = new Map((backendRace?.horses || []).map((h) => [h.id, h.postPosition]));
+      const mockIds = saved.picks
+        .map((backendId) => {
+          const pp = postById.get(backendId);
+          return race.horses.find((h) => h.postPosition === pp)?.id;
+        })
+        .filter(Boolean);
+      if (mockIds.length > 0) {
+        setSelectedHorses(mockIds);
+        if (UI_STRATEGY[saved.strategy]) {
+          setActiveStrategy(UI_STRATEGY[saved.strategy]);
+          setSaveState({ phase: 'saved', message: '' });
+        }
+      }
+    }
+    return mine;
+  }, [race]);
+
+  useEffect(() => {
+    if (!token) return;
+    let live = true;
+    (async () => {
+      try {
+        const ctx = await loadBackendCtx();
+        if (live) await loadSavedPicks(ctx);
+      } catch {
+        // Backend tournament unavailable — sheet stays local-only.
+      }
+    })();
+    return () => { live = false; };
+  }, [token, loadBackendCtx, loadSavedPicks]);
 
   // Live clock for the CIERRE EN countdown
   useEffect(() => {
@@ -83,20 +146,12 @@ export default function RaceClient() {
         setSaveState({ phase: 'needs-auth', message: '' });
         return;
       }
-      // Resolve the demo sheet against the live backend by track + race number,
-      // then map demo picks to real runner ids by post position.
-      const data = await fetchJson('/tournaments', { cache: 'no-store' });
-      const list = data?.tournaments || [];
-      const backendTournament = list.find((t) => t.track === tournament.track);
-      if (!backendTournament) {
-        throw new Error('Este hipódromo no tiene torneo activo en el backend');
-      }
-      const detail = await fetchJson(`/tournaments/${backendTournament.slug}`, { cache: 'no-store' });
-      const backendRace = (detail?.tournament?.races || []).find((r) => r.raceNumber === race.number);
+      const ctx = backendCtx || (await loadBackendCtx());
+      const backendRace = ctx.races.find((r) => r.raceNumber === race.number);
       if (!backendRace) {
         throw new Error('Esta carrera no existe en el torneo activo del backend');
       }
-      const byPost = new Map((backendRace.horses || []).map((h) => [h.postPosition, h.id]));
+      const byPost = new Map(backendRace.horses.map((h) => [h.postPosition, h.id]));
       const runnerIds = selectedHorses.map((id) => {
         const picked = race.horses.find((h) => h.id === id);
         return picked ? byPost.get(picked.postPosition) : undefined;
@@ -114,11 +169,64 @@ export default function RaceClient() {
         }),
       });
       setSaveState({ phase: 'saved', message: '' });
+      await loadSavedPicks(ctx);
       setShowConfirmation(true);
     } catch (err) {
       setSaveState({ phase: 'error', message: err?.message || 'No se pudo guardar el boleto' });
     }
-  }, [isPicksComplete, ensureGuestSession, token, tournament, race, selectedHorses, activeStrategy]);
+  }, [isPicksComplete, ensureGuestSession, token, backendCtx, loadBackendCtx, loadSavedPicks, race, selectedHorses, activeStrategy]);
+
+  // Lock the complete 7-race ticket via /aggregate (persists + survives refresh).
+  const readyCount = useMemo(() => {
+    const have = new Set(savedTickets.map((t) => t.raceNumber));
+    if (selectedHorses.length > 0) have.add(race.number);
+    return [1, 2, 3, 4, 5, 6, 7].filter((n) => have.has(n)).length;
+  }, [savedTickets, selectedHorses, race.number]);
+
+  const handleLockAggregate = useCallback(async () => {
+    setAggregateState({ phase: 'saving', message: '' });
+    try {
+      const session = await ensureGuestSession();
+      if (!session?.token && !token) {
+        setAggregateState({ phase: 'error', message: 'Inicia sesión o entra como invitado para bloquear el ticket' });
+        return;
+      }
+      const ctx = backendCtx || (await loadBackendCtx());
+      const byRace = new Map(savedTickets.map((t) => [t.raceNumber, t]));
+      const selections = [];
+      for (let n = 1; n <= 7; n += 1) {
+        const backendRace = ctx.races.find((r) => r.raceNumber === n);
+        if (!backendRace) throw new Error(`La carrera ${n} no existe en el torneo activo`);
+        if (n === race.number) {
+          if (selectedHorses.length === 0) throw new Error(`Falta tu selección de la carrera ${n} (esta página)`);
+          const byPost = new Map(backendRace.horses.map((h) => [h.postPosition, h.id]));
+          const runnerIds = selectedHorses.map((id) => {
+            const picked = race.horses.find((h) => h.id === id);
+            return picked ? byPost.get(picked.postPosition) : undefined;
+          });
+          if (runnerIds.some((v) => v == null)) throw new Error(`Selección inválida en la carrera ${n}`);
+          selections.push({ raceId: backendRace.id, strategy: BACKEND_STRATEGY[activeStrategy], picks: runnerIds });
+        } else {
+          const saved = byRace.get(n);
+          if (!saved || !Array.isArray(saved.picks) || saved.picks.length === 0) {
+            throw new Error(`Falta guardar la carrera ${n}: ábrela y confirma tu boleto`);
+          }
+          const validIds = new Set(backendRace.horses.map((h) => h.id));
+          for (const pid of saved.picks) {
+            if (!validIds.has(pid)) throw new Error(`Boleto guardado inválido en la carrera ${n}: vuelve a confirmarlo`);
+          }
+          selections.push({ raceId: backendRace.id, strategy: saved.strategy, picks: saved.picks });
+        }
+      }
+      const res = await fetchAuthJson('/tickets/aggregate', {
+        method: 'POST',
+        body: JSON.stringify({ tournamentId: ctx.tournamentId, ticketNumber: 1, selections }),
+      });
+      setAggregateState({ phase: 'saved', message: res?.message || 'Ticket de 7 carreras bloqueado' });
+    } catch (err) {
+      setAggregateState({ phase: 'error', message: err?.message || 'No se pudo bloquear el ticket' });
+    }
+  }, [ensureGuestSession, token, backendCtx, loadBackendCtx, savedTickets, race, selectedHorses, activeStrategy]);
 
   const handleCloseConfirmation = useCallback(() => {
     setShowConfirmation(false);
@@ -394,6 +502,39 @@ export default function RaceClient() {
                   <p className="text-[9px] font-bold opacity-70">Porcentaje acumulado</p>
                 </div>
               ))}
+            </div>
+
+            {/* 7-race aggregate lock — persists the complete ticket, survives refresh */}
+            <div className="rounded-xl border-2 border-[#f5b301]/50 bg-black p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-black uppercase tracking-wider text-white">
+                  Boleto torneo <span className="text-[#f5b301] font-mono">{readyCount}/7</span>
+                </p>
+                <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 via-cyan-400 to-[#f5b301] transition-all"
+                    style={{ width: `${Math.round((readyCount / 7) * 100)}%` }}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLockAggregate}
+                disabled={readyCount < 7 || aggregateState.phase === 'saving'}
+                className="mt-3 w-full rounded-xl bg-[#f5b301] hover:brightness-110 text-black text-sm font-black uppercase tracking-widest py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {aggregateState.phase === 'saving' ? 'Bloqueando…' : 'Bloquear ticket 7 carreras'}
+              </button>
+              {aggregateState.phase === 'saved' && (
+                <p className="mt-2 text-emerald-300 text-xs font-bold text-center" role="status">
+                  ✓ {aggregateState.message}
+                </p>
+              )}
+              {aggregateState.phase === 'error' && (
+                <p className="mt-2 text-red-300 text-xs font-bold text-center" role="alert">
+                  {aggregateState.message}
+                </p>
+              )}
             </div>
           </div>
 

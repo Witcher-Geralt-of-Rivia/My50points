@@ -29,6 +29,7 @@ import WorkspaceOnboardingTour from '@/frontend/components/onboarding/WorkspaceO
 import DividendsTableModal from '@/frontend/components/modals/DividendsTableModal';
 import RaceSummaryMatrix from '@/frontend/components/tournament/RaceSummaryMatrix';
 import TicketCarousel from '@/frontend/components/tournament/TicketCarousel';
+import TicketUnlockModal from '@/frontend/components/tournament/TicketUnlockModal';
 import FigmaStrategySlips from '@/frontend/components/tournament/FigmaStrategySlips';
 import FigmaFinalRanking from '@/frontend/components/tournament/FigmaFinalRanking';
 import { FileSpreadsheet } from 'lucide-react';
@@ -97,7 +98,7 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
   const params = useParams();
   const searchParams = useSearchParams();
   const tournamentSlug = tournamentSlugParam || params?.id;
-  const { token, isAuthenticated, ensureGuestSession, loading: authLoading } = useAuth();
+  const { token, isAuthenticated, ensureGuestSession, loading: authLoading, user } = useAuth();
   const fromQuery = searchParams.get('modality');
   const modalityId = isValidModalityId(fromQuery)
     ? fromQuery
@@ -122,6 +123,8 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
     ticketFromQuery >= 1 && ticketFromQuery <= 3 ? ticketFromQuery : 1,
   );
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [unlocks, setUnlocks] = useState({ 2: false, 3: false });
+  const [unlockModalFor, setUnlockModalFor] = useState(null);
   const [ticketMarkedComplete, setTicketMarkedComplete] = useState(false);
   const [showDividendsModal, setShowDividendsModal] = useState(false);
   const [gameAlert, setGameAlert] = useState({
@@ -272,7 +275,32 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
         setSubmittedTickets(ticketMap);
       })
       .catch(() => {});
+
+    // M2 ad entitlements for Tickets 2 & 3 (server-issued unlock records).
+    fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw.id}`)
+      .then((data) => {
+        if (!data) return;
+        setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
+      })
+      .catch(() => {});
   }, [token, tournamentRaw]);
+
+  const reloadUnlocks = useCallback(() => {
+    if (!token || !tournamentRaw) return;
+    fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw.id}`)
+      .then((data) => {
+        if (!data) return;
+        setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
+      })
+      .catch(() => {});
+  }, [token, tournamentRaw]);
+
+  const isGuestUser = Boolean(user?.isGuest);
+  const isTicketLocked = useCallback((ticketNum) => {
+    if (ticketNum <= 1) return false;
+    if (isGuestUser) return true;
+    return !unlocks[ticketNum];
+  }, [isGuestUser, unlocks]);
 
   const tournament = useMemo(() => {
     if (!tournamentRaw) return null;
@@ -489,11 +517,23 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
   );
 
   const handleSelectTicket = useCallback((ticketNum) => {
+    if (ticketNum > 1 && isGuestUser) {
+      setGameAlert({
+        show: true,
+        title: 'Ticket exclusivo',
+        message: 'Los invitados (Modalidad 4) juegan solo el Ticket 1. Regístrate gratis para desbloquear los boletos 2 y 3.',
+      });
+      return;
+    }
+    if (ticketNum > 1 && !unlocks[ticketNum]) {
+      setUnlockModalFor(ticketNum);
+      return;
+    }
     setActiveTicketNumber(ticketNum);
     setExpandedRace(null);
     setPicks({});
     setActiveStrategy('full');
-  }, []);
+  }, [isGuestUser, unlocks]);
 
   const confirmedCount = useMemo(() => {
     if (!tournament) return 0;
@@ -838,7 +878,26 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
             ticketsState={submittedTickets}
             totalRaces={tournament.races.length || 7}
             completedCount={confirmedCount}
+            lockedTickets={{ 2: isTicketLocked(2), 3: isTicketLocked(3) }}
+            isGuest={isGuestUser}
+            onUnlockRequest={(n) => setUnlockModalFor(n)}
           />
+          {unlockModalFor && (
+            <TicketUnlockModal
+              ticketNumber={unlockModalFor}
+              tournamentId={tournamentRaw?.id}
+              tournamentName={tournament?.name}
+              onClose={() => setUnlockModalFor(null)}
+              onUnlocked={() => {
+                reloadUnlocks();
+                setUnlockModalFor(null);
+                setActiveTicketNumber(unlockModalFor);
+                setExpandedRace(null);
+                setPicks({});
+                setActiveStrategy('full');
+              }}
+            />
+          )}
 
           {/* Figma 7-Race General Summary Matrix (Pages 28–36, 48–52, 76–80) */}
           <RaceSummaryMatrix

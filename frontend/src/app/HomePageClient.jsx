@@ -35,140 +35,6 @@ import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import { useAuth } from "@/frontend/contexts/AuthContext";
 import { useLiveTournamentsPoll } from "@/frontend/lib/hooks/useLiveTournamentsPoll";
 
-// Default realistic sample tournaments to ensure all 3 sections are rich and visual
-const MOCK_TOURNAMENTS_TODAY = [
-  {
-    id: "today-1",
-    slug: "parx-racing-live",
-    name: "PARX RACING",
-    track: "PARX RACING",
-    status: "active",
-    currentRace: 4,
-    date: new Date().toISOString(),
-    postTime: "14:00",
-    location: "Bensalem, PA",
-  },
-  {
-    id: "today-2",
-    slug: "gulfstream-park-live",
-    name: "GULFSTREAM PARK",
-    track: "GULFSTREAM PARK",
-    status: "live",
-    currentRace: 2,
-    date: new Date().toISOString(),
-    postTime: "14:30",
-    location: "Hallandale Beach, FL",
-  },
-  {
-    id: "today-3",
-    slug: "santa-anita-today",
-    name: "SANTA ANITA PARK",
-    track: "SANTA ANITA",
-    status: "active",
-    currentRace: 1,
-    date: new Date().toISOString(),
-    postTime: "15:00",
-    location: "Arcadia, CA",
-  },
-  {
-    id: "today-4",
-    slug: "saratoga-today",
-    name: "SARATOGA RACETRACK",
-    track: "SARATOGA",
-    status: "active",
-    currentRace: 5,
-    date: new Date().toISOString(),
-    postTime: "15:45",
-    location: "Saratoga Springs, NY",
-  },
-];
-
-const MOCK_TOURNAMENTS_UPCOMING = [
-  {
-    id: "up-1",
-    slug: "belmont-park-upcoming",
-    name: "BELMONT PARK",
-    track: "BELMONT PARK",
-    status: "upcoming",
-    date: new Date(Date.now() + 1000 * 60 * 35).toISOString(),
-    postTime: "16:00",
-    location: "Elmont, NY",
-  },
-  {
-    id: "up-2",
-    slug: "churchill-downs-upcoming",
-    name: "CHURCHILL DOWNS",
-    track: "CHURCHILL DOWNS",
-    status: "upcoming",
-    date: new Date(Date.now() + 1000 * 60 * 75).toISOString(),
-    postTime: "17:15",
-    location: "Louisville, KY",
-  },
-  {
-    id: "up-3",
-    slug: "del-mar-upcoming",
-    name: "DEL MAR RACING",
-    track: "DEL MAR",
-    status: "upcoming",
-    date: new Date(Date.now() + 1000 * 60 * 120).toISOString(),
-    postTime: "18:00",
-    location: "Del Mar, CA",
-  },
-  {
-    id: "up-4",
-    slug: "keeneland-upcoming",
-    name: "KEENELAND RACE COURSE",
-    track: "KEENELAND",
-    status: "upcoming",
-    date: new Date(Date.now() + 1000 * 60 * 180).toISOString(),
-    postTime: "19:00",
-    location: "Lexington, KY",
-  },
-];
-
-const MOCK_TOURNAMENTS_FINISHED = [
-  {
-    id: "fin-1",
-    slug: "monmouth-park-finished",
-    name: "MONMOUTH PARK",
-    track: "MONMOUTH PARK",
-    status: "finished",
-    date: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    postTime: "11:00",
-    location: "Oceanport, NJ",
-  },
-  {
-    id: "fin-2",
-    slug: "pimlico-finished",
-    name: "PIMLICO RACE COURSE",
-    track: "PIMLICO",
-    status: "finished",
-    date: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-    postTime: "12:00",
-    location: "Baltimore, MD",
-  },
-  {
-    id: "fin-3",
-    slug: "woodbine-finished",
-    name: "WOODBINE RACETRACK",
-    track: "WOODBINE",
-    status: "finished",
-    date: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-    postTime: "12:30",
-    location: "Toronto, ON",
-  },
-  {
-    id: "fin-4",
-    slug: "aqueduct-finished",
-    name: "AQUEDUCT RACETRACK",
-    track: "AQUEDUCT",
-    status: "finished",
-    date: new Date(Date.now() - 1000 * 60 * 480).toISOString(),
-    postTime: "13:00",
-    location: "Queens, NY",
-  },
-];
-
 export default function HomePageClient({ initialTournaments = [] }) {
   const { t, language } = useLanguage();
   const { isAuthenticated, user } = useAuth();
@@ -197,26 +63,24 @@ export default function HomePageClient({ initialTournaments = [] }) {
     onLoadingChange: (loading) => setHomeLoading(loading),
   });
 
-  // Categorize tournaments
+  // Categorize tournaments — backend data only. No mock cards: every card
+  // links to a real tournament, and empty sections say so honestly.
   const todayList = useMemo(() => {
-    const fromApi = liveTournaments.filter(
+    return liveTournaments.filter(
       (t) => t.status === "active" || t.status === "live"
     );
-    return fromApi.length > 0 ? fromApi : MOCK_TOURNAMENTS_TODAY;
   }, [liveTournaments]);
 
   const upcomingList = useMemo(() => {
-    const fromApi = liveTournaments.filter(
+    return liveTournaments.filter(
       (t) => t.status === "upcoming" || t.status === "scheduled" || (!t.status && t.date)
     );
-    return fromApi.length > 0 ? fromApi : MOCK_TOURNAMENTS_UPCOMING;
   }, [liveTournaments]);
 
   const finishedList = useMemo(() => {
-    const fromApi = liveTournaments.filter(
+    return liveTournaments.filter(
       (t) => t.status === "finished" || t.status === "completed"
     );
-    return fromApi.length > 0 ? fromApi : MOCK_TOURNAMENTS_FINISHED;
   }, [liveTournaments]);
 
   return (
@@ -747,6 +611,11 @@ export default function HomePageClient({ initialTournaments = [] }) {
                   index={todayPage * 4 + i + 1}
                 />
               ))}
+              {todayList.length === 0 && !homeLoading && (
+                <p className="col-span-full text-center text-sm text-zinc-500 py-8">
+                  {t("figmaUI.page27.noTournamentsToday")}
+                </p>
+              )}
             </div>
             </div>
 
@@ -821,6 +690,11 @@ export default function HomePageClient({ initialTournaments = [] }) {
                   index={upcomingPage * 4 + i + 1}
                 />
               ))}
+              {upcomingList.length === 0 && !homeLoading && (
+                <p className="col-span-full text-center text-sm text-zinc-500 py-8">
+                  {t("figmaUI.page27.noTournamentsUpcoming")}
+                </p>
+              )}
             </div>
             </div>
 
@@ -895,6 +769,11 @@ export default function HomePageClient({ initialTournaments = [] }) {
                   index={finishedPage * 4 + i + 1}
                 />
               ))}
+              {finishedList.length === 0 && !homeLoading && (
+                <p className="col-span-full text-center text-sm text-zinc-500 py-8">
+                  {t("figmaUI.page27.noTournamentsFinished")}
+                </p>
+              )}
             </div>
             </div>
 

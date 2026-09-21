@@ -135,7 +135,8 @@ const raceClasses = [
 function generateRaces(tournamentIndex) {
   const races = [];
   const tournamentStart = 3;
-  for (let i = 0; i < 10; i++) {
+  // Strict 7-race tournament format (Admin rule): never 8/9/10.
+  for (let i = 0; i < 7; i++) {
     const horseCount = 8 + Math.floor(Math.random() * 5);
     const distance = distances[i % distances.length];
     const surface = i < 5 ? surfaces[i % 2] : pickRandom(surfaces);
@@ -146,7 +147,7 @@ function generateRaces(tournamentIndex) {
     races.push({
       id: `race-${tournamentIndex}-${i}`,
       number: i + 1,
-      name: i === 9
+      name: i === 6
         ? ['Gulfstream Park Handicap', 'Santa Anita Derby', 'Kentucky Derby Prep'][tournamentIndex]
         : `Race ${i + 1}`,
       class: raceClasses[i % raceClasses.length],
@@ -175,8 +176,8 @@ export const tournaments = [
     prizePool: 50000,
     entryFee: 50,
     racesCompleted: 3,
-    totalRaces: 10,
-    description: 'El evento de carreras mas importante del sur de Florida con los mejores pura sangre compitiendo en 8 emocionantes carreras.',
+    totalRaces: 7,
+    description: 'El evento de carreras mas importante del sur de Florida con los mejores pura sangre compitiendo en 7 emocionantes carreras.',
     races: generateRaces(0),
   },
   {
@@ -191,7 +192,7 @@ export const tournaments = [
     prizePool: 75000,
     entryFee: 75,
     racesCompleted: 0,
-    totalRaces: 10,
+    totalRaces: 7,
     description: 'Vive las carreras de clase mundial en el gran hipodromo con impresionantes vistas a las montanas de San Gabriel.',
     races: generateRaces(1),
   },
@@ -207,7 +208,7 @@ export const tournaments = [
     prizePool: 100000,
     entryFee: 100,
     racesCompleted: 0,
-    totalRaces: 10,
+    totalRaces: 7,
     description: 'Serie preparatoria para las Rosas en el historico hogar del Kentucky Derby.',
     races: generateRaces(2),
   },
