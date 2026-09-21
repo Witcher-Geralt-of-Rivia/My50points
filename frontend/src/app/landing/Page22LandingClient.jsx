@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Globe } from "lucide-react";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import GuestOnboardingModal from "@/frontend/components/modals/GuestOnboardingModal";
 
@@ -54,26 +53,15 @@ export default function Page22LandingClient() {
             draggable={false}
           />
 
-          {/* LANGUAGE — solid pill covering the baked pill, with globe + label */}
+          {/* LANGUAGE — invisible hotspot over the baked pill (design stays clean);
+              click toggles language + shows the confirmation toast */}
           <button
             type="button"
             onClick={handleToggleLanguage}
             aria-label="Toggle language"
-            className="absolute z-10 flex items-center justify-center rounded-full border-[#a855f7] bg-[#0e0918] text-white font-black shadow-[0_0_22px_rgba(168,85,247,0.7)] hover:bg-purple-950 active:scale-95 transition-all cursor-pointer"
-            style={{
-              top: "0.8%",
-              right: "2%",
-              width: "26%",
-              height: "5.2%",
-              borderWidth: "3px",
-              fontSize: "3.4cqw",
-              gap: "2cqw",
-              letterSpacing: "0.18em",
-            }}
-          >
-            <Globe style={{ width: "4.6cqw", height: "4.6cqw" }} strokeWidth={2.2} />
-            <span>LANGUAGE</span>
-          </button>
+            className="absolute z-10 cursor-pointer bg-transparent border-0"
+            style={{ top: "0.8%", right: "2%", width: "26%", height: "5.2%" }}
+          />
 
           {/* Strategy hotspots → cómo jugar */}
           <a href="#como-jugar" aria-label="Full Point" className="absolute" style={{ left: "11.5%", top: "10.8%", width: "25%", height: "6.4%" }} />
