@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Globe } from "lucide-react";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import GuestOnboardingModal from "@/frontend/components/modals/GuestOnboardingModal";
 
@@ -26,10 +27,10 @@ export default function Page22LandingClient() {
 
   const isEn = language === "en";
 
-  const handleToggleLanguage = () => {
-    const next = isEn ? "es" : "en";
-    setLanguage(next);
-    setLangToast(next);
+  const handleToggleLanguage = (next) => {
+    const target = next || (isEn ? "es" : "en");
+    setLanguage(target);
+    setLangToast(target);
     setTimeout(() => setLangToast(null), 2600);
   };
 
@@ -53,15 +54,35 @@ export default function Page22LandingClient() {
             draggable={false}
           />
 
-          {/* LANGUAGE — invisible hotspot over the baked pill (design stays clean);
-              click toggles language + shows the confirmation toast */}
-          <button
-            type="button"
-            onClick={handleToggleLanguage}
-            aria-label="Toggle language"
-            className="absolute z-10 cursor-pointer bg-transparent border-0"
-            style={{ top: "0.8%", right: "2%", width: "26%", height: "5.2%" }}
-          />
+          {/* LANGUAGE — clean fixed-size toggle pinned over the baked pill area.
+              Solid background fully covers the baked artwork beneath. */}
+          <div
+            className="absolute z-10 flex items-center gap-1 rounded-full border-2 border-[#a855f7] bg-[#0e0918]/95 p-1 shadow-[0_0_22px_rgba(168,85,247,0.7)]"
+            style={{ top: "1.4%", right: "2.5%" }}
+          >
+            <Globe className="w-4 h-4 text-white/80 ml-2" />
+            {[
+              { code: "es", label: "ES" },
+              { code: "en", label: "EN" },
+            ].map((o) => {
+              const active = language === o.code;
+              return (
+                <button
+                  key={o.code}
+                  type="button"
+                  onClick={() => {
+                    if (!active) handleToggleLanguage(o.code);
+                  }}
+                  aria-label={o.code === "es" ? "Español" : "English"}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-black tracking-widest transition-all cursor-pointer ${
+                    active ? "bg-[#a855f7] text-white" : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
 
           {/* Strategy hotspots → cómo jugar */}
           <a href="#como-jugar" aria-label="Full Point" className="absolute" style={{ left: "11.5%", top: "10.8%", width: "25%", height: "6.4%" }} />
