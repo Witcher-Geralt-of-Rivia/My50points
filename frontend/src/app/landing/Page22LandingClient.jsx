@@ -17,6 +17,7 @@ import GuestOnboardingModal from "@/frontend/components/modals/GuestOnboardingMo
 export default function Page22LandingClient() {
   const { language, setLanguage, t } = useLanguage();
   const [showGuestModal, setShowGuestModal] = useState(false);
+  const [langToast, setLangToast] = useState(null);
 
   useEffect(() => {
     try {
@@ -25,6 +26,13 @@ export default function Page22LandingClient() {
   }, []);
 
   const isEn = language === "en";
+
+  const handleToggleLanguage = () => {
+    const next = isEn ? "es" : "en";
+    setLanguage(next);
+    setLangToast(next);
+    setTimeout(() => setLangToast(null), 2600);
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#06030c] text-white font-sans overflow-x-hidden pb-16">
@@ -59,9 +67,10 @@ export default function Page22LandingClient() {
 
           {/* LANGUAGE — functional replica pinned over the baked pill */}
           <button
-            onClick={() => setLanguage(isEn ? "es" : "en")}
+            type="button"
+            onClick={handleToggleLanguage}
             aria-label="Toggle language"
-            className="absolute flex items-center justify-center rounded-full border-[#a855f7] bg-[#0e0918] text-white font-black tracking-widest shadow-[0_0_22px_rgba(168,85,247,0.7)] hover:bg-purple-950 transition-colors cursor-pointer"
+            className="absolute z-10 flex items-center justify-center rounded-full border-[#a855f7] bg-[#0e0918] text-white font-black tracking-widest shadow-[0_0_22px_rgba(168,85,247,0.7)] hover:bg-purple-950 active:scale-95 transition-all cursor-pointer"
             style={{
               top: "1.1%",
               right: "2.6%",
@@ -85,6 +94,17 @@ export default function Page22LandingClient() {
           <a href="#modalidades" aria-label="Modalidades" className="absolute" style={{ left: "13%", top: "43.1%", width: "3.2%", height: "2.4%" }} />
           <a href="#torneos-en-vivo" aria-label="Torneos en vivo" className="absolute" style={{ left: "17.5%", top: "43.1%", width: "3.2%", height: "2.4%" }} />
           <a href="#como-jugar" aria-label="Cómo jugar" className="absolute" style={{ left: "21.8%", top: "43.1%", width: "3.2%", height: "2.4%" }} />
+
+          {/* Language-switch confirmation toast */}
+          {langToast && (
+            <div
+              role="status"
+              className="absolute left-1/2 -translate-x-1/2 rounded-full border-2 border-[#a855f7] bg-black/85 px-[5cqw] py-[2cqw] text-white font-black whitespace-nowrap shadow-[0_0_22px_rgba(168,85,247,0.7)]"
+              style={{ bottom: "24%", fontSize: "3.6cqw" }}
+            >
+              {langToast === "en" ? "English enabled — scroll down" : "Español activado — desplázate"}
+            </div>
+          )}
         </div>
       </section>
 
