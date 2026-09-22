@@ -550,6 +550,23 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
     return tournament.races.filter((r) => submittedForRace(r.id)).length;
   }, [tournament, submittedForRace]);
 
+  // Race summary must reflect what the BACKEND persisted for the active
+  // ticket, not just the in-memory editing buffer — otherwise a confirmed
+  // 7/7 ticket rendered "SIN PICKS / Vacío" after a refresh.
+  const effectivePicks = useMemo(() => {
+    const merged = {};
+    for (const race of tournament?.races || []) {
+      const sub = submittedForRace(race.id);
+      if (sub && Array.isArray(sub.picks) && sub.picks.length > 0) {
+        merged[race.id] = sub.picks;
+      }
+    }
+    for (const [raceId, arr] of Object.entries(picks || {})) {
+      if (Array.isArray(arr) && arr.length > 0) merged[raceId] = arr;
+    }
+    return merged;
+  }, [tournament, submittedForRace, picks]);
+
   // P0-2: when all 7 races are confirmed for the active ticket, persist the
   // complete ticket via /aggregate (TournamentTicket root). One attempt per
   // ticket per data state; manual retry button below on failure. Refresh-safe
@@ -1013,7 +1030,7 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               const target = tournament.races[idx];
               if (target) toggleRace(target.id);
             }}
-            picks={picks}
+            picks={effectivePicks}
             onOpenDividends={() => setShowDividendsModal(true)}
           />
 
@@ -1025,6 +1042,13 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               submittedTickets={submittedTickets}
               expandedRaceId={expandedRace}
               onSelectRace={toggleRace}
+              lockedTickets={{ 2: isTicketLocked(2), 3: isTicketLocked(3) }}
+              confirmedTickets={{
+                1: aggregateStatus[1] === 'locked',
+                2: aggregateStatus[2] === 'locked',
+                3: aggregateStatus[3] === 'locked',
+              }}
+              onUnlockRequest={(n) => setUnlockModalFor(n)}
             />
           </div>
 

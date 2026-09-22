@@ -54,27 +54,34 @@ class ClaimGuestBody(BaseModel):
     guestToken: str
 
 
+def _has_ad_unlock(db, user, tournament_id: int, ticket_number: int | None = None) -> bool:
+    """True when an ad-unlock record exists for this user/tournament.
+
+    `ticket_number=None` asks the tournament-wide question (M2 scope);
+    passing a number asks the per-ticket question (M4 scope).
+    """
+    q = db.query(TournamentTicket).filter(
+        TournamentTicket.userId == user.id,
+        TournamentTicket.tournamentId == tournament_id,
+        TournamentTicket.isAdUnlocked == True,  # noqa: E712
+    )
+    if ticket_number is not None:
+        q = q.filter(TournamentTicket.ticketNumber == ticket_number)
+    return q.first() is not None
+
+
 def _require_ticket_entitlement(db, user, tournament_id: int, ticket_number: int) -> None:
     """Enforce M2/M4 ticket entitlements (Phase 1 §9).
 
     - Ticket 1 is always free (guests and registered).
-    - Tickets 2 & 3 each require their own completed ad proof, recorded by
-      POST /ad-unlock. Guests (M4) unlock each extra ticket with 1 ad view,
-      exactly like registered (M2) accounts.
+    - M2 (registered): ONE completed ad per tournament unlocks Tickets 2 & 3.
+    - M4 (guest): each extra ticket needs its own completed ad.
     """
     if ticket_number <= 1:
         return
-    existing = (
-        db.query(TournamentTicket)
-        .filter(
-            TournamentTicket.userId == user.id,
-            TournamentTicket.tournamentId == tournament_id,
-            TournamentTicket.ticketNumber == ticket_number,
-            TournamentTicket.isAdUnlocked == True,  # noqa: E712
-        )
-        .first()
-    )
-    if not existing:
+    # M4 guests are scoped per ticket; M2 accounts are scoped per tournament.
+    scope = ticket_number if user.isGuest else None
+    if not _has_ad_unlock(db, user, tournament_id, scope):
         raise HTTPException(
             status_code=402,
             detail=f"Ticket #{ticket_number} requires completing a sponsor ad to unlock.",
@@ -453,30 +460,41 @@ def unlock_ad_ticket(
     # the full ad view. Direct calls without watching always fail here.
     _verify_ad_token(body.adToken, user.id, body.tournamentId, body.ticketNumber)
 
-    agg_ticket = (
-        db.query(TournamentTicket)
-        .filter(
-            TournamentTicket.userId == user.id,
-            TournamentTicket.tournamentId == body.tournamentId,
-            TournamentTicket.ticketNumber == body.ticketNumber,
+    # Entitlement scope (Phase 1 §9): M2 accounts get ONE ad per tournament
+    # that unlocks Tickets 2 & 3; M4 guests unlock one ticket per ad.
+    granted = [body.ticketNumber] if user.isGuest else [2, 3]
+    stamp = int(datetime.now(timezone.utc).timestamp())
+    for num in granted:
+        agg_ticket = (
+            db.query(TournamentTicket)
+            .filter(
+                TournamentTicket.userId == user.id,
+                TournamentTicket.tournamentId == body.tournamentId,
+                TournamentTicket.ticketNumber == num,
+            )
+            .first()
         )
-        .first()
-    )
-    if not agg_ticket:
-        agg_ticket = TournamentTicket(
-            userId=user.id,
-            tournamentId=body.tournamentId,
-            ticketNumber=body.ticketNumber,
-            status="draft",
-            isAdUnlocked=True,
-            adUnlockToken=f"ad_reward_{user.id}_{body.tournamentId}_{body.ticketNumber}_{int(datetime.now(timezone.utc).timestamp())}",
-        )
-        db.add(agg_ticket)
-    else:
-        agg_ticket.isAdUnlocked = True
+        if not agg_ticket:
+            agg_ticket = TournamentTicket(
+                userId=user.id,
+                tournamentId=body.tournamentId,
+                ticketNumber=num,
+                status="draft",
+                isAdUnlocked=True,
+                adUnlockToken=f"ad_reward_{user.id}_{body.tournamentId}_{num}_{stamp}",
+            )
+            db.add(agg_ticket)
+        else:
+            agg_ticket.isAdUnlocked = True
 
     db.commit()
-    return {"unlocked": True, "ticketNumber": body.ticketNumber, "tournamentId": body.tournamentId}
+    return {
+        "unlocked": True,
+        "ticketNumber": body.ticketNumber,
+        "tournamentId": body.tournamentId,
+        "unlockedTickets": granted,
+        "scope": "ticket" if user.isGuest else "tournament",
+    }
 
 
 @router.post("/claim-guest")
@@ -672,10 +690,11 @@ def ticket_unlocks(
     payload: dict = Depends(get_bearer_user),
     db: Session = Depends(get_db),
 ):
-    """Ad-entitlement status for Tickets 2 & 3 (M2: ad-unlocked, M4/guests: never).
+    """Ad-entitlement + confirmed status for Tickets 1-3.
 
-    Ticket 1 is always available. Guests are restricted to Ticket 1 by the
-    submit endpoints regardless of this map.
+    Ticket 1 is always available. M2 (registered) earns a tournament-wide
+    unlock from a single ad, so one record entitles Tickets 2 AND 3. M4
+    (guest) stays per ticket: each extra ticket needs its own ad.
     """
     user = db.query(User).filter(User.id == payload["userId"]).first()
     if not user:
@@ -690,6 +709,10 @@ def ticket_unlocks(
         .all()
     )
     unlocked = {r.ticketNumber: bool(r.isAdUnlocked) for r in rows}
+    # M2 (registered): one ad per tournament unlocks every extra ticket, so a
+    # single unlock record entitles Tickets 2 AND 3. M4 guests stay per ticket.
+    if not user.isGuest and any(unlocked.values()):
+        unlocked = {2: True, 3: True}
     confirmed_rows = (
         db.query(TournamentTicket.ticketNumber)
         .filter(

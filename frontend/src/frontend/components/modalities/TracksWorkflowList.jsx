@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ModalityPageShell from "@/frontend/components/modalities/ModalityPageShell";
 import ModalityWorkspaceChrome from "@/frontend/components/modality-workspace/ModalityWorkspaceChrome";
 import TracksWorkflowAccordion from "@/frontend/components/modalities/TracksWorkflowAccordion";
 import TracksWorkflowTicketsBridge from "@/frontend/components/modalities/TracksWorkflowTicketsBridge";
 import TrackTicketsPanel from "@/frontend/components/modalities/TrackTicketsPanel";
-import EmbeddedTicketRaces from "@/frontend/components/onboarding/EmbeddedTicketRaces";
 import ModalityWelcomeSummaryPanel from "@/frontend/components/modality-welcome/ModalityWelcomeSummaryPanel";
 import GuestClaimTicketsDrawer from "@/frontend/components/modalities/GuestClaimTicketsDrawer";
 import FinishedTournamentResultsDashboard from "@/frontend/components/modalities/FinishedTournamentResultsDashboard";
@@ -79,6 +78,7 @@ function GuestExpirationBanner() {
 
 export default function TracksWorkflowList({ modalityId, tracks, loading, t, embedded = false, onTrackClick = null }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const expandFromUrl = searchParams.get("track");
   const ticketFromUrl = Number.parseInt(searchParams.get("ticket") || "", 10);
   const workflow = useTracksWorkflowState(expandFromUrl, ticketFromUrl);
@@ -142,23 +142,16 @@ export default function TracksWorkflowList({ modalityId, tracks, loading, t, emb
     displayedTracks = historyTracks.length > 0 ? historyTracks : tracks.filter(t => t.finished);
   }
 
+  // ONE authoritative ticket flow: track cards route into the canonical
+  // /tournament/[slug] experience (backend aggregate + backend confirmed
+  // state + server ad entitlement). The legacy embedded engine below is no
+  // longer the entry point — the neon grid (default view) never rendered it,
+  // which is why the workspace was unreachable from here.
   const handleAccordionTrackClick = onTrackClick || ((track) => {
-    if (track?.slug) {
-      if (workflow.expandedSlug === track.slug) {
-        workflow.toggleTrack(track.slug);
-      } else {
-        const activeTrack = tracks.find(t => t.slug === track.slug);
-        if (activeTrack) {
-          workflow.selectTrackTicket(activeTrack, 1);
-          setTimeout(() => {
-            const el = document.getElementById("active-track-drawer");
-            if (el) {
-              el.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-          }, 100);
-        }
-      }
-    }
+    if (!track?.slug) return;
+    router.push(
+      `/tournament/${encodeURIComponent(track.slug)}?modality=${modalityId}&ticket=1`,
+    );
   });
 
   const surfaceClass = `tracks-workflow-surface${
@@ -341,23 +334,18 @@ export default function TracksWorkflowList({ modalityId, tracks, loading, t, emb
                           inline={true}
                         />
 
-                        {/* Inline Races Gameplay Section */}
-                        {/* El slug del torneo llega en `slug` (`tournamentSlug` no
-                            lo rellena nadie), así que sin este respaldo la
-                            condición era siempre falsa y el tablero de caballos
-                            no se pintaba nunca: no se podía apostar. */}
+                        {/* Gameplay lives in the canonical /tournament/[slug]
+                            flow (backend aggregate ticket + backend confirmed
+                            state + server ad entitlement). This panel links
+                            there instead of running a second ticket engine. */}
                         {(activeTrack.tournamentSlug || activeTrack.slug) && (
-                          <div id="inline-races-section" className="mt-4 border-t border-zinc-800 pt-6 scroll-mt-20">
-                            <EmbeddedTicketRaces
-                              key={`${workflow.expandedSlug}-${workflow.activeTicketNum}`}
-                              tournamentSlug={activeTrack.tournamentSlug || activeTrack.slug}
-                              ticketNum={workflow.activeTicketNum || 1}
-                              trackSlug={workflow.expandedSlug}
-                              trackName={activeTrack.name || ""}
-                              onUsageChange={() => {
-                                workflow.bumpUsage();
-                              }}
-                            />
+                          <div id="inline-races-section" className="mt-4 border-t border-zinc-200 pt-6 scroll-mt-20 text-center">
+                            <Link
+                              href={`/tournament/${encodeURIComponent(activeTrack.tournamentSlug || activeTrack.slug)}?modality=${modalityId}&ticket=${workflow.activeTicketNum || 1}`}
+                              className="inline-flex items-center justify-center rounded-xl bg-[#7c3aed] hover:brightness-110 text-white text-xs font-black uppercase tracking-widest px-6 py-3 cursor-pointer"
+                            >
+                              {t("gameModalities.enterTournament")}
+                            </Link>
                           </div>
                         )}
                       </div>

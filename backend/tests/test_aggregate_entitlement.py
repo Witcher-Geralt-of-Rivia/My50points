@@ -180,3 +180,109 @@ def test_ad_unlock_then_aggregate_persists_7_races(client, db):
         TournamentTicket.tournamentId == t.id,
         TournamentTicket.ticketNumber == 2).all()
     assert len(aggs) == 1
+
+
+def test_m2_one_ad_per_tournament_unlocks_all_three_tickets(client, db):
+    """M2 business rule: ONE completed ad per tournament unlocks Tickets 2 & 3.
+
+    The audit found the ad unlocking only the ticket it was watched for, so a
+    registered player was asked for a second ad before Ticket 3.
+    """
+    user = _member(db, "m2_one_ad")
+    headers = {"Authorization": f"Bearer {sign_token(user.id, user.username)}"}
+    tourn, races = _santa(db)
+
+    before = client.get(f"/api/tickets/unlocks?tournamentId={tourn.id}", headers=headers).json()
+    assert before["ticket2"] is False and before["ticket3"] is False
+
+    # One legitimate, fully-watched ad on Ticket 2.
+    res = client.post(
+        "/api/tickets/ad-unlock",
+        headers=headers,
+        json={
+            "tournamentId": tourn.id,
+            "ticketNumber": 2,
+            "adToken": _aged_challenge(user.id, tourn.id, 2),
+        },
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["scope"] == "tournament"
+
+    after = client.get(f"/api/tickets/unlocks?tournamentId={tourn.id}", headers=headers).json()
+    assert after["ticket2"] is True
+    assert after["ticket3"] is True, "one M2 ad must unlock every extra ticket"
+
+    # Ticket 3 submits with NO second ad.
+    res = client.post(
+        "/api/tickets/aggregate",
+        headers=headers,
+        json={"tournamentId": tourn.id, "ticketNumber": 3, "selections": _selections(races)},
+    )
+    assert res.status_code == 200, res.text
+    assert db.query(TournamentTicket).filter(
+        TournamentTicket.userId == user.id,
+        TournamentTicket.tournamentId == tourn.id,
+        TournamentTicket.ticketNumber == 3,
+        TournamentTicket.status == "confirmed",
+    ).first() is not None
+
+
+def test_m2_tournament_unlock_does_not_leak_to_other_tournaments(client, db):
+    """The tournament-wide M2 grant stays scoped to the tournament it was earned in."""
+    user = _member(db, "m2_scope")
+    headers = {"Authorization": f"Bearer {sign_token(user.id, user.username)}"}
+    tourn, _ = _santa(db)
+    other = db.query(Tournament).filter(Tournament.slug != tourn.slug).first()
+    assert other is not None
+
+    client.post(
+        "/api/tickets/ad-unlock",
+        headers=headers,
+        json={"tournamentId": tourn.id, "ticketNumber": 2,
+              "adToken": _aged_challenge(user.id, tourn.id, 2)},
+    )
+    elsewhere = client.get(f"/api/tickets/unlocks?tournamentId={other.id}", headers=headers).json()
+    assert elsewhere["ticket2"] is False
+    assert elsewhere["ticket3"] is False
+
+
+def test_m4_guest_still_needs_one_ad_per_ticket(client, db):
+    """M4 keeps per-ticket entitlement: unlocking Ticket 2 must not free Ticket 3."""
+    guest = _member(db, "m4_per_ticket", is_guest=True)
+    headers = {"Authorization": f"Bearer {sign_token(guest.id, guest.username, is_guest=True)}"}
+    tourn, races = _santa(db)
+
+    res = client.post(
+        "/api/tickets/ad-unlock",
+        headers=headers,
+        json={"tournamentId": tourn.id, "ticketNumber": 2,
+              "adToken": _aged_challenge(guest.id, tourn.id, 2)},
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["scope"] == "ticket"
+
+    unlocks = client.get(f"/api/tickets/unlocks?tournamentId={tourn.id}", headers=headers).json()
+    assert unlocks["ticket2"] is True
+    assert unlocks["ticket3"] is False, "M4 must still buy Ticket 3 with its own ad"
+
+    # Ticket 3 is refused until its own ad is watched...
+    res = client.post(
+        "/api/tickets/aggregate",
+        headers=headers,
+        json={"tournamentId": tourn.id, "ticketNumber": 3, "selections": _selections(races)},
+    )
+    assert res.status_code == 402
+
+    # ...and accepted afterwards, so guests still reach all three tickets.
+    client.post(
+        "/api/tickets/ad-unlock",
+        headers=headers,
+        json={"tournamentId": tourn.id, "ticketNumber": 3,
+              "adToken": _aged_challenge(guest.id, tourn.id, 3)},
+    )
+    res = client.post(
+        "/api/tickets/aggregate",
+        headers=headers,
+        json={"tournamentId": tourn.id, "ticketNumber": 3, "selections": _selections(races)},
+    )
+    assert res.status_code == 200, res.text
