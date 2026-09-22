@@ -17,7 +17,7 @@ import { useAchievementCards } from '@/frontend/contexts/AchievementCardsContext
 import { useRankingUpdates } from '@/frontend/contexts/RankingUpdatesContext';
 import FloatingTicketBar from '@/frontend/components/tournament/FloatingTicketBar';
 import AppPageHeader from '@/frontend/components/layout/AppPageHeader';
-import TournamentRanking from '@/frontend/components/tournament/TournamentRanking';
+import FigmaLiveRankingTable from '@/frontend/components/tournament/FigmaLiveRankingTable';
 import RealTimeRanking from '@/frontend/components/tournament/RealTimeRanking';
 import TournamentChat from '@/frontend/components/tournament/TournamentChat';
 
@@ -40,6 +40,7 @@ export default function RankingClient() {
   const { checkGlobalRank, checkTournamentRank } = useRankingUpdates();
   const [tournament, setTournament] = useState(null);
   const [rankingData, setRankingData] = useState(null);
+  const [rawEntries, setRawEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ranking');
   const [activeTicketIndex, setActiveTicketIndex] = useState(0);
@@ -54,6 +55,7 @@ export default function RankingClient() {
         fetchJson(`/tournaments/${slug}/leaderboard`),
       ]);
       setTournament(tournamentRes.tournament);
+      setRawEntries(lbRes.leaderboard || []);
       const mapped = mapTournamentLeaderboard(
         lbRes.leaderboard || [],
         user?.id,
@@ -75,6 +77,7 @@ export default function RankingClient() {
     } catch {
       setTournament(null);
       setRankingData(null);
+      setRawEntries([]);
     } finally {
       setLoading(false);
     }
@@ -83,7 +86,7 @@ export default function RankingClient() {
   useEffect(() => {
     setLoading(true);
     loadRanking();
-    const id = setInterval(loadRanking, 12000);
+    const id = setInterval(loadRanking, 15000);
     return () => clearInterval(id);
   }, [loadRanking]);
 
@@ -182,7 +185,13 @@ export default function RankingClient() {
         <AnimatePresence mode="wait">
           {activeTab === 'ranking' && (
             <motion.div key="ranking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <TournamentRanking data={rankingData} />
+              <FigmaLiveRankingTable
+                entries={rawEntries}
+                tournament={tournament}
+                currentUserId={user?.id}
+                onRefresh={loadRanking}
+                onOpenChat={() => setActiveTab('chat')}
+              />
             </motion.div>
           )}
           {activeTab === 'live' && (

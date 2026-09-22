@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Play, CheckCircle2, AlertCircle, ChevronDown, Trophy } from "lucide-react";
 import AppPageHeader from "@/frontend/components/layout/AppPageHeader";
 import { fetchJson } from "@/frontend/lib/api/client";
-import { fetchAdminJson } from "@/frontend/lib/api/adminClient";
+import { fetchAdminJson, isAdminRole } from "@/frontend/lib/api/adminClient";
 import { useAuth } from "@/frontend/contexts/AuthContext";
 
 const RACE_COUNT = 7;
@@ -106,7 +106,8 @@ function ScoredTicketsTable({ rows }) {
 }
 
 export default function SimulatePageClient() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const isAdmin = isAdminRole(user);
   const [tournaments, setTournaments] = useState([]);
   const [selectedSlug, setSelectedSlug] = useState("");
   const [tournamentDetail, setTournamentDetail] = useState(null);
@@ -252,13 +253,14 @@ export default function SimulatePageClient() {
     setRaceResults(defaults);
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !isAdmin) {
     return (
       <div className="sim-page">
         <AppPageHeader title="SIMULATE" subtitle="Simulacion de resultados y puntuacion" />
         <p className="sim-empty">
-          Inicia sesion (invitado o registrado), completa tus picks en Torneos, luego vuelve aqui para
-          publicar resultados.
+          {!isAuthenticated
+            ? "Inicia sesion con una cuenta de administrador para publicar resultados."
+            : "Tu cuenta no tiene rol de administrador. Pide a un administrador que la autorice."}
         </p>
       </div>
     );

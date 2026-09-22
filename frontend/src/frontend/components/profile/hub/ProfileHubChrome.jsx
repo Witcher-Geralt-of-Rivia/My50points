@@ -18,6 +18,7 @@ import ModalityNavRail from "@/frontend/components/modality-workspace/ModalityNa
 import FreeTicketsOverviewBar from "@/frontend/components/modality-workspace/FreeTicketsOverviewBar";
 import TournamentActionBar from "@/frontend/components/modality-workspace/TournamentActionBar";
 import ProfileHubHeader from "@/frontend/components/profile/hub/ProfileHubHeader";
+import ProfileHubNews from "@/frontend/components/profile/hub/ProfileHubNews";
 import ProfileAdTorneoSlot from "@/frontend/components/profile/hub/ProfileAdTorneoSlot";
 import ProfileTicketHistoryPanel from "@/frontend/components/profile/hub/ProfileTicketHistoryPanel";
 import ProfileHubFooter from "@/frontend/components/profile/hub/ProfileHubFooter";
@@ -124,8 +125,9 @@ export default function ProfileHubChrome({ profile, userProfile }) {
         />
 
         <div className="profile-hub-page__ads">
-          <ProfileAdTorneoSlot slotLabel="a" />
-          <ProfileAdTorneoSlot slotLabel="b" />
+          <ProfileHubNews t={t} />
+          <ProfileAdTorneoSlot slotLabel="a" modalityId={modalityId} />
+          <ProfileAdTorneoSlot slotLabel="b" modalityId={modalityId} />
         </div>
 
         <FreeTicketsOverviewBar

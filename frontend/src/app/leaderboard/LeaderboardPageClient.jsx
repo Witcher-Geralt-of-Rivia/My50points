@@ -248,6 +248,7 @@ export default function LeaderboardPageClient() {
           initials: (entry.username || "??").slice(0, 2).toUpperCase(),
           color: entry.avatarColor || "#7c3aed",
           gameMode: entry.gameMode || 2,
+          isGuest: Boolean(entry.isGuest),
           points: entry.totalPoints || 0,
           winRate: entry.winRate || 0,
           streak: entry.bestStreak || 0,
@@ -274,6 +275,7 @@ export default function LeaderboardPageClient() {
           initials: (entry.username || "??").slice(0, 2).toUpperCase(),
           color: entry.avatarColor || "#7c3aed",
           gameMode: entry.gameMode || 2,
+          isGuest: Boolean(entry.isGuest),
           points: entry.totalPoints || 0,
           winRate: 0,
           streak: entry.bestStreak || 0,
@@ -564,10 +566,10 @@ export default function LeaderboardPageClient() {
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             {[
-              { id: 1, label: "RANKING TICKETS", subLabel: "M1 PAGO", color: "bg-purple/10 border-purple-light/40 text-purple-light hover:border-purple-light", activeBg: "bg-purple text-white border-purple-light shadow-[0_0_15px_rgba(168,85,247,0.35)]" },
+              { id: 3, label: "RANKING TICKETS", subLabel: "M1 PAGO", color: "bg-purple/10 border-purple-light/40 text-purple-light hover:border-purple-light", activeBg: "bg-purple text-white border-purple-light shadow-[0_0_15px_rgba(168,85,247,0.35)]" },
               { id: 2, label: "RANKING TICKETS", subLabel: "M2 GRATIS", color: "bg-cyan/10 border-cyan/40 text-cyan hover:border-cyan", activeBg: "bg-cyan text-white border-cyan shadow-[0_0_15px_rgba(6,182,212,0.35)]" },
-              { id: 3, label: "RANKING TICKETS", subLabel: "M3 ESPECIAL", color: "bg-yellow-500/10 border-yellow-500/40 text-yellow-400 hover:border-yellow-500", activeBg: "bg-yellow-500 text-black border-yellow shadow-[0_0_15px_rgba(234,179,8,0.35)]" },
-              { id: 4, label: "RANKING TICKETS", subLabel: "M4 INVITADO", color: "bg-purple-950/10 border-purple-500/30 text-purple-300 hover:border-purple-500", activeBg: "bg-white text-purple border-purple border-2 shadow-[0_0_15px_rgba(255,255,255,0.4)]" },
+              { id: 4, label: "RANKING TICKETS", subLabel: "M3 ESPECIAL", color: "bg-yellow-500/10 border-yellow-500/40 text-yellow-400 hover:border-yellow-500", activeBg: "bg-yellow-500 text-black border-yellow shadow-[0_0_15px_rgba(234,179,8,0.35)]" },
+              { id: 1, label: "RANKING TICKETS", subLabel: "M4 INVITADO", color: "bg-purple-950/10 border-purple-500/30 text-purple-300 hover:border-purple-500", activeBg: "bg-white text-purple border-purple border-2 shadow-[0_0_15px_rgba(255,255,255,0.4)]" },
             ].map((m) => {
               const isChecked = selectedModes.includes(m.id);
               return (
@@ -795,7 +797,7 @@ export default function LeaderboardPageClient() {
                               )}
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <ModeBadge gameMode={player.gameMode} />
+                              <ModeBadge gameMode={player.gameMode} isGuest={player.isGuest} />
                             </div>
                           </div>
                         </div>
@@ -950,7 +952,7 @@ function PodiumCard({ player, position, t }) {
 
         <h3 className="font-bold text-lg text-white mb-1">{player.displayName || player.username}</h3>
         <div className="flex justify-center mb-2">
-          <ModeBadge gameMode={player.gameMode} />
+          <ModeBadge gameMode={player.gameMode} isGuest={player.isGuest} />
         </div>
 
         <p className="text-2xl font-black leaderboard-page__points mb-2">

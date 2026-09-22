@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -26,6 +26,13 @@ import {
 } from '@/frontend/lib/gameModalities';
 import { markTrackTicketUsed } from '@/frontend/lib/trackTicketUsage';
 import WorkspaceOnboardingTour from '@/frontend/components/onboarding/WorkspaceOnboardingTour';
+import DividendsTableModal from '@/frontend/components/modals/DividendsTableModal';
+import RaceSummaryMatrix from '@/frontend/components/tournament/RaceSummaryMatrix';
+import TicketCarousel from '@/frontend/components/tournament/TicketCarousel';
+import TicketUnlockModal from '@/frontend/components/tournament/TicketUnlockModal';
+import FigmaStrategySlips from '@/frontend/components/tournament/FigmaStrategySlips';
+import FigmaFinalRanking from '@/frontend/components/tournament/FigmaFinalRanking';
+import { FileSpreadsheet } from 'lucide-react';
 
 const STRATEGY_MAP = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
 const STRATEGY_REVERSE = { full_point: 'full', dual_point: 'dual', smart_pick: 'smart' };
@@ -54,10 +61,10 @@ function normalizeRace(race) {
 const RACES_PER_TOURNAMENT = 7;
 
 function normalizeTournament(t) {
-  const races = (t.races || [])
+  const sorted = (t.races || [])
     .slice()
-    .sort((a, b) => (a.raceNumber || 0) - (b.raceNumber || 0))
-    .slice(0, RACES_PER_TOURNAMENT);
+    .sort((a, b) => (a.raceNumber || 0) - (b.raceNumber || 0));
+  const races = sorted.length >= RACES_PER_TOURNAMENT ? sorted.slice(-RACES_PER_TOURNAMENT) : sorted;
   return {
     ...t,
     totalRaces: RACES_PER_TOURNAMENT,
@@ -91,7 +98,7 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
   const params = useParams();
   const searchParams = useSearchParams();
   const tournamentSlug = tournamentSlugParam || params?.id;
-  const { token, isAuthenticated, ensureGuestSession, loading: authLoading } = useAuth();
+  const { token, isAuthenticated, ensureGuestSession, loading: authLoading, user } = useAuth();
   const fromQuery = searchParams.get('modality');
   const modalityId = isValidModalityId(fromQuery)
     ? fromQuery
@@ -116,7 +123,12 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
     ticketFromQuery >= 1 && ticketFromQuery <= 3 ? ticketFromQuery : 1,
   );
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [unlocks, setUnlocks] = useState({ 2: false, 3: false });
+  const [unlockModalFor, setUnlockModalFor] = useState(null);
+  const [aggregateStatus, setAggregateStatus] = useState({});
+  const [aggregateLocking, setAggregateLocking] = useState({});
   const [ticketMarkedComplete, setTicketMarkedComplete] = useState(false);
+  const [showDividendsModal, setShowDividendsModal] = useState(false);
   const [gameAlert, setGameAlert] = useState({
     show: false,
     title: "",
@@ -260,12 +272,53 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
         if (!data?.tickets) return;
         const ticketMap = {};
         for (const t of data.tickets) {
-          ticketMap[`${t.raceId}-${t.ticketNumber}`] = t;
+          // A persisted row means the race was submitted: mark it so the
+          // carousel/sheet show USADO (not EN PROCESO) right after refresh.
+          ticketMap[`${t.raceId}-${t.ticketNumber}`] = {
+            ...t,
+            isSubmitted: true,
+            picksCount: Array.isArray(t.picks) ? t.picks.length : 0,
+          };
         }
         setSubmittedTickets(ticketMap);
       })
       .catch(() => {});
+
+    // M2/M4 ad entitlements + confirmed (aggregate-locked) state.
+    fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw.id}`)
+      .then((data) => {
+        if (!data) return;
+        setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
+        if (data.confirmed) {
+          setAggregateStatus((p) => {
+            const next = { ...p };
+            for (const [num, on] of Object.entries(data.confirmed)) {
+              if (on) next[num] = 'locked';
+            }
+            return next;
+          });
+        }
+      })
+      .catch(() => {});
   }, [token, tournamentRaw]);
+
+  const reloadUnlocks = useCallback(() => {
+    if (!token || !tournamentRaw) return;
+    fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw.id}`)
+      .then((data) => {
+        if (!data) return;
+        setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
+      })
+      .catch(() => {});
+  }, [token, tournamentRaw]);
+
+  const isGuestUser = Boolean(user?.isGuest);
+  // Ticket 1 free for everyone; Tickets 2 & 3 need their own ad unlock each
+  // (M2 and M4 guests alike — enforced server-side too).
+  const isTicketLocked = useCallback((ticketNum) => {
+    if (ticketNum <= 1) return false;
+    return !unlocks[ticketNum];
+  }, [unlocks]);
 
   const tournament = useMemo(() => {
     if (!tournamentRaw) return null;
@@ -482,16 +535,90 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
   );
 
   const handleSelectTicket = useCallback((ticketNum) => {
+    if (ticketNum > 1 && isTicketLocked(ticketNum)) {
+      setUnlockModalFor(ticketNum);
+      return;
+    }
     setActiveTicketNumber(ticketNum);
     setExpandedRace(null);
     setPicks({});
     setActiveStrategy('full');
-  }, []);
+  }, [isTicketLocked]);
 
   const confirmedCount = useMemo(() => {
     if (!tournament) return 0;
     return tournament.races.filter((r) => submittedForRace(r.id)).length;
   }, [tournament, submittedForRace]);
+
+  // Race summary must reflect what the BACKEND persisted for the active
+  // ticket, not just the in-memory editing buffer — otherwise a confirmed
+  // 7/7 ticket rendered "SIN PICKS / Vacío" after a refresh.
+  const effectivePicks = useMemo(() => {
+    const merged = {};
+    for (const race of tournament?.races || []) {
+      const sub = submittedForRace(race.id);
+      if (sub && Array.isArray(sub.picks) && sub.picks.length > 0) {
+        merged[race.id] = sub.picks;
+      }
+    }
+    for (const [raceId, arr] of Object.entries(picks || {})) {
+      if (Array.isArray(arr) && arr.length > 0) merged[raceId] = arr;
+    }
+    return merged;
+  }, [tournament, submittedForRace, picks]);
+
+  // P0-2: when all 7 races are confirmed for the active ticket, persist the
+  // complete ticket via /aggregate (TournamentTicket root). One attempt per
+  // ticket per data state; manual retry button below on failure. Refresh-safe
+  // because submittedTickets reload from the backend on mount.
+  const aggregateTried = useRef({});
+  const [aggregateRetryTick, setAggregateRetryTick] = useState(0);
+  useEffect(() => {
+    if (!tournament || !token || !tournamentRaw?.id) return;
+    if (confirmedCount < (tournament.totalRaces || 7)) return;
+    if (aggregateStatus[activeTicketNumber] === 'locked') return;
+    // Never re-submit once the tournament is closed: the persisted state
+    // above already shows the locked ticket, no raw 400s.
+    const submittable = ['upcoming', 'live', 'open'].includes(tournament.status);
+    if (!submittable) return;
+    const triedKey = `${activeTicketNumber}:${confirmedCount}:${aggregateRetryTick}`;
+    if (aggregateTried.current[triedKey]) return;
+    aggregateTried.current[triedKey] = true;
+    let live = true;
+    (async () => {
+      setAggregateLocking((p) => ({ ...p, [activeTicketNumber]: true }));
+      try {
+        const selections = tournament.races.map((r, idx) => {
+          const sub = submittedForRace(r.id);
+          return {
+            raceId: r.id,
+            raceOrder: idx + 1,
+            strategy: sub.strategy,
+            picks: sub.picks,
+          };
+        });
+        await fetchAuthJson('/tickets/aggregate', {
+          method: 'POST',
+          body: JSON.stringify({
+            tournamentId: tournamentRaw.id,
+            ticketNumber: activeTicketNumber,
+            selections,
+          }),
+        });
+        if (live) {
+          setAggregateStatus((p) => ({ ...p, [activeTicketNumber]: 'locked' }));
+          setAggregateLocking((p) => ({ ...p, [activeTicketNumber]: false }));
+        }
+      } catch (err) {
+        if (live) {
+          const msg = err?.data?.detail || err?.message || 'No se pudo bloquear el ticket';
+          setAggregateStatus((p) => ({ ...p, [activeTicketNumber]: `error:${typeof msg === 'string' ? msg : 'Error'}` }));
+          setAggregateLocking((p) => ({ ...p, [activeTicketNumber]: false }));
+        }
+      }
+    })();
+    return () => { live = false; };
+  }, [confirmedCount, tournament, token, tournamentRaw, activeTicketNumber, submittedForRace, aggregateStatus, aggregateRetryTick]);
 
   const pendingCount = useMemo(() => {
     if (!tournament) return 0;
@@ -632,21 +759,33 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
 
         <div className="relative app-page pt-6 pb-8">
           <AppPageHeader title={tournament.name} className="mb-6" />
-          {onClose ? (
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors bg-transparent border-0 cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+                <span>Volver a hipódromos</span>
+              </button>
+            ) : (
+              <Link href={backHref} className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors">
+                <ChevronLeft size={16} />
+                <span>{returnPath ? 'Volver a hipódromos' : 'Volver a Torneos'}</span>
+              </Link>
+            )}
+
             <button
+              id="tournament-view-dividends-btn"
               type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors bg-transparent border-0 cursor-pointer"
+              onClick={() => setShowDividendsModal(true)}
+              className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/40 hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all cursor-pointer"
             >
-              <ChevronLeft size={16} />
-              <span>Volver a hipódromos</span>
+              <FileSpreadsheet size={14} />
+              <span>Tabla de Dividendos Fijos</span>
             </button>
-          ) : (
-            <Link href={backHref} className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors">
-              <ChevronLeft size={16} />
-              <span>{returnPath ? 'Volver a hipódromos' : 'Volver a Torneos'}</span>
-            </Link>
-          )}
+          </div>
 
           {ticketIsFullyComplete ? (
             <div className="mb-6 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 to-teal-950/40 px-5 py-4 backdrop-blur-sm">
@@ -812,6 +951,89 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
             </motion.div>
           </div>
 
+          {/* Aggregate lock status: complete 7-race ticket persisted via /aggregate */}
+          <div
+            className={`rounded-xl border px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold ${
+              aggregateStatus[activeTicketNumber] === 'locked'
+                ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                : String(aggregateStatus[activeTicketNumber] || '').startsWith('error:')
+                  ? 'border-red-500/50 bg-red-500/10 text-red-300'
+                  : 'border-white/10 bg-white/[0.03] text-white/50'
+            }`}
+            role="status"
+          >
+            <span className="uppercase tracking-widest">
+              Boleto {activeTicketNumber} · {confirmedCount}/{tournament.races.length || 7} carreras
+            </span>
+            {aggregateLocking[activeTicketNumber] && <span>Bloqueando ticket completo…</span>}
+            {aggregateStatus[activeTicketNumber] === 'locked' && <span>✓ Ticket 7 carreras bloqueado y guardado</span>}
+            {String(aggregateStatus[activeTicketNumber] || '').startsWith('error:') && (
+              <>
+                <span>{String(aggregateStatus[activeTicketNumber]).slice(6)}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAggregateStatus((p) => {
+                      const next = { ...p };
+                      delete next[activeTicketNumber];
+                      return next;
+                    });
+                    setAggregateRetryTick((t) => t + 1);
+                  }}
+                  className="underline underline-offset-2 hover:text-white cursor-pointer"
+                >
+                  Reintentar
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Figma Ticket Lifecycle Carousel (Pages 11–20, 37–44, 88–90) */}
+          <TicketCarousel
+            activeTicketId={activeTicketNumber}
+            onSelectTicket={handleSelectTicket}
+            ticketsState={submittedTickets}
+            totalRaces={tournament.races.length || 7}
+            completedCount={confirmedCount}
+            lockedTickets={{ 2: isTicketLocked(2), 3: isTicketLocked(3) }}
+            confirmedTickets={{
+              1: aggregateStatus[1] === 'locked',
+              2: aggregateStatus[2] === 'locked',
+              3: aggregateStatus[3] === 'locked',
+            }}
+            isGuest={isGuestUser}
+            onUnlockRequest={(n) => setUnlockModalFor(n)}
+          />
+          {unlockModalFor && (
+            <TicketUnlockModal
+              ticketNumber={unlockModalFor}
+              tournamentId={tournamentRaw?.id}
+              tournamentName={tournament?.name}
+              onClose={() => setUnlockModalFor(null)}
+              onUnlocked={() => {
+                reloadUnlocks();
+                setUnlockModalFor(null);
+                setActiveTicketNumber(unlockModalFor);
+                setExpandedRace(null);
+                setPicks({});
+                setActiveStrategy('full');
+              }}
+            />
+          )}
+
+          {/* Figma 7-Race General Summary Matrix (Pages 28–36, 48–52, 76–80) */}
+          <RaceSummaryMatrix
+            tournament={tournament}
+            races={tournament.races}
+            currentRaceIndex={tournament.races.findIndex((r) => r.id === (currentRace?.id || expandedRace))}
+            onSelectRace={(idx) => {
+              const target = tournament.races[idx];
+              if (target) toggleRace(target.id);
+            }}
+            picks={effectivePicks}
+            onOpenDividends={() => setShowDividendsModal(true)}
+          />
+
           <div className="tour-step-races-bar">
             <TournamentTicketSheet
               races={tournament.races}
@@ -820,6 +1042,13 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               submittedTickets={submittedTickets}
               expandedRaceId={expandedRace}
               onSelectRace={toggleRace}
+              lockedTickets={{ 2: isTicketLocked(2), 3: isTicketLocked(3) }}
+              confirmedTickets={{
+                1: aggregateStatus[1] === 'locked',
+                2: aggregateStatus[2] === 'locked',
+                3: aggregateStatus[3] === 'locked',
+              }}
+              onUnlockRequest={(n) => setUnlockModalFor(n)}
             />
           </div>
 
@@ -830,6 +1059,20 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               animate={{ opacity: 1, y: 0 }}
               className="space-y-4"
             >
+              {/* Figma Strategy Selection Slips (Pages 57–64, 75, 81–82, 100) */}
+              <FigmaStrategySlips
+                strategy={isRaceConfirmed(currentRace.id) ? (confirmedStrategyForRace(currentRace.id) || 'full') : activeStrategy}
+                onSelectStrategy={!isRaceConfirmed(currentRace.id) ? handleStrategyChange : undefined}
+                race={currentRace}
+                horses={currentRace.horses}
+                selectedHorseIds={isRaceConfirmed(currentRace.id) ? (submittedForRace(currentRace.id)?.picks || []) : (picks[currentRace.id] || [])}
+                onToggleHorse={!isRaceConfirmed(currentRace.id) ? handlePickHorse : undefined}
+                onOpenRaceModal={() => {
+                  const el = document.getElementById(`race-${currentRace.id}`);
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+              />
+
               <RaceCard
                 race={currentRace}
                 activeStrategy={isRaceConfirmed(currentRace.id) ? (confirmedStrategyForRace(currentRace.id) || 'full') : activeStrategy}
@@ -945,6 +1188,12 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               </motion.div>
             </div>
           </div>
+
+          {/* Official Figma Final Ranking Podium & Leaderboard (Pages 6–9, 63, 65) */}
+          <FigmaFinalRanking
+            tournamentName={tournament.name}
+            isFinished={tournament.status === 'finished' || allRacesPlayed}
+          />
         </div>
       </div>
 
@@ -963,6 +1212,12 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
       <AnimatePresence>
         {gameAlert.show && renderGameAlertModal()}
       </AnimatePresence>
+
+      <DividendsTableModal
+        isOpen={showDividendsModal}
+        onClose={() => setShowDividendsModal(false)}
+        tournamentSlug={tournament?.slug}
+      />
     </div>
     </ModalityScope>
   );

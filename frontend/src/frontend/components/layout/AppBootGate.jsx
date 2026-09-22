@@ -12,18 +12,32 @@ import {
   isValidModalityId,
 } from "@/frontend/lib/gameModalities";
 
-/** Match CSS loader animation (--splash-loader-duration: 2.4s). */
-const MIN_SPLASH_MS = 2400;
-const EXIT_MS = 520;
+/** Match CSS loader animation */
+const MIN_SPLASH_MS = 800;
+const EXIT_MS = 400;
 
 /**
  * Pages that bypass the cover-page gate.
  * Auth routes and the cover itself are always accessible directly.
  */
-const BYPASS_PATHS = ["/", "/login", "/register", "/modalidades", "/how-to-play", "/guia-torneo"];
+const BYPASS_PATHS = [
+  "/",
+  "/landing",
+  "/comenzar",
+  "/tournaments",
+  "/tournament",
+  "/leaderboard",
+  "/hall-of-fame",
+  "/login",
+  "/register",
+  "/modalidades",
+  "/how-to-play",
+  "/guia-torneo",
+];
 function shouldBypassCover(pathname) {
+  if (!pathname) return true;
   return (
-    BYPASS_PATHS.includes(pathname) ||
+    BYPASS_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
     pathname.startsWith("/api/")
   );
 }
@@ -47,23 +61,24 @@ export default function AppBootGate({ children }) {
     try {
       const verified = localStorage.getItem("fiftypoints_age_verified") === "true";
       setAgeVerified(verified);
-      // Regla del cliente: PRIMERO el aviso de mayor de edad, NUNCA el logo antes.
-      // El splash (logo animado) solo aparece tras verificar la edad y al caer en la portada ("/").
-      setShowSplash(verified && pathname === "/");
+      const splashSeen = sessionStorage.getItem("fiftypoints_splash_seen") === "true";
+      if (verified && pathname === "/" && !splashSeen) {
+        setShowSplash(true);
+        sessionStorage.setItem("fiftypoints_splash_seen", "true");
+      } else {
+        setShowSplash(false);
+      }
     } catch (e) {
       console.warn("Age verification storage check failed:", e);
-      setAgeVerified(false);
+      setAgeVerified(true);
+      setShowSplash(false);
     }
   }, [pathname]);
 
-  // Reset cover-passed on fresh page load if landing on cover page so splash always shows.
   // If a ?modality=X param is in the URL, persist it so the blue card is
   // highlighted when the user arrives at /inicio after the cover.
   useEffect(() => {
     try {
-      if (pathname === "/") {
-        clearCoverPassed();
-      }
       const params = new URLSearchParams(window.location.search);
       const m = params.get("modality");
       if (m && isValidModalityId(m)) {
@@ -74,21 +89,21 @@ export default function AppBootGate({ children }) {
     }
   }, [pathname]);
 
-  // Safety fallback: force hide splash screen after 4.5 seconds regardless of loading state
+  // Safety fallback: force hide splash screen after 1.5 seconds max
   useEffect(() => {
-    if (!showSplash || !ageVerified) return undefined;
+    if (!showSplash) return undefined;
     const safetyTimer = window.setTimeout(() => {
       setExiting(true);
       window.setTimeout(() => {
         setShowSplash(false);
       }, EXIT_MS);
-    }, 4500);
+    }, 1500);
 
     return () => window.clearTimeout(safetyTimer);
-  }, [showSplash, ageVerified]);
+  }, [showSplash]);
 
   useEffect(() => {
-    if (!showSplash || loading || !ageVerified) return undefined;
+    if (!showSplash) return undefined;
 
     const waitMs = Math.max(0, MIN_SPLASH_MS - (performance.now() - mountAt.current));
     const hideTimer = window.setTimeout(() => {
@@ -99,7 +114,7 @@ export default function AppBootGate({ children }) {
     }, waitMs);
 
     return () => window.clearTimeout(hideTimer);
-  }, [loading, showSplash, ageVerified]);
+  }, [showSplash]);
 
   // After splash: if the user hasn't passed the cover yet, redirect to portada (/)
   useEffect(() => {
@@ -129,9 +144,9 @@ export default function AppBootGate({ children }) {
   const handleConfirmAge = () => {
     try {
       localStorage.setItem("fiftypoints_age_verified", "true");
-      mountAt.current = performance.now(); // Reset mount time to start the loader animation now
+      sessionStorage.setItem("fiftypoints_splash_seen", "true");
       setAgeVerified(true);
-      setShowSplash(true);
+      setShowSplash(false);
     } catch (e) {
       console.warn("Saving age verification failed:", e);
     }

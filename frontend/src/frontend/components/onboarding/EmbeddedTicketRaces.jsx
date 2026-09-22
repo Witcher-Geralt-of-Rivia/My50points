@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import { useAuth } from "@/frontend/contexts/AuthContext";
 import { fetchAuthJson } from "@/frontend/lib/api/client";
+import TicketUnlockModal from "@/frontend/components/tournament/TicketUnlockModal";
 import { fetchTournamentDetail } from "@/frontend/lib/api/tournaments";
 import { normalizeTournament } from "@/frontend/lib/tournamentNormalize";
 import RaceCard from "@/frontend/components/tournament/RaceCard";
@@ -127,6 +128,12 @@ export default function EmbeddedTicketRaces({
   const [clearing, setClearing] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [ticketUsed, setTicketUsed] = useState(() => isTrackTicketUsed(trackSlug, ticketNum));
+  // Same aggregate + ad entitlement as the canonical tournament flow:
+  // Tickets 2 & 3 need their own completed ad each (M2 and M4 alike).
+  const [unlocks, setUnlocks] = useState({ 2: false, 3: false });
+  const [ticketConfirmed, setTicketConfirmed] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [aggregateState, setAggregateState] = useState({ phase: 'idle', message: '' });
   const [gameAlert, setGameAlert] = useState({
     show: false,
     title: "",
@@ -377,6 +384,60 @@ export default function EmbeddedTicketRaces({
     () => (tournamentRaw ? normalizeTournament(tournamentRaw) : null),
     [tournamentRaw],
   );
+
+  // Entitlement + confirmed state from the backend (same source of truth).
+  useEffect(() => {
+    if (!token || !tournamentRaw) return;
+    let cancelled = false;
+    fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw.id}`)
+      .then((data) => {
+        if (cancelled || !data) return;
+        setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
+        if (data.confirmed && data.confirmed[ticketNum]) setTicketConfirmed(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [token, tournamentRaw, ticketNum]);
+
+  const isLocked = ticketNum > 1 && !unlocks[ticketNum] && !ticketConfirmed;
+
+  // Auto-lock the complete 7-race ticket via /aggregate (same as canonical flow).
+  const aggregateTried = useRef({});
+  useEffect(() => {
+    if (!tournament || !token || !tournamentRaw?.id) return;
+    if (!allRacesSubmitted || ticketConfirmed) return;
+    const submittable = ['upcoming', 'live', 'open'].includes(tournament.status);
+    if (!submittable) return;
+    const triedKey = `${ticketNum}:${tournament.races.length}`;
+    if (aggregateTried.current[triedKey]) return;
+    aggregateTried.current[triedKey] = true;
+    let live = true;
+    (async () => {
+      setAggregateState({ phase: 'saving', message: '' });
+      try {
+        const selections = tournament.races.map((r, idx) => {
+          const sub = submittedTickets[`${r.id}-${ticketNum}`];
+          return { raceId: r.id, raceOrder: idx + 1, strategy: sub.strategy, picks: sub.picks };
+        });
+        await fetchAuthJson('/tickets/aggregate', {
+          method: 'POST',
+          body: JSON.stringify({ tournamentId: tournamentRaw.id, ticketNumber: ticketNum, selections }),
+        });
+        if (live) {
+          setAggregateState({ phase: 'saved', message: '' });
+          setTicketConfirmed(true);
+        }
+      } catch (err) {
+        if (live) {
+          const msg = err?.data?.detail || err?.message || 'No se pudo bloquear el ticket';
+          setAggregateState({ phase: 'error', message: typeof msg === 'string' ? msg : 'Error' });
+        }
+      }
+    })();
+    return () => { live = false; };
+  }, [tournament, token, tournamentRaw, ticketNum, allRacesSubmitted, ticketConfirmed, submittedTickets]);
 
   const submittedForRace = useCallback(
     (raceId) => submittedTickets[`${raceId}-${ticketNum}`],
@@ -709,6 +770,24 @@ export default function EmbeddedTicketRaces({
           trackSlug,
           raceIds,
         });
+      // Same aggregate root as the canonical flow: persist the complete
+      // 7-race ticket server-side (best-effort; receipt flow continues).
+      try {
+        const selections = (tournament?.races || []).map((r, idx) => {
+          const sub = submittedTickets[`${r.id}-${ticketNum}`];
+          return { raceId: r.id, raceOrder: idx + 1, strategy: sub.strategy, picks: sub.picks };
+        });
+        if (selections.length >= 7 && selections.every((s) => Array.isArray(s.picks) && s.picks.length > 0)) {
+          await fetchAuthJson('/tickets/aggregate', {
+            method: 'POST',
+            body: JSON.stringify({ tournamentId: tournamentRaw?.id, ticketNumber: ticketNum, selections }),
+          });
+          setTicketConfirmed(true);
+          setAggregateState({ phase: 'saved', message: '' });
+        }
+      } catch (aggErr) {
+        setAggregateState({ phase: 'error', message: aggErr?.data?.detail || aggErr?.message || 'Error' });
+      }
       const issuedAt = new Date();
       persistTicketReceiptCode(trackSlug, ticketNum, tournament?.slug || tournamentSlug, code);
       markTrackTicketUsed(
@@ -866,6 +945,42 @@ export default function EmbeddedTicketRaces({
 
   if (!expandedRace || !expandedRaceData) {
     return <p className="comenzar-inline-races__status">{t("gameModalities.loading")}</p>;
+  }
+
+  // Same ad entitlement as the canonical tournament flow: Tickets 2 & 3 need
+  // their own completed ad each (M2 and M4 guests alike).
+  if (isLocked) {
+    return (
+      <div className="rounded-2xl border border-amber-400/40 bg-amber-400/5 p-6 text-center">
+        <p className="text-amber-300 text-sm font-black uppercase tracking-widest">
+          Boleto {ticketNum} bloqueado
+        </p>
+        <p className="text-zinc-400 text-xs mt-2 mb-4">{t("ads.m2Rule")}</p>
+        <button
+          type="button"
+          onClick={() => setShowUnlockModal(true)}
+          className="rounded-xl bg-amber-400 hover:brightness-110 text-black text-xs font-black uppercase tracking-widest px-6 py-3 cursor-pointer"
+        >
+          {t("ads.watchAd")}
+        </button>
+        {showUnlockModal && (
+          <TicketUnlockModal
+            ticketNumber={ticketNum}
+            tournamentId={tournamentRaw?.id}
+            tournamentName={tournament?.name}
+            onClose={() => setShowUnlockModal(false)}
+            onUnlocked={() => {
+              setShowUnlockModal(false);
+              fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw?.id}`)
+                .then((data) => {
+                  if (data) setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
+                })
+                .catch(() => {});
+            }}
+          />
+        )}
+      </div>
+    );
   }
 
   return (

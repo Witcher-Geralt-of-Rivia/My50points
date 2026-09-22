@@ -1,6 +1,6 @@
 import json
 import random
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from app.constants import RACES_PER_TOURNAMENT
 from app.models import (
@@ -41,6 +41,13 @@ FAKE_USERS = [
     "NightRider", "GoldenArrow", "RebelCrown", "SilentStorm", "MidnightGold",
 ]
 
+# Demo dates stay on the current matchday so the home feed (which only shows
+# today ± 1 day per client rule) always has real backend tournaments.
+# Gulfstream/Churchill ran yesterday (history), Santa Anita runs tomorrow.
+_SEED_NOW = datetime.now(timezone.utc)
+_YESTERDAY = (_SEED_NOW - timedelta(days=1)).replace(hour=14, minute=0, second=0, microsecond=0)
+_TOMORROW = (_SEED_NOW + timedelta(days=1)).replace(hour=17, minute=0, second=0, microsecond=0)
+
 TOURNAMENTS = [
     {
         "slug": "gulfstream-park-2026",
@@ -50,7 +57,7 @@ TOURNAMENTS = [
         "status": "finished",
         "totalRaces": RACES_PER_TOURNAMENT,
         "currentRace": 7,
-        "date": datetime(2026, 5, 26, 14, 0, 0),
+        "date": _YESTERDAY,
         "description": "Premier South Florida racing event featuring top thoroughbreds",
     },
     {
@@ -61,7 +68,7 @@ TOURNAMENTS = [
         "status": "finished",
         "totalRaces": RACES_PER_TOURNAMENT,
         "currentRace": 7,
-        "date": datetime(2026, 5, 26, 13, 0, 0),
+        "date": _YESTERDAY.replace(hour=13),
         "description": "Historic Kentucky racing with world-class competition",
     },
     {
@@ -72,7 +79,7 @@ TOURNAMENTS = [
         "status": "upcoming",
         "totalRaces": RACES_PER_TOURNAMENT,
         "currentRace": 0,
-        "date": datetime(2026, 5, 27, 17, 0, 0),
+        "date": _TOMORROW,
         "description": "West Coast premier thoroughbred racing series",
     },
 ]

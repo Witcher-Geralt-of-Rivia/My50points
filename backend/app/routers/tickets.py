@@ -1,11 +1,13 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth_utils import STRATEGIES, get_bearer_user
+from app.config import settings
 from app.constants import LAUNCH_GAME_MODES, MAX_FREE_TICKETS
 from app.database import get_db
 from app.models import Race, Ticket, User, LeaderboardEntry, Tournament, TournamentTicket, TicketSelection
@@ -40,10 +42,50 @@ class AggregateTicketBody(BaseModel):
 class AdUnlockBody(BaseModel):
     tournamentId: int
     ticketNumber: int
+    adToken: str | None = None
+
+
+# Minimum proven ad watch time (seconds) before an unlock token is honored.
+AD_MIN_WATCH_SECONDS = 5
+AD_CHALLENGE_TTL_MINUTES = 10
 
 
 class ClaimGuestBody(BaseModel):
     guestToken: str
+
+
+def _has_ad_unlock(db, user, tournament_id: int, ticket_number: int | None = None) -> bool:
+    """True when an ad-unlock record exists for this user/tournament.
+
+    `ticket_number=None` asks the tournament-wide question (M2 scope);
+    passing a number asks the per-ticket question (M4 scope).
+    """
+    q = db.query(TournamentTicket).filter(
+        TournamentTicket.userId == user.id,
+        TournamentTicket.tournamentId == tournament_id,
+        TournamentTicket.isAdUnlocked == True,  # noqa: E712
+    )
+    if ticket_number is not None:
+        q = q.filter(TournamentTicket.ticketNumber == ticket_number)
+    return q.first() is not None
+
+
+def _require_ticket_entitlement(db, user, tournament_id: int, ticket_number: int) -> None:
+    """Enforce M2/M4 ticket entitlements (Phase 1 §9).
+
+    - Ticket 1 is always free (guests and registered).
+    - M2 (registered): ONE completed ad per tournament unlocks Tickets 2 & 3.
+    - M4 (guest): each extra ticket needs its own completed ad.
+    """
+    if ticket_number <= 1:
+        return
+    # M4 guests are scoped per ticket; M2 accounts are scoped per tournament.
+    scope = ticket_number if user.isGuest else None
+    if not _has_ad_unlock(db, user, tournament_id, scope):
+        raise HTTPException(
+            status_code=402,
+            detail=f"Ticket #{ticket_number} requires completing a sponsor ad to unlock.",
+        )
 
 
 @router.post("")
@@ -60,8 +102,6 @@ def submit_ticket(body: TicketBody, payload: dict = Depends(get_bearer_user), db
     ticket_number = body.ticketNumber if body.ticketNumber is not None else 1
     if ticket_number not in range(1, MAX_FREE_TICKETS + 1):
         raise HTTPException(status_code=400, detail=f"ticketNumber must be 1–{MAX_FREE_TICKETS}")
-    if user.isGuest and ticket_number > 1:
-        raise HTTPException(status_code=403, detail="Guest users (Modalidad 4) can only submit Ticket #1")
     if body.strategy not in STRATEGIES:
         raise HTTPException(status_code=400, detail="Invalid strategy")
 
@@ -85,6 +125,9 @@ def submit_ticket(body: TicketBody, payload: dict = Depends(get_bearer_user), db
             status_code=404,
             detail="Race not found (stale race id — refresh the tournament page)",
         )
+    # M2/M4 entitlement: Tickets 2 & 3 each need their own completed ad
+    # (Ticket 1 is always free). Guests play all 3 the same way.
+    _require_ticket_entitlement(db, user, race.tournamentId, ticket_number)
     if race.status not in ("upcoming", "open"):
         raise HTTPException(status_code=400, detail="Race is no longer accepting picks")
 
@@ -186,9 +229,6 @@ def submit_tournament_ticket(
     if ticket_number not in range(1, MAX_FREE_TICKETS + 1):
         raise HTTPException(status_code=400, detail=f"ticketNumber must be 1–{MAX_FREE_TICKETS}")
 
-    if user.isGuest and ticket_number > 1:
-        raise HTTPException(status_code=403, detail="Guest accounts (Modalidad 4) are restricted to 1 ticket.")
-
     tournament = (
         db.query(Tournament)
         .options(joinedload(Tournament.races).joinedload(Race.horses))
@@ -220,27 +260,11 @@ def submit_tournament_ticket(
         except ValueError:
             pass
 
-    # M2 Registered entitlement: Ticket 1 is free, Tickets 2 & 3 require ad token / unlock
-    is_ad_unlocked = False
-    if not user.isGuest and ticket_number > 1:
-        existing_agg = (
-            db.query(TournamentTicket)
-            .filter(
-                TournamentTicket.userId == user.id,
-                TournamentTicket.tournamentId == body.tournamentId,
-                TournamentTicket.ticketNumber == ticket_number,
-            )
-            .first()
-        )
-        if existing_agg and existing_agg.isAdUnlocked:
-            is_ad_unlocked = True
-        elif body.adToken:
-            is_ad_unlocked = True
-        else:
-            raise HTTPException(
-                status_code=402,
-                detail=f"Ticket #{ticket_number} requires completing a sponsor ad to unlock.",
-            )
+    # M2/M4 entitlement: Ticket 1 is free for everyone (guests included);
+    # Tickets 2 & 3 each require their own completed ad proof, recorded by
+    # POST /ad-unlock. Raises 402 otherwise.
+    _require_ticket_entitlement(db, user, body.tournamentId, ticket_number)
+    is_ad_unlocked = ticket_number > 1
 
     # Validate selections: must have selections for the 7 tournament races
     expected_race_ids = {r.id for r in final_7_races}
@@ -356,45 +380,121 @@ def submit_tournament_ticket(
     }
 
 
+@router.get("/ad-challenge")
+def ad_challenge(
+    tournamentId: int = Query(...),
+    ticketNumber: int = Query(...),
+    payload: dict = Depends(get_bearer_user),
+    db: Session = Depends(get_db),
+):
+    """Issue a signed ad-view challenge (proof-of-watch handshake, step 1).
+
+    The client starts the ad with this token and returns it to /ad-unlock
+    after the full view. The server only honors tokens old enough to prove
+    a complete watch — calling /ad-unlock directly without watching fails.
+    """
+    user = db.query(User).filter(User.id == payload["userId"]).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    if ticketNumber not in (2, 3):
+        raise HTTPException(status_code=400, detail="Only tickets 2 and 3 can be ad-unlocked.")
+    now = datetime.now(timezone.utc)
+    challenge = jwt.encode(
+        {
+            "purpose": "ad-challenge",
+            "userId": user.id,
+            "tournamentId": tournamentId,
+            "ticketNumber": ticketNumber,
+            "iat": now,
+            "exp": now + timedelta(minutes=AD_CHALLENGE_TTL_MINUTES),
+        },
+        settings.jwt_secret,
+        algorithm="HS256",
+    )
+    if not isinstance(challenge, str):
+        challenge = challenge.decode()
+    return {
+        "adToken": challenge,
+        "minWatchSeconds": AD_MIN_WATCH_SECONDS,
+        "ticketNumber": ticketNumber,
+        "tournamentId": tournamentId,
+    }
+
+
+def _verify_ad_token(ad_token: str | None, user_id: int, tournament_id: int, ticket_number: int) -> None:
+    """Raise unless ad_token is a genuine completed-view proof for this user/tournament/ticket."""
+    if not ad_token:
+        raise HTTPException(status_code=402, detail="Ticket requires completing a sponsor ad to unlock.")
+    try:
+        data = jwt.decode(ad_token, settings.jwt_secret, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=403, detail="Invalid ad proof.")
+    if data.get("purpose") != "ad-challenge":
+        raise HTTPException(status_code=403, detail="Invalid ad proof.")
+    if data.get("userId") != user_id or data.get("tournamentId") != tournament_id or data.get("ticketNumber") != ticket_number:
+        raise HTTPException(status_code=403, detail="Ad proof does not match this ticket.")
+    issued_at = data.get("iat")
+    try:
+        issued = datetime.fromtimestamp(float(issued_at), tz=timezone.utc) if isinstance(issued_at, (int, float)) else datetime.fromisoformat(str(issued_at).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=403, detail="Invalid ad proof.")
+    watched = (datetime.now(timezone.utc) - issued).total_seconds()
+    if watched < AD_MIN_WATCH_SECONDS:
+        raise HTTPException(status_code=400, detail="Ad view not completed: watch the full ad first.")
+
+
 @router.post("/ad-unlock")
 def unlock_ad_ticket(
     body: AdUnlockBody,
     payload: dict = Depends(get_bearer_user),
     db: Session = Depends(get_db),
 ):
-    """Enforce ad-reward completion for M2 tickets 2 & 3."""
+    """Enforce ad-reward completion for tickets 2 & 3 (M2 registered and M4 guests alike)."""
     user = db.query(User).filter(User.id == payload["userId"]).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
-    if user.isGuest:
-        raise HTTPException(status_code=403, detail="Guest accounts cannot unlock additional tickets.")
     if body.ticketNumber not in (2, 3):
         raise HTTPException(status_code=400, detail="Only tickets 2 and 3 can be ad-unlocked.")
 
-    agg_ticket = (
-        db.query(TournamentTicket)
-        .filter(
-            TournamentTicket.userId == user.id,
-            TournamentTicket.tournamentId == body.tournamentId,
-            TournamentTicket.ticketNumber == body.ticketNumber,
+    # Genuine proof required: a server-signed challenge old enough to prove
+    # the full ad view. Direct calls without watching always fail here.
+    _verify_ad_token(body.adToken, user.id, body.tournamentId, body.ticketNumber)
+
+    # Entitlement scope (Phase 1 §9): M2 accounts get ONE ad per tournament
+    # that unlocks Tickets 2 & 3; M4 guests unlock one ticket per ad.
+    granted = [body.ticketNumber] if user.isGuest else [2, 3]
+    stamp = int(datetime.now(timezone.utc).timestamp())
+    for num in granted:
+        agg_ticket = (
+            db.query(TournamentTicket)
+            .filter(
+                TournamentTicket.userId == user.id,
+                TournamentTicket.tournamentId == body.tournamentId,
+                TournamentTicket.ticketNumber == num,
+            )
+            .first()
         )
-        .first()
-    )
-    if not agg_ticket:
-        agg_ticket = TournamentTicket(
-            userId=user.id,
-            tournamentId=body.tournamentId,
-            ticketNumber=body.ticketNumber,
-            status="draft",
-            isAdUnlocked=True,
-            adUnlockToken=f"ad_reward_{user.id}_{body.tournamentId}_{body.ticketNumber}_{int(datetime.now(timezone.utc).timestamp())}",
-        )
-        db.add(agg_ticket)
-    else:
-        agg_ticket.isAdUnlocked = True
+        if not agg_ticket:
+            agg_ticket = TournamentTicket(
+                userId=user.id,
+                tournamentId=body.tournamentId,
+                ticketNumber=num,
+                status="draft",
+                isAdUnlocked=True,
+                adUnlockToken=f"ad_reward_{user.id}_{body.tournamentId}_{num}_{stamp}",
+            )
+            db.add(agg_ticket)
+        else:
+            agg_ticket.isAdUnlocked = True
 
     db.commit()
-    return {"unlocked": True, "ticketNumber": body.ticketNumber, "tournamentId": body.tournamentId}
+    return {
+        "unlocked": True,
+        "ticketNumber": body.ticketNumber,
+        "tournamentId": body.tournamentId,
+        "unlockedTickets": granted,
+        "scope": "ticket" if user.isGuest else "tournament",
+    }
 
 
 @router.post("/claim-guest")
@@ -582,3 +682,55 @@ def list_tickets(
         })
 
     return {"tickets": formatted_tickets}
+
+
+@router.get("/unlocks")
+def ticket_unlocks(
+    tournamentId: int = Query(...),
+    payload: dict = Depends(get_bearer_user),
+    db: Session = Depends(get_db),
+):
+    """Ad-entitlement + confirmed status for Tickets 1-3.
+
+    Ticket 1 is always available. M2 (registered) earns a tournament-wide
+    unlock from a single ad, so one record entitles Tickets 2 AND 3. M4
+    (guest) stays per ticket: each extra ticket needs its own ad.
+    """
+    user = db.query(User).filter(User.id == payload["userId"]).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    rows = (
+        db.query(TournamentTicket)
+        .filter(
+            TournamentTicket.userId == user.id,
+            TournamentTicket.tournamentId == tournamentId,
+            TournamentTicket.ticketNumber.in_([2, 3]),
+        )
+        .all()
+    )
+    unlocked = {r.ticketNumber: bool(r.isAdUnlocked) for r in rows}
+    # M2 (registered): one ad per tournament unlocks every extra ticket, so a
+    # single unlock record entitles Tickets 2 AND 3. M4 guests stay per ticket.
+    if not user.isGuest and any(unlocked.values()):
+        unlocked = {2: True, 3: True}
+    confirmed_rows = (
+        db.query(TournamentTicket.ticketNumber)
+        .filter(
+            TournamentTicket.userId == user.id,
+            TournamentTicket.tournamentId == tournamentId,
+            TournamentTicket.status == "confirmed",
+        )
+        .all()
+    )
+    confirmed = {1: False, 2: False, 3: False}
+    for (num,) in confirmed_rows:
+        if num in confirmed:
+            confirmed[num] = True
+    return {
+        "tournamentId": tournamentId,
+        "ticket1": True,
+        "ticket2": unlocked.get(2, False),
+        "ticket3": unlocked.get(3, False),
+        "guestRestricted": bool(user.isGuest),
+        "confirmed": confirmed,
+    }

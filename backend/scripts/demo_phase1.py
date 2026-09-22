@@ -11,6 +11,7 @@ from pathlib import Path
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_ROOT))
 os.environ["RACING_BACKGROUND_SYNC"] = "false"
+os.environ.setdefault("ADMIN_SECRET", "change-me-admin-secret")
 
 # ANSI colors
 CYAN = "\033[96m"
@@ -62,12 +63,14 @@ def main():
     res = subprocess.run(["git", "branch", "--show-current"], cwd=BACKEND_ROOT, capture_output=True, text=True)
     branch = res.stdout.strip()
     print(f"Current Git Branch: {BOLD}{branch}{RESET}")
-    assert branch == "feat/security-alembic-tests", "Wrong branch!"
-    success("Working strictly on feature branch: feat/security-alembic-tests (main untouched)")
+    assert branch in ("feat/security-alembic-tests", "feat/figma-ui-overhaul"), f"Unexpected branch: {branch}"
+    success(f"Working strictly on feature branch: {branch} (main untouched)")
 
+    import shutil
     # 2. Alembic migrations
     header("2. Alembic Migration Verification")
-    alembic_exe = str(BACKEND_ROOT / ".venv" / "Scripts" / "alembic.exe")
+    venv_alembic = BACKEND_ROOT / ".venv" / "Scripts" / "alembic.exe"
+    alembic_exe = str(venv_alembic) if venv_alembic.exists() else (shutil.which("alembic") or "alembic")
     # Ensure current database is migrated to latest migration head
     subprocess.run([alembic_exe, "-c", "alembic.ini", "upgrade", "head"], cwd=BACKEND_ROOT, capture_output=True)
     res = run_cmd([alembic_exe, "-c", "alembic.ini", "check"], "Checking Alembic Schema Drift")
@@ -75,12 +78,13 @@ def main():
     success("Alembic schema check: Zero drift detected against application models")
 
 
-    # 3. 20/20 Tests Passing
-    header("3. Automated Test Suite (20/20 Tests)")
-    pytest_exe = str(BACKEND_ROOT / ".venv" / "Scripts" / "pytest.exe")
+    # 3. Automated Test Suite
+    header("3. Automated Test Suite")
+    venv_pytest = BACKEND_ROOT / ".venv" / "Scripts" / "pytest.exe"
+    pytest_exe = str(venv_pytest) if venv_pytest.exists() else (shutil.which("pytest") or "pytest")
     res = run_cmd([pytest_exe, "tests/", "-q"], "Running Pytest Suite")
     assert res.returncode == 0
-    success("Automated test foundation: All 20 tests passing cleanly")
+    success("Automated test foundation: All tests passing cleanly")
 
     # 4. Invalid/Default JWT Rejected in Production
     header("4. Production JWT Secret Enforcement (Fail-Fast)")

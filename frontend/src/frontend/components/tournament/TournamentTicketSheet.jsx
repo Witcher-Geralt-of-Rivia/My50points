@@ -1,8 +1,10 @@
 "use client";
 
 const STRATEGY_SHORT = {
+  // Backend enum values (app/auth_utils.py STRATEGIES) + UI short ids.
   full_point: "Full",
   dual_point: "Dual",
+  smart_pick: "Smart",
   smart_point: "Smart",
   full: "Full",
   dual: "Dual",
@@ -11,7 +13,8 @@ const STRATEGY_SHORT = {
 
 function strategyLabel(ticket) {
   if (!ticket?.strategy) return "—";
-  return STRATEGY_SHORT[ticket.strategy] || ticket.strategy;
+  // Never leak a raw backend enum (e.g. "smart_pick") into the UI.
+  return STRATEGY_SHORT[ticket.strategy] || "—";
 }
 
 export default function TournamentTicketSheet({
@@ -22,6 +25,9 @@ export default function TournamentTicketSheet({
   labels = {},
   expandedRaceId,
   onSelectRace,
+  lockedTickets = {},
+  confirmedTickets = {},
+  onUnlockRequest,
 }) {
   const {
     ticketLabel = "Ticket",
@@ -53,20 +59,27 @@ export default function TournamentTicketSheet({
       {/* Row 1: Tickets selectors (Grey=Available, Green=In Use, Yellow=Used) */}
       <div className="tournament-ticket-sheet__tabs" role="tablist" aria-label={ticketLabel}>
         {ticketTotals.map(({ num, points, confirmed }) => {
-          const isUsed = confirmed >= (races?.length || 7);
+          // Single source of truth, shared with TicketCarousel: backend
+          // confirmed state first, then ad entitlement, then local progress.
+          const isConfirmed =
+            Boolean(confirmedTickets[num]) || confirmed >= (races?.length || 7);
+          const isLocked = Boolean(lockedTickets[num]) && !isConfirmed;
           const isActive = activeTicketNumber === num;
-          
+
           let stateClass = "tournament-ticket-sheet__tab--available";
           let stateMeta = "Disponible";
-          
-          if (isUsed) {
+
+          if (isConfirmed) {
             stateClass = "tournament-ticket-sheet__tab--used";
             stateMeta = points > 0 ? `${points.toLocaleString()} pts` : "Usado";
+          } else if (isLocked) {
+            stateClass = "tournament-ticket-sheet__tab--locked";
+            stateMeta = "Bloqueado";
           } else if (isActive) {
             stateClass = "tournament-ticket-sheet__tab--in-use";
             stateMeta = "En Uso";
           }
-          
+
           return (
             <button
               key={num}
@@ -74,7 +87,7 @@ export default function TournamentTicketSheet({
               role="tab"
               aria-selected={isActive}
               className={`tournament-ticket-sheet__tab ${stateClass} tour-step-ticket-tab`}
-              onClick={() => onSelectTicket(num)}
+              onClick={() => (isLocked ? onUnlockRequest?.(num) : onSelectTicket(num))}
             >
               <span className="tournament-ticket-sheet__tab-title">
                 {ticketLabel} {num}

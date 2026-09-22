@@ -23,6 +23,10 @@ function isInicioPath(pathname) {
   return pathname === "/inicio";
 }
 
+function isLandingPath(pathname) {
+  return pathname === "/landing";
+}
+
 function isWorkflowTracksPath(pathname) {
   return /^\/modalidades\/(guest|free|paid|special)\/?$/.test(pathname);
 }
@@ -46,6 +50,7 @@ function isChromelessPath(pathname) {
 function isImmersiveBgPath(pathname) {
   return (
     isComenzarPath(pathname) ||
+    isLandingPath(pathname) ||
     isHowToPlayPath(pathname) ||
     isGuiaTorneoPath(pathname) ||
     isWorkflowTracksPath(pathname) ||
@@ -58,9 +63,15 @@ function isImmersiveBgPath(pathname) {
  * Pages that never show the floating menu or any chrome.
  * - Cover "/" is chromeless (has its own full-screen layout)
  * - Auth pages /login /register have their own minimal chrome
+ * - /comenzar and /landing have their own integrated Page 22 Figma design and header
  */
 function hideMenuOnPath(pathname) {
-  return isHomePath(pathname) || isAuthPath(pathname);
+  return (
+    isHomePath(pathname) ||
+    isAuthPath(pathname) ||
+    isComenzarPath(pathname) ||
+    isLandingPath(pathname)
+  );
 }
 
 export default function ConditionalShell({ children }) {
@@ -69,16 +80,24 @@ export default function ConditionalShell({ children }) {
   const onHome = isHomePath(pathname);
   const onAuth = isAuthPath(pathname);
   const onComenzar = isComenzarPath(pathname);
+  const onLanding = isLandingPath(pathname);
   const onInicio = isInicioPath(pathname);
   const onWorkflowTracks = isWorkflowTracksPath(pathname);
   const onHowToPlay = isHowToPlayPath(pathname);
   const onGuiaTorneo = isGuiaTorneoPath(pathname);
   const onProfile = isProfilePath(pathname);
   const hideChrome = isChromelessPath(pathname);
-  const skipSurface = hideChrome || onAuth || onComenzar || onHowToPlay || onGuiaTorneo || onInicio;
+  const skipSurface =
+    hideChrome ||
+    onAuth ||
+    onComenzar ||
+    onLanding ||
+    onHowToPlay ||
+    onGuiaTorneo ||
+    onInicio;
 
-  // Floating menu is visible on ALL pages for ALL users (guests and registered)
-  // except: cover (/), login, and register
+  // Floating menu is visible on all regular app pages
+  // Suppressed on: cover (/), auth (/login, /register), and landing (/comenzar, /landing)
   const showFloatingMenu = !hideMenuOnPath(pathname);
   const showLanguageToggle = showFloatingMenu;
 
@@ -90,10 +109,9 @@ export default function ConditionalShell({ children }) {
   const mainClass = (() => {
     if (hideChrome) return "min-h-screen";
     if (onAuth) return "app-main app-main--auth min-h-screen";
-    if (onComenzar || onInicio)
-      return `app-main app-main--with-menu app-main--immersive ${
-        onInicio ? "app-main--inicio" : "app-main--comenzar"
-      } min-h-screen`;
+    if (onComenzar || onLanding) return "min-h-screen w-full bg-[#05020a]";
+    if (onInicio)
+      return "app-main app-main--with-menu app-main--immersive app-main--inicio min-h-screen";
     if (onWorkflowTracks)
       return "app-main app-main--with-menu app-main--immersive app-main--workflow-tracks min-h-screen";
     if (onHowToPlay)

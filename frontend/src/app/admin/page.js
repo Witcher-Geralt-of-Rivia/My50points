@@ -10,6 +10,8 @@ import {
 } from '@/frontend/lib/admin/adminDataManager';
 import { fetchRacesFromApi, getAvailableTracks, validateDataSource, DATA_SOURCES } from '@/frontend/lib/admin/racingApi';
 import AppPageHeader from '@/frontend/components/layout/AppPageHeader';
+import { useAuth } from '@/frontend/contexts/AuthContext';
+import { isAdminRole } from '@/frontend/lib/api/adminClient';
 
 function Field({ label, value, onChange, type = 'text', className = '' }) {
   return (
@@ -118,6 +120,7 @@ function RaceEditor({ race, tournamentId, onRefresh }) {
 }
 
 export default function AdminPage() {
+  const { isAuthenticated, user } = useAuth();
   const [data, setData] = useState({ tournaments: [], lastUpdated: null });
   const [activeTab, setActiveTab] = useState('tournaments');
   const [apiKey, setApiKey] = useState('');
@@ -188,6 +191,19 @@ export default function AdminPage() {
   };
 
   const tracks = getAvailableTracks();
+
+  if (!isAuthenticated || !isAdminRole(user)) {
+    return (
+      <>
+        <AppPageHeader title="ADMIN" subtitle="Administracion de torneos" />
+        <p className="text-sm text-white/50 max-w-xl">
+          {!isAuthenticated
+            ? "Inicia sesion con una cuenta de administrador para gestionar torneos."
+            : "Tu cuenta no tiene rol de administrador. Pide a un administrador que la autorice."}
+        </p>
+      </>
+    );
+  }
 
   return (
     <>

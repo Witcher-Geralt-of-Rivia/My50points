@@ -1,68 +1,61 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { ChevronRight, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import {
+  Trophy,
+  LayoutGrid,
+  MapPin,
+  Ticket,
+  Flame,
+  CheckSquare,
+  BarChart3,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  UserCheck,
+  Compass,
+  Clock,
+  Link as LinkIcon,
+  CheckCircle2,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  Users,
+  Zap,
+} from "lucide-react";
 import AnimateInView from "@/frontend/components/ui/AnimateInView";
-import HomeLanding from "@/frontend/components/home/HomeLanding";
-import LiveTournamentCard from "@/frontend/components/home/LiveTournamentCard";
-import HowItWorksStepCard from "@/frontend/components/home/HowItWorksStepCard";
-import TournamentPlaysSection from "@/frontend/components/home/TournamentPlaysSection";
-import SectionHeader from "@/frontend/components/home/SectionHeader";
+import FigmaTournamentCard from "@/frontend/components/home/FigmaTournamentCard";
+import LanguageToggle from "@/frontend/components/layout/LanguageToggle";
+import AgeVerificationModal from "@/frontend/components/modals/AgeVerificationModal";
+import GuestOnboardingModal from "@/frontend/components/modals/GuestOnboardingModal";
+import TournamentGuideModal from "@/frontend/components/modals/TournamentGuideModal";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import { useAuth } from "@/frontend/contexts/AuthContext";
-import { staticFile } from "@/frontend/lib/config/paths";
-import { fetchJson } from "@/frontend/lib/api/client";
-import { mapLegendForHome } from "@/frontend/lib/api/mappers";
 import { useLiveTournamentsPoll } from "@/frontend/lib/hooks/useLiveTournamentsPoll";
-import VideoFeedPreview from "@/frontend/components/home/VideoFeedPreview";
-
-const howItWorksMeta = [{ step: 1 }, { step: 2 }, { step: 3 }];
-
-function getRankStyle(rank) {
-  switch (rank) {
-    case 1:
-      return "bg-gradient-to-br from-yellow-400 to-amber-600 text-black shadow-lg shadow-amber-500/20";
-    case 2:
-      return "bg-gradient-to-br from-zinc-300 to-zinc-500 text-black";
-    case 3:
-      return "bg-gradient-to-br from-amber-600 to-amber-800 text-white";
-    default:
-      return "bg-white/5 text-zinc-400";
-  }
-}
-
-function getStepBullets(step, t) {
-  return [1, 2, 3].map((n) => ({
-    lead: t(`howItWorksSection.step${step}Bullet${n}Lead`),
-    text: t(`howItWorksSection.step${step}Bullet${n}Text`),
-  }));
-}
-
-function LiveTournamentCardSkeleton() {
-  return (
-    <div
-      className="live-tournament-card live-tournament-card--upcoming live-tournament-card--cover live-tournament-card--preview animate-pulse pointer-events-none"
-      aria-hidden
-    >
-      <div className="live-tournament-card__shell">
-        <div className="h-full min-h-[12rem] bg-white/5" />
-      </div>
-    </div>
-  );
-}
 
 export default function HomePageClient({ initialTournaments = [] }) {
-  const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { t, language } = useLanguage();
+  const { isAuthenticated, user } = useAuth();
   const [liveTournaments, setLiveTournaments] = useState(
     () => initialTournaments || []
   );
-  const [topPlayers, setTopPlayers] = useState([]);
   const [homeLoading, setHomeLoading] = useState(
     !(initialTournaments && initialTournaments.length > 0)
   );
-  const [playersLoading, setPlayersLoading] = useState(true);
+
+  // Modals
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
+
+  // Active Modality Tab (1, 2, 3, 4)
+  const [selectedModality, setSelectedModality] = useState(4);
+
+  // Carousel scroll positions for each section
+  const [todayPage, setTodayPage] = useState(0);
+  const [upcomingPage, setUpcomingPage] = useState(0);
+  const [finishedPage, setFinishedPage] = useState(0);
 
   useLiveTournamentsPoll({
     forHome: true,
@@ -70,327 +63,760 @@ export default function HomePageClient({ initialTournaments = [] }) {
     onLoadingChange: (loading) => setHomeLoading(loading),
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchJson("/leaderboard?limit=5", { cache: "no-store", timeoutMs: 15000 })
-      .then((res) => {
-        if (!cancelled) {
-          setTopPlayers((res?.legends || []).map(mapLegendForHome));
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setPlayersLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Categorize tournaments — backend data only. No mock cards: every card
+  // links to a real tournament, and empty sections say so honestly.
+  const todayList = useMemo(() => {
+    return liveTournaments.filter(
+      (t) => t.status === "active" || t.status === "live"
+    );
+  }, [liveTournaments]);
 
-  const howItWorks = howItWorksMeta.map((item) => {
-    const stepLabel = `${t("howItWorksSection.step")} ${item.step}`.toUpperCase();
+  const upcomingList = useMemo(() => {
+    return liveTournaments.filter(
+      (t) => t.status === "upcoming" || t.status === "scheduled" || (!t.status && t.date)
+    );
+  }, [liveTournaments]);
 
-    if (item.step === 1) {
-      return {
-        ...item,
-        variant: "strategy",
-        stepLabel,
-        titleLead: t("howItWorksSection.step1TitleLead"),
-        titleAccent: t("howItWorksSection.step1TitleAccent"),
-        intro: t("howItWorksSection.step1Intro"),
-        strategies: [
-          {
-            name: t("strategies.fullPoint"),
-            description: t("howItWorksSection.step1FullPointDesc"),
-            iconCount: 1,
-          },
-          {
-            name: t("strategies.dualPoint"),
-            description: t("howItWorksSection.step1DualPointDesc"),
-            iconCount: 2,
-          },
-          {
-            name: t("strategies.smartPoint"),
-            description: t("howItWorksSection.step1SmartPointDesc"),
-            iconCount: 3,
-          },
-        ],
-      };
-    }
-
-    if (item.step === 2) {
-      return {
-        ...item,
-        variant: "paragraph",
-        stepLabel,
-        title: t("howItWorksSection.step2Title"),
-        description: t("howItWorksSection.step2Desc"),
-      };
-    }
-
-    return {
-      ...item,
-      variant: "bullets",
-      stepLabel,
-      title: t(`howItWorksSection.step${item.step}Title`),
-      bullets: getStepBullets(item.step, t),
-    };
-  });
+  const finishedList = useMemo(() => {
+    return liveTournaments.filter(
+      (t) => t.status === "finished" || t.status === "completed"
+    );
+  }, [liveTournaments]);
 
   return (
-    <div className="relative overflow-x-hidden">
-      <HomeLanding />
+    <div className="relative min-h-screen bg-[#07040d] text-white overflow-x-hidden font-sans pb-24">
+      {/* Global Age Verification Gate (+18) */}
+      <AgeVerificationModal />
 
-      <section className="relative py-16 sm:py-24">
-        <div className="absolute inset-0">
-          <img
-            src={staticFile("/images/hero-lobby.jpg")}
-            alt=""
-            className="w-full h-full object-cover opacity-20"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-dark via-brand-dark/85 to-brand-dark" />
-        </div>
+      {/* Modalidad 4 Guest Onboarding Modal */}
+      <GuestOnboardingModal
+        isOpen={showGuestModal}
+        onClose={() => setShowGuestModal(false)}
+      />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
-          <AnimateInView>
-            <SectionHeader
-              label={t("tournamentsSection.liveLabel")}
-              title={t("tournamentsSection.title")}
-              descriptionLead={t("tournamentsSection.descriptionLead")}
-              descriptionHighlight={t("tournamentsSection.descriptionHighlight")}
-            />
-          </AnimateInView>
+      {/* Tu Camino en el Torneo Guide Modal */}
+      <TournamentGuideModal
+        isOpen={showGuideModal}
+        onClose={() => setShowGuideModal(false)}
+      />
 
-          <div className="live-tournaments-section__grid">
-            {homeLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <LiveTournamentCardSkeleton key={i} />
-              ))
-            ) : liveTournaments.length === 0 ? (
-              <p className="text-zinc-500 text-sm col-span-full py-8">
-                {t("tournamentsSection.empty")}
-              </p>
-            ) : (
-              liveTournaments.map((tournament, i) => (
-                <AnimateInView key={tournament.id || tournament.slug} delay={i * 0.15}>
-                  <LiveTournamentCard
-                    tournament={tournament}
-                    t={t}
-                    featured={i === 0}
-                    previewOnly
-                  />
-                </AnimateInView>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
+      {/* Ambient glowing radial lights */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-purple-600/15 rounded-full blur-[140px]" />
+        <div className="absolute top-[40%] -left-40 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[160px]" />
+        <div className="absolute top-[70%] -right-40 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[160px]" />
+      </div>
 
-      <section className="relative py-16 sm:py-24">
-        <div className="absolute inset-0 bg-brand-dark" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
-          <AnimateInView>
-            <SectionHeader
-              label={t("howItWorksSection.label")}
-              title={t("howItWorksSection.title")}
-              descriptionLead={t("howItWorksSection.descriptionLead")}
-              descriptionHighlight={t("howItWorksSection.descriptionHighlight")}
-            />
-          </AnimateInView>
-
-          <div className="how-it-works-grid">
-            {howItWorks.map((step, i) => (
-              <AnimateInView key={step.step} delay={i * 0.15}>
-                <HowItWorksStepCard
-                  step={step.step}
-                  stepLabel={step.stepLabel}
-                  variant={step.variant}
-                  title={step.title}
-                  titleLead={step.titleLead}
-                  titleAccent={step.titleAccent}
-                  intro={step.intro}
-                  description={step.description}
-                  strategies={step.strategies}
-                  bullets={step.bullets}
-                />
-              </AnimateInView>
-            ))}
-          </div>
-
-          <AnimateInView delay={0.3}>
-            <div className="mt-12 sm:mt-16">
-              <TournamentPlaysSection t={t} />
+      <div className="relative z-10 max-w-[1360px] mx-auto px-3 sm:px-6 pt-6 sm:pt-10 flex flex-col gap-8 sm:gap-12">
+        {/* =========================================================
+            1. TOP HEADER BANNER: PÁGINA PRINCIPAL
+            ========================================================= */}
+        <section className="flex flex-col items-center">
+          {/* PÁGINA PRINCIPAL header bar — black with white title, neon stripes inside */}
+          <div className="w-full py-3.5 px-4 sm:px-8 rounded-xl border border-purple-900/60 bg-black shadow-[0_0_30px_rgba(168,85,247,0.35)] flex items-center justify-between gap-3">
+            {/* Left stripes */}
+            <div className="flex flex-col gap-1 w-10 sm:w-24 shrink-0" aria-hidden>
+              <div className="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+              <div className="h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+              <div className="h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
             </div>
-          </AnimateInView>
-        </div>
-      </section>
 
-      <section className="relative py-16 sm:py-24">
-        <div className="absolute inset-0 bg-gradient-to-b from-brand-dark via-brand-card/20 to-brand-dark" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+            {/* Center Title */}
+            <h1 className="text-lg sm:text-3xl md:text-4xl font-black uppercase tracking-wider text-white text-center">
+              {t("figmaUI.page27.pageTitle")}
+            </h1>
 
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6">
-          <AnimateInView>
-            <SectionHeader
-              label={t("topPlayers.label")}
-              title={t("topPlayers.title")}
-              descriptionLead={t("topPlayers.descriptionLead")}
-              descriptionHighlight={t("topPlayers.descriptionHighlight")}
-            />
-          </AnimateInView>
+            {/* Right stripes */}
+            <div className="flex flex-col gap-1 w-10 sm:w-24 shrink-0" aria-hidden>
+              <div className="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+              <div className="h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+              <div className="h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
+            </div>
+          </div>
 
-          <AnimateInView delay={0.1}>
-            <div className="glass-card rounded-2xl overflow-hidden">
-              <div className="px-4 sm:px-6 py-3 border-b border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider w-full">
-                  <span className="w-10 text-center">{t("topPlayers.rank")}</span>
-                  <span className="flex-1">{t("topPlayers.player")}</span>
-                  <span className="w-20 text-right hidden sm:block">{t("topPlayers.winRate")}</span>
-                  <span className="w-20 text-right hidden sm:block">{t("topPlayers.streak")}</span>
-                  <span className="w-24 text-right">{t("topPlayers.points")}</span>
+          {/* Quick Floating Action Buttons: Guest, Guide & Page 22 Landing */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
+            <button
+              onClick={() => setShowGuestModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-purple-300 bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all cursor-pointer"
+            >
+              <UserCheck className="w-4 h-4 text-purple-400" />
+              <span>{t("figmaUI.quickActions.guestBtn")}</span>
+            </button>
+            <button
+              onClick={() => setShowGuideModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-cyan-300 bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.25)] transition-all cursor-pointer"
+            >
+              <Compass className="w-4 h-4 text-cyan-400" />
+              <span>{t("figmaUI.quickActions.guideBtn")}</span>
+            </button>
+            <Link
+              href="/landing"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-amber-300 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.25)] transition-all cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>PÁG. 22: NEON RACER</span>
+            </Link>
+            <LanguageToggle />
+          </div>
+        </section>
+
+        {/* =========================================================
+            2. PANTALLAS DE INFORMACIÓN DEL JUEGO / PUBLICIDAD (2x2 Grid)
+            ========================================================= */}
+        <section className="w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {/* Promo Card 1: Modalidad 4 */}
+            <div
+              onClick={() => setShowGuestModal(true)}
+              className="group relative h-36 sm:h-44 rounded-xl border-2 border-purple-500/70 bg-black p-4 shadow-[0_0_25px_rgba(147,51,234,0.25)] hover:border-purple-400 hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center text-center"
+            >
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
+                  {t("figmaUI.page27.promos.card1Title")}
+                </h3>
+                <p className="text-[11px] text-zinc-400 max-w-xs">
+                  {t("figmaUI.page27.promos.card1Sub")}
+                </p>
+              </div>
+            </div>
+
+            {/* Promo Card 2: 50 Points Challenge */}
+            <div
+              onClick={() => setShowGuideModal(true)}
+              className="group relative h-36 sm:h-44 rounded-xl border-2 border-purple-500/70 bg-black p-4 shadow-[0_0_25px_rgba(147,51,234,0.25)] hover:border-purple-400 hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center text-center"
+            >
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
+                  {t("figmaUI.page27.promos.card2Title")}
+                </h3>
+                <p className="text-[11px] text-zinc-400 max-w-xs">
+                  {t("figmaUI.page27.promos.card2Sub")}
+                </p>
+              </div>
+            </div>
+
+            {/* Promo Card 3: 7 Carreras Oficiales */}
+            <div className="group relative h-36 sm:h-44 rounded-xl border-2 border-purple-500/70 bg-black p-4 shadow-[0_0_25px_rgba(147,51,234,0.25)] hover:border-purple-400 hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all overflow-hidden flex flex-col items-center justify-center text-center">
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
+                  {t("figmaUI.page27.promos.card3Title")}
+                </h3>
+                <p className="text-[11px] text-zinc-400 max-w-xs">
+                  {t("figmaUI.page27.promos.card3Sub")}
+                </p>
+              </div>
+            </div>
+
+            {/* Promo Card 4: Ranking Global & Premios */}
+            <Link
+              href="/leaderboard"
+              className="group relative h-36 sm:h-44 rounded-xl border-2 border-purple-500/70 bg-black p-4 shadow-[0_0_25px_rgba(147,51,234,0.25)] hover:border-purple-400 hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all overflow-hidden flex flex-col items-center justify-center text-center"
+            >
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
+                  {t("figmaUI.page27.promos.card4Title")}
+                </h3>
+                <p className="text-[11px] text-zinc-400 max-w-xs">
+                  {t("figmaUI.page27.promos.card4Sub")}
+                </p>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        {/* =========================================================
+            3. TU CAMINO EN EL TORNEO (7 Step Tracker)
+            ========================================================= */}
+        <section className="relative w-full flex flex-col items-center">
+          {/* Slim title bar — TU CAMINO EN EL TORNEO */}
+          <div className="w-full py-2.5 px-4 rounded-lg border border-purple-900/60 bg-black text-center">
+            <h2 className="text-sm sm:text-xl font-black uppercase tracking-widest text-white">
+              {t("figmaUI.page27.journeyTitle")}
+            </h2>
+          </div>
+
+          <div className="w-full mt-3">
+            {/* 7 Steps Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
+              {/* Step 1: MODALIDAD */}
+              <div
+                onClick={() => setSelectedModality(1)}
+                className="flex flex-col items-center rounded-2xl border-2 border-cyan-400/80 bg-[#081524] p-3 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:scale-105 transition-all cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl bg-cyan-400/20 border border-cyan-400 flex items-center justify-center mb-2">
+                  <LayoutGrid className="w-6 h-6 text-cyan-400" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-cyan-300">
+                  {t("figmaUI.page27.steps.step1")}
+                </span>
+                <div className="w-full h-1.5 rounded-full bg-cyan-400 mt-2 shadow-[0_0_8px_#06b6d4]" />
+              </div>
+
+              {/* Step 2: HIPÓDROMO */}
+              <div className="flex flex-col items-center rounded-2xl border-2 border-purple-500/80 bg-[#170a2c] p-3 shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:scale-105 transition-all cursor-pointer">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-500 flex items-center justify-center mb-2">
+                  <MapPin className="w-6 h-6 text-purple-400" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-purple-300">
+                  {t("figmaUI.page27.steps.step2")}
+                </span>
+                <div className="w-full h-1.5 rounded-full bg-purple-500 mt-2 shadow-[0_0_8px_#a855f7]" />
+              </div>
+
+              {/* Step 3: TICKET */}
+              <div className="flex flex-col items-center rounded-2xl border-2 border-blue-400/80 bg-[#0a152e] p-3 shadow-[0_0_15px_rgba(96,165,250,0.3)] hover:scale-105 transition-all cursor-pointer">
+                <div className="w-12 h-12 rounded-xl bg-blue-400/20 border border-blue-400 flex items-center justify-center mb-2">
+                  <Ticket className="w-6 h-6 text-blue-400" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-blue-300">
+                  {t("figmaUI.page27.steps.step3")}
+                </span>
+                <div className="w-full h-1.5 rounded-full bg-blue-400 mt-2 shadow-[0_0_8px_#60a5fa]" />
+              </div>
+
+              {/* Step 4: ESTRATEGIA (Active with Down Arrow Pointer) */}
+              <div
+                onClick={() => setShowGuideModal(true)}
+                className="relative flex flex-col items-center rounded-2xl border-2 border-amber-400 bg-[#211705] p-3 shadow-[0_0_25px_rgba(251,191,36,0.5)] hover:scale-105 transition-all cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl bg-amber-400/20 border border-amber-400 flex items-center justify-center mb-2">
+                  <Flame className="w-6 h-6 text-amber-400" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
+                  {t("figmaUI.page27.steps.step4")}
+                </span>
+                <div className="w-full h-1.5 rounded-full bg-amber-400 mt-2 shadow-[0_0_10px_#fbbf24]" />
+              </div>
+
+              {/* Step 5: CONFIRMAR */}
+              <div className="flex flex-col items-center rounded-2xl border-2 border-fuchsia-500/80 bg-[#24082c] p-3 shadow-[0_0_15px_rgba(217,70,239,0.3)] hover:scale-105 transition-all cursor-pointer">
+                <div className="w-12 h-12 rounded-xl bg-fuchsia-500/20 border border-fuchsia-500 flex items-center justify-center mb-2">
+                  <CheckSquare className="w-6 h-6 text-fuchsia-400" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-fuchsia-300">
+                  {t("figmaUI.page27.steps.step5")}
+                </span>
+                <div className="w-full h-1.5 rounded-full bg-fuchsia-500 mt-2 shadow-[0_0_8px_#d946ef]" />
+              </div>
+
+              {/* Step 6: TORNEO */}
+              <div className="flex flex-col items-center rounded-2xl border-2 border-cyan-400/80 bg-[#081524] p-3 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:scale-105 transition-all cursor-pointer">
+                <div className="w-12 h-12 rounded-xl bg-cyan-400/20 border border-cyan-400 flex items-center justify-center mb-2">
+                  <Trophy className="w-6 h-6 text-cyan-400" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-cyan-300">
+                  {t("figmaUI.page27.steps.step6")}
+                </span>
+                <div className="w-full h-1.5 rounded-full bg-cyan-400 mt-2 shadow-[0_0_8px_#06b6d4]" />
+              </div>
+
+              {/* Step 7: RANKING */}
+              <Link
+                href="/ranking"
+                className="flex flex-col items-center rounded-2xl border-2 border-amber-400/80 bg-[#211705] p-3 shadow-[0_0_15px_rgba(251,191,36,0.3)] hover:scale-105 transition-all cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl bg-amber-400/20 border border-amber-400 flex items-center justify-center mb-2">
+                  <BarChart3 className="w-6 h-6 text-amber-400" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
+                  {t("figmaUI.page27.steps.step7")}
+                </span>
+                <div className="w-full h-1.5 rounded-full bg-amber-400 mt-2 shadow-[0_0_8px_#fbbf24]" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Downward pointing chevron connector */}
+          <div className="w-10 h-10 -mt-5 z-20 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.8)] border-2 border-[#07040d]">
+            <ChevronDown className="w-6 h-6 stroke-[3]" />
+          </div>
+        </section>
+
+        {/* =========================================================
+            4. MODALIDADES TORNEO (4 Tabs & Claimed Ticket Showcase)
+            ========================================================= */}
+        <section className="w-full rounded-3xl border-2 border-purple-500/70 bg-[#0d071b] p-4 sm:p-7 shadow-[0_0_35px_rgba(147,51,234,0.3)] flex flex-col gap-6">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl sm:text-3xl font-black uppercase tracking-wider text-white">
+                {t("figmaUI.page27.modalitiesTitle")}
+              </h2>
+              <span className="px-2.5 py-1 rounded-md bg-purple-900/80 border border-purple-400 text-[10px] font-black tracking-widest text-purple-300">
+                TORNEO 50 🏆
+              </span>
+            </div>
+
+            {/* 4 Tabs */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedModality(1)}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                  selectedModality === 1
+                    ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.6)]"
+                    : "bg-purple-950/60 text-purple-300 hover:bg-purple-900/60 border border-purple-800/40"
+                }`}
+              >
+                <span>{t("figmaUI.page27.tab1")}</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => setSelectedModality(2)}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                  selectedModality === 2
+                    ? "bg-cyan-500 text-black font-black shadow-[0_0_15px_rgba(6,182,212,0.6)]"
+                    : "bg-cyan-950/60 text-cyan-300 hover:bg-cyan-900/60 border border-cyan-800/40"
+                }`}
+              >
+                <span>{t("figmaUI.page27.tab2")}</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => setSelectedModality(3)}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                  selectedModality === 3
+                    ? "bg-amber-400 text-black font-black shadow-[0_0_15px_rgba(251,191,36,0.6)]"
+                    : "bg-amber-950/60 text-amber-300 hover:bg-amber-900/60 border border-amber-800/40"
+                }`}
+              >
+                <span>{t("figmaUI.page27.tab3")}</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => setSelectedModality(4)}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                  selectedModality === 4
+                    ? "bg-white text-purple-950 font-black shadow-[0_0_20px_rgba(255,255,255,0.7)] border-2 border-purple-500"
+                    : "bg-purple-950/60 text-purple-300 hover:bg-purple-900/60 border border-purple-800/40"
+                }`}
+              >
+                <span>{t("figmaUI.page27.tab4")}</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Subtitle Banner */}
+          <div className="w-full py-2.5 px-4 rounded-xl bg-purple-900/80 border border-purple-500/40 text-center font-black text-xs sm:text-sm uppercase tracking-widest text-white shadow-inner">
+            {t("figmaUI.page27.modalitiesSub")}
+          </div>
+
+          {/* 2-Column Content Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: 5 Rules Bullets + 3 Free Tickets Notice */}
+            <div className="lg:col-span-7 flex flex-col gap-4">
+              {/* Badge: TIENES 3 TICKETS GRATIS */}
+              <div className="p-3.5 rounded-2xl bg-black/60 border-2 border-purple-500/60 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-400 text-black font-black text-xs flex items-center justify-center shrink-0 border border-black shadow">
+                  50
+                </div>
+                <span className="text-sm sm:text-base font-black uppercase tracking-wider text-white">
+                  {t("figmaUI.page27.modalityBadge")}
+                </span>
+              </div>
+
+              {/* 5 Rules Items */}
+              <div className="flex flex-col gap-2.5">
+                {/* Rule 1 */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                    1
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    {t("figmaUI.page27.rules.rule1")}
+                  </p>
+                </div>
+
+                {/* Rule 2 */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                    2
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    {t("figmaUI.page27.rules.rule2")}
+                  </p>
+                </div>
+
+                {/* Rule 3 */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                    3
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    {t("figmaUI.page27.rules.rule3")}
+                  </p>
+                </div>
+
+                {/* Rule 4 */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                    4
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    {t("figmaUI.page27.rules.rule4")}
+                  </p>
+                </div>
+
+                {/* Rule 5 */}
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                    5
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    {t("figmaUI.page27.rules.rule5")}
+                  </p>
                 </div>
               </div>
 
-              {playersLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="px-4 sm:px-6 py-3.5 flex items-center gap-4 animate-pulse border-b border-white/[0.03] last:border-0"
-                  >
-                    <div className="w-10 h-7 bg-white/5 rounded-lg" />
-                    <div className="flex-1 h-4 bg-white/5 rounded max-w-[8rem]" />
-                    <div className="w-24 h-4 bg-white/5 rounded ml-auto" />
-                  </div>
-                ))
-              ) : topPlayers.length === 0 ? (
-                <p className="px-6 py-8 text-center text-sm text-zinc-500">
-                  {t("leaderboard.empty") || "—"}
-                </p>
-              ) : (
-                topPlayers.map((player, i) => (
-                  <AnimateInView key={player.rank} delay={0.1 + i * 0.08}>
-                    <div
-                      className={`px-4 sm:px-6 py-3.5 flex items-center gap-4 transition-all duration-200 hover:bg-white/[0.02] ${
-                        i < topPlayers.length - 1 ? "border-b border-white/[0.03]" : ""
-                      } ${player.rank === 1 ? "bg-gradient-to-r from-amber-500/[0.04] to-transparent" : ""}`}
-                    >
-                      <div className="w-10 flex justify-center">
-                        <span
-                          className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold ${getRankStyle(player.rank)}`}
-                        >
-                          {player.rank}
-                        </span>
-                      </div>
-                      <div className="flex-1 flex items-center gap-3 min-w-0">
-                        <div
-                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold text-white shrink-0"
-                          style={{
-                            backgroundColor: `${player.avatarColor}33`,
-                            color: player.avatarColor,
-                          }}
-                        >
-                          {player.avatar}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">{player.username}</p>
-                          <p className="text-[11px] text-zinc-600 sm:hidden">{player.winRate} WR</p>
-                        </div>
-                      </div>
-                      <div className="w-20 text-right hidden sm:block">
-                        <span className="text-sm text-zinc-400">{player.winRate}</span>
-                      </div>
-                      <div className="w-20 text-right hidden sm:flex items-center justify-end gap-1">
-                        {player.streakType === "win" ? (
-                          <>
-                            <img
-                              src={staticFile("/images/icons/icon-fire.png")}
-                              alt=""
-                              className="w-4 h-4 object-contain"
-                            />
-                            <span className="text-sm font-medium text-orange-400">{player.streak}W</span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-zinc-600">{player.streak}L</span>
-                        )}
-                      </div>
-                      <div className="w-24 text-right">
-                        <span
-                          className={`text-sm sm:text-base font-bold ${player.rank === 1 ? "text-gradient-gold" : "text-white"}`}
-                        >
-                          {player.totalPoints.toLocaleString()}
-                        </span>
-                        <span className="text-[11px] text-zinc-600 ml-1">{t("common.pts")}</span>
-                      </div>
-                    </div>
-                  </AnimateInView>
-                ))
-              )}
+              {/* Start CTA Button */}
+              <button
+                onClick={() => setShowGuestModal(true)}
+                className="mt-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(147,51,234,0.4)] transition-all cursor-pointer"
+              >
+                <span>{t("figmaUI.page27.guestCta")}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
 
-              <div className="px-6 py-4 border-t border-white/5 text-center">
-                <Link
-                  href="/leaderboard"
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-purple-light hover:text-white transition-colors group"
-                >
-                  {t("topPlayers.viewAll")}
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
+            {/* Right Column: Claimed Ticket Voucher Showcase */}
+            <div className="lg:col-span-5 rounded-3xl border-2 border-purple-500/70 bg-[#120824] overflow-hidden shadow-[0_0_30px_rgba(147,51,234,0.35)]">
+              {/* Header */}
+              <div className="bg-[#1f0b3d] text-purple-200 font-black text-xs text-center py-2 uppercase tracking-widest border-b border-purple-500/40">
+                {t("figmaUI.page27.claimedCard.origin")}
+              </div>
+
+              {/* Status Bar with Checkmark */}
+              <div className="bg-white text-purple-950 font-black text-sm text-center py-2 uppercase tracking-wider flex items-center justify-center gap-2">
+                <span>{t("figmaUI.page27.claimedCard.status")}</span>
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              </div>
+
+              {/* Spec Table */}
+              <div className="p-4 sm:p-6 flex flex-col gap-3.5">
+                {/* Score */}
+                <div className="flex items-center justify-between py-2 border-b border-purple-500/20">
+                  <span className="text-xs text-zinc-300 font-bold uppercase">
+                    {t("figmaUI.page27.claimedCard.scoreLabel")}
+                  </span>
+                  <span className="text-2xl sm:text-3xl font-black text-white font-mono text-right">
+                    {t("figmaUI.page27.claimedCard.scoreVal")}
+                  </span>
+                </div>
+
+                {/* Modality */}
+                <div className="flex items-center justify-between py-1.5 border-b border-purple-500/20">
+                  <span className="text-xs text-zinc-400 font-medium">
+                    {t("figmaUI.page27.claimedCard.createdInLabel")}
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-purple-300">
+                    {t("figmaUI.page27.claimedCard.createdInVal")}
+                  </span>
+                </div>
+
+                {/* Alias */}
+                <div className="flex items-center justify-between py-1.5 border-b border-purple-500/20">
+                  <span className="text-xs text-zinc-400 font-medium">
+                    {t("figmaUI.page27.claimedCard.aliasLabel")}
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-cyan-300">
+                    {t("figmaUI.page27.claimedCard.aliasVal")}
+                  </span>
+                </div>
+
+                {/* Tournament */}
+                <div className="flex items-center justify-between py-1.5 border-b border-purple-500/20">
+                  <span className="text-xs text-zinc-400 font-medium">
+                    {t("figmaUI.page27.claimedCard.tournamentLabel")}
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-amber-300">
+                    {t("figmaUI.page27.claimedCard.tournamentVal")}
+                  </span>
+                </div>
+
+                {/* Date */}
+                <div className="flex items-center justify-between py-1.5 border-b border-purple-500/20">
+                  <span className="text-xs text-zinc-400 font-medium">
+                    {t("figmaUI.page27.claimedCard.dateLabel")}
+                  </span>
+                  <span className="text-xs font-semibold text-zinc-300">
+                    {t("figmaUI.page27.claimedCard.dateVal")}
+                  </span>
+                </div>
+
+                {/* Claimed By */}
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-zinc-400 font-medium">
+                    {t("figmaUI.page27.claimedCard.claimedByLabel")}
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-emerald-400">
+                    {t("figmaUI.page27.claimedCard.claimedByVal")}
+                  </span>
+                </div>
               </div>
             </div>
-          </AnimateInView>
-
-          <div id="feed">
-            <VideoFeedPreview />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {!isAuthenticated && (
-      <section className="relative py-16 sm:py-24">
-        <div className="absolute inset-0 bg-brand-dark" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6">
-          <AnimateInView>
-            <div className="relative glass-card rounded-3xl p-8 sm:p-14 text-center overflow-hidden">
-              <div className="absolute inset-0">
-                <img
-                  src={staticFile("/images/sidebar-promo.jpg")}
-                  alt=""
-                  className="w-full h-full object-cover opacity-15"
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/60 via-brand-dark/90 to-brand-dark" />
-              </div>
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple via-purple-light to-cyan" />
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[200px] bg-purple/10 rounded-full blur-[80px] pointer-events-none" />
-
-              <div className="relative">
-                <img
-                  src={staticFile("/images/icons/icon-controller.png")}
-                  alt=""
-                  className="w-12 h-12 sm:w-14 sm:h-14 object-contain mx-auto mb-5 sm:mb-6"
-                />
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4">
-                  {t("cta.title")}
-                </h2>
-                <p className="text-sm sm:text-lg text-zinc-400 max-w-lg mx-auto mb-8 leading-relaxed">
-                  {t("cta.description")}
-                </p>
-                <Link
-                  href="/register"
-                  className="inline-flex items-center px-10 py-4 text-base font-semibold text-white bg-gradient-to-r from-purple to-purple-light rounded-xl btn-glow animate-glow-pulse"
-                >
-                  {t("cta.createAccount")}
-                  <ChevronRight className="inline-block w-5 h-5 ml-1" />
-                </Link>
-                <p className="text-xs text-zinc-600 mt-5">{t("cta.noCreditCard")}</p>
-              </div>
+        {/* =========================================================
+            5. TORNEOS DISPONIBLES MASTER SECTION
+            ========================================================= */}
+        <section className="w-full flex flex-col gap-8">
+          {/* Top Title Banner with Stripes */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-full max-w-4xl py-4 px-6 rounded-2xl bg-white text-center shadow-[0_0_40px_rgba(255,255,255,0.25)]">
+              <h2 className="text-xl sm:text-3xl font-black uppercase tracking-wider text-black text-center">
+                {t("figmaUI.page27.tournamentsTitle")}
+              </h2>
             </div>
-          </AnimateInView>
-        </div>
-      </section>
-      )}
+            <div className="w-full max-w-4xl space-y-1.5" aria-hidden>
+              <div className="w-full h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />
+              <div className="w-full h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+              <div className="w-full h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
+            </div>
+
+            {/* Glowing Ribbon: TIENES 3 TICKETS GRATIS EN ESTOS TORNEOS */}
+            <div className="py-2 px-6 rounded-full bg-white border-2 border-purple-500 text-purple-900 font-black text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(168,85,247,0.4)] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+              <span>{t("figmaUI.page27.tournamentsBanner")}</span>
+              <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+            </div>
+          </div>
+
+          {/* =======================================================
+              SECTION A: TORNEOS DISPONIBLES HOY (Purple Theme)
+              ======================================================= */}
+          <div className="w-full rounded-3xl border-2 border-purple-600 bg-white shadow-[0_0_35px_rgba(147,51,234,0.35)] relative overflow-visible">
+            {/* Colored header bar with trophy */}
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 rounded-t-[1.3rem] bg-gradient-to-r from-purple-700 via-purple-800 to-[#2a0a5e]">
+              <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.8)] shrink-0">
+                <Trophy className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
+                {t("figmaUI.page27.tournamentsToday")}
+              </h3>
+            </div>
+
+            {/* White body with cards */}
+            <div className="p-4 sm:p-6 bg-white rounded-b-[1.3rem]">
+            {/* Grid of Tournament Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {todayList.slice(todayPage * 4, todayPage * 4 + 4).map((tItem, i) => (
+                <FigmaTournamentCard
+                  key={tItem.id || tItem.slug}
+                  tournament={tItem}
+                  index={todayPage * 4 + i + 1}
+                />
+              ))}
+              {todayList.length === 0 && !homeLoading && (
+                <p className="col-span-full text-center text-sm text-zinc-500 py-8">
+                  {t("figmaUI.page27.noTournamentsToday")}
+                </p>
+              )}
+            </div>
+            </div>
+
+            {/* Mobile carousel arrows */}
+            <div className="flex md:hidden items-center justify-center gap-3 pb-4 bg-white rounded-b-[1.3rem]">
+              <button
+                onClick={() => setTodayPage((p) => Math.max(0, p - 1))}
+                disabled={todayPage === 0}
+                aria-label="Anterior"
+                className="w-9 h-9 rounded-full bg-black border-2 border-purple-500 text-purple-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setTodayPage((p) => p + 1)}
+                disabled={todayPage >= Math.ceil(todayList.length / 4) - 1}
+                aria-label="Siguiente"
+                className="w-9 h-9 rounded-full bg-black border-2 border-purple-500 text-purple-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Edge carousel arrows */}
+            <button
+              onClick={() => setTodayPage((p) => Math.max(0, p - 1))}
+              disabled={todayPage === 0}
+              aria-label="Anterior"
+              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-purple-500 text-purple-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(147,51,234,0.6)]"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setTodayPage((p) => p + 1)}
+              disabled={todayPage >= Math.ceil(todayList.length / 4) - 1}
+              aria-label="Siguiente"
+              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-purple-500 text-purple-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(147,51,234,0.6)]"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Section Connector */}
+          <div className="flex justify-center -my-4 z-10">
+            <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-[0_0_12px_rgba(147,51,234,0.8)] border border-[#07040d]">
+              <ChevronDown className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* =======================================================
+              SECTION B: PRÓXIMOS TORNEOS DISPONIBLES (Cyan Theme)
+              ======================================================= */}
+          <div className="w-full rounded-3xl border-2 border-cyan-500 bg-white shadow-[0_0_35px_rgba(6,182,212,0.35)] relative overflow-visible">
+            {/* Colored header bar with trophy */}
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 rounded-t-[1.3rem] bg-gradient-to-r from-cyan-500 via-cyan-600 to-[#0a4a56]">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500 text-black flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.8)] shrink-0">
+                <Trophy className="w-5 h-5 text-black" />
+              </div>
+              <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
+                {t("figmaUI.page27.tournamentsUpcoming")}
+              </h3>
+            </div>
+
+            {/* White body with cards */}
+            <div className="p-4 sm:p-6 bg-white rounded-b-[1.3rem]">
+            {/* Grid of Tournament Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {upcomingList.slice(upcomingPage * 4, upcomingPage * 4 + 4).map((tItem, i) => (
+                <FigmaTournamentCard
+                  key={tItem.id || tItem.slug}
+                  tournament={tItem}
+                  index={upcomingPage * 4 + i + 1}
+                />
+              ))}
+              {upcomingList.length === 0 && !homeLoading && (
+                <p className="col-span-full text-center text-sm text-zinc-500 py-8">
+                  {t("figmaUI.page27.noTournamentsUpcoming")}
+                </p>
+              )}
+            </div>
+            </div>
+
+            {/* Mobile carousel arrows */}
+            <div className="flex md:hidden items-center justify-center gap-3 pb-4 bg-white rounded-b-[1.3rem]">
+              <button
+                onClick={() => setUpcomingPage((p) => Math.max(0, p - 1))}
+                disabled={upcomingPage === 0}
+                aria-label="Anterior"
+                className="w-9 h-9 rounded-full bg-black border-2 border-cyan-400 text-cyan-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setUpcomingPage((p) => p + 1)}
+                disabled={upcomingPage >= Math.ceil(upcomingList.length / 4) - 1}
+                aria-label="Siguiente"
+                className="w-9 h-9 rounded-full bg-black border-2 border-cyan-400 text-cyan-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Edge carousel arrows */}
+            <button
+              onClick={() => setUpcomingPage((p) => Math.max(0, p - 1))}
+              disabled={upcomingPage === 0}
+              aria-label="Anterior"
+              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-cyan-400 text-cyan-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cyan-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.6)]"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setUpcomingPage((p) => p + 1)}
+              disabled={upcomingPage >= Math.ceil(upcomingList.length / 4) - 1}
+              aria-label="Siguiente"
+              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-cyan-400 text-cyan-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cyan-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.6)]"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Section Connector */}
+          <div className="flex justify-center -my-4 z-10">
+            <div className="w-8 h-8 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.8)] border border-[#07040d]">
+              <ChevronDown className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* =======================================================
+              SECTION C: TORNEOS FINALIZADOS (Gold/Yellow Theme)
+              ======================================================= */}
+          <div className="w-full rounded-3xl border-2 border-amber-400 bg-white shadow-[0_0_35px_rgba(251,191,36,0.35)] relative overflow-visible">
+            {/* Colored header bar with trophy */}
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 rounded-t-[1.3rem] bg-gradient-to-r from-amber-400 via-amber-500 to-[#5e4a00]">
+              <div className="w-10 h-10 rounded-xl bg-amber-400 text-black flex items-center justify-center shadow-[0_0_15px_rgba(251,191,36,0.8)] shrink-0">
+                <Trophy className="w-5 h-5 text-black" />
+              </div>
+              <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
+                {t("figmaUI.page27.tournamentsFinished")}
+              </h3>
+            </div>
+
+            {/* White body with cards */}
+            <div className="p-4 sm:p-6 bg-white rounded-b-[1.3rem]">
+            {/* Grid of Tournament Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {finishedList.slice(finishedPage * 4, finishedPage * 4 + 4).map((tItem, i) => (
+                <FigmaTournamentCard
+                  key={tItem.id || tItem.slug}
+                  tournament={tItem}
+                  index={finishedPage * 4 + i + 1}
+                />
+              ))}
+              {finishedList.length === 0 && !homeLoading && (
+                <p className="col-span-full text-center text-sm text-zinc-500 py-8">
+                  {t("figmaUI.page27.noTournamentsFinished")}
+                </p>
+              )}
+            </div>
+            </div>
+
+            {/* Mobile carousel arrows */}
+            <div className="flex md:hidden items-center justify-center gap-3 pb-4 bg-white rounded-b-[1.3rem]">
+              <button
+                onClick={() => setFinishedPage((p) => Math.max(0, p - 1))}
+                disabled={finishedPage === 0}
+                aria-label="Anterior"
+                className="w-9 h-9 rounded-full bg-black border-2 border-amber-400 text-amber-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setFinishedPage((p) => p + 1)}
+                disabled={finishedPage >= Math.ceil(finishedList.length / 4) - 1}
+                aria-label="Siguiente"
+                className="w-9 h-9 rounded-full bg-black border-2 border-amber-400 text-amber-200 flex items-center justify-center disabled:opacity-30"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Edge carousel arrows */}
+            <button
+              onClick={() => setFinishedPage((p) => Math.max(0, p - 1))}
+              disabled={finishedPage === 0}
+              aria-label="Anterior"
+              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-amber-400 text-amber-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(251,191,36,0.6)]"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setFinishedPage((p) => p + 1)}
+              disabled={finishedPage >= Math.ceil(finishedList.length / 4) - 1}
+              aria-label="Siguiente"
+              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black border-2 border-amber-400 text-amber-200 items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-900 transition-all cursor-pointer shadow-[0_0_12px_rgba(251,191,36,0.6)]"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

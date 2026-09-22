@@ -519,9 +519,15 @@ export default function RaceCard({
                       </div>
                     </div>
 
-                    {/* Mobile card */}
-                    <div className="md:hidden p-3">
-                      <div className="flex items-center gap-3">
+                    {/* Mobile card — whole row is the pick control (44px+ targets) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!picksLocked && (canPick || selected)) onPickHorse?.(horse.id);
+                      }}
+                      disabled={picksLocked || (!canPick && !selected)}
+                      className="md:hidden w-full p-3 text-left min-h-[60px] flex items-center gap-3 cursor-pointer disabled:cursor-not-allowed"
+                    >
                         <PostBadge number={horse.postPosition} />
                         <JockeySilk primary={horse.silkColors.primary} secondary={horse.silkColors.secondary} size={20} />
                         <div className="flex-1 min-w-0">
@@ -566,25 +572,29 @@ export default function RaceCard({
                               {points}pts
                             </motion.span>
                           )}
-                          <motion.button
-                            whileTap={picksLocked ? undefined : { scale: 0.9 }}
-                            onClick={() => onPickHorse?.(horse.id)}
-                            disabled={picksLocked || (!canPick && !selected)}
+                          <motion.span
+                            animate={selected ? { scale: [1, 1.15, 1] } : {}}
                             className={`
-                              tour-step-horse-btn w-9 h-9 rounded-lg flex items-center justify-center transition-all
+                              tour-step-horse-btn w-11 h-11 rounded-xl flex items-center justify-center transition-all
                               ${selected
-                                ? 'bg-gradient-to-r from-purple to-purple-light text-white shadow-[0_0_12px_rgba(124,58,237,0.4)]'
+                                ? 'bg-gradient-to-r from-purple to-purple-light text-white shadow-[0_0_15px_rgba(124,58,237,0.5)]'
                                 : canPick
-                                  ? 'bg-white/5 text-white/50 border border-white/10'
-                                  : 'bg-white/[0.02] text-white/15 border border-white/5 cursor-not-allowed'
+                                  ? 'bg-white/5 text-white/60 border border-white/15'
+                                  : 'bg-white/[0.02] text-white/15 border border-white/5'
                               }
                             `}
+                            aria-hidden
                           >
-                            {selected ? <Check size={14} /> : '+'}
-                          </motion.button>
+                            {selected ? (
+                              <Check size={18} strokeWidth={3} />
+                            ) : canPick ? (
+                              <span className="text-xl font-bold leading-none">+</span>
+                            ) : (
+                              <span className="text-base opacity-40">🔒</span>
+                            )}
+                          </motion.span>
                         </div>
-                      </div>
-                    </div>
+                    </button>
                   </motion.div>
                 );
               })}

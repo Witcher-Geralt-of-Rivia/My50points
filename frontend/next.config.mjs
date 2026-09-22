@@ -74,6 +74,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/tournament',
+        destination: '/tournaments',
+        permanent: false,
+      },
+      {
         source: '/50points',
         destination: '/',
         permanent: false,

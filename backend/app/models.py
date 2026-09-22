@@ -18,6 +18,7 @@ class User(Base):
     guestToken: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     avatarColor: Mapped[str] = mapped_column(String, default="#7c3aed")
     gameMode: Mapped[int] = mapped_column(Integer, default=2)
+    role: Mapped[str] = mapped_column(String, default="member")  # founder | admin | member
     country: Mapped[str | None] = mapped_column(String, nullable=True)
     birthYear: Mapped[int | None] = mapped_column(Integer, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)

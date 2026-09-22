@@ -1,28 +1,127 @@
-﻿'use client';
+'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  ChevronLeft, MapPin, Clock, Trophy, Zap, Users,
+  ChevronLeft,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getTournamentById, getRaceById } from '@/frontend/lib/data/raceData';
+import { fetchJson, fetchAuthJson } from '@/frontend/lib/api/client';
+import { useAuth } from '@/frontend/contexts/AuthContext';
 import RaceCard from '@/frontend/components/tournament/RaceCard';
-import PickSelector, { strategies } from '@/frontend/components/tournament/PickSelector';
+import { strategies } from '@/frontend/components/tournament/PickSelector';
 import TicketSummary from '@/frontend/components/tournament/TicketSummary';
 import TicketConfirmation from '@/frontend/components/tournament/TicketConfirmation';
-import AppPageHeader from '@/frontend/components/layout/AppPageHeader';
+
+const BACKEND_STRATEGY = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
+const UI_STRATEGY = { full_point: 'full', dual_point: 'dual', smart_pick: 'smart' };
 
 export default function RaceClient() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const tournament = useMemo(() => getTournamentById(params.id), [params.id]);
   const race = useMemo(() => getRaceById(params.id, params.raceId), [params.id, params.raceId]);
+  // Active ticket shared with the tournament page (?ticket=N, default 1) so
+  // lock states stay consistent everywhere.
+  const ticketNumber = useMemo(() => {
+    const n = Number.parseInt(searchParams.get('ticket') || '1', 10);
+    return n >= 1 && n <= 3 ? n : 1;
+  }, [searchParams]);
 
   const [activeStrategy, setActiveStrategy] = useState('full');
   const [selectedHorses, setSelectedHorses] = useState([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  const [shares, setShares] = useState(null);
+  const [saveState, setSaveState] = useState({ phase: 'idle', message: '' });
+  const [backendCtx, setBackendCtx] = useState(null);
+  const [savedTickets, setSavedTickets] = useState([]);
+  const [aggregateState, setAggregateState] = useState({ phase: 'idle', message: '' });
+  const { token, ensureGuestSession, playAsGuest } = useAuth();
+
+  // Resolve the demo sheet against the live backend tournament (by track):
+  // backend tournament id + races with runner ids, for load + submit + aggregate.
+  const loadBackendCtx = useCallback(async () => {
+    const data = await fetchJson('/tournaments', { cache: 'no-store' });
+    const list = data?.tournaments || [];
+    const bt = list.find((t) => t.track === tournament.track);
+    if (!bt) throw new Error('Este hip�dromo no tiene torneo activo en el backend');
+    const detail = await fetchJson(`/tournaments/${bt.slug}`, { cache: 'no-store' });
+    const races = (detail?.tournament?.races || []).map((r) => ({
+      id: r.id,
+      raceNumber: r.raceNumber,
+      horses: (r.horses || []).map((h) => ({ id: h.id, postPosition: h.postPosition })),
+    }));
+    const ctx = { tournamentId: detail?.tournament?.id ?? bt.id, races };
+    setBackendCtx(ctx);
+    return ctx;
+  }, [tournament.track]);
+
+  // Load already-saved picks for this race so refresh never loses them.
+  const loadSavedPicks = useCallback(async (ctx) => {
+    const res = await fetchAuthJson(`/tickets?tournamentId=${ctx.tournamentId}`, { cache: 'no-store' });
+    const all = res?.tickets || res || [];
+    const mine = Array.isArray(all) ? all.filter((t) => (t.ticketNumber ?? 1) === ticketNumber) : [];
+    setSavedTickets(mine);
+    const saved = mine.find((t) => t.raceNumber === race.number);
+    if (saved && Array.isArray(saved.picks) && saved.picks.length > 0) {
+      const backendRace = ctx.races.find((r) => r.raceNumber === race.number);
+      const postById = new Map((backendRace?.horses || []).map((h) => [h.id, h.postPosition]));
+      const mockIds = saved.picks
+        .map((backendId) => {
+          const pp = postById.get(backendId);
+          return race.horses.find((h) => h.postPosition === pp)?.id;
+        })
+        .filter(Boolean);
+      if (mockIds.length > 0) {
+        setSelectedHorses(mockIds);
+        if (UI_STRATEGY[saved.strategy]) {
+          setActiveStrategy(UI_STRATEGY[saved.strategy]);
+          setSaveState({ phase: 'saved', message: '' });
+        }
+      }
+    }
+    return mine;
+  }, [race, ticketNumber]);
+
+  useEffect(() => {
+    if (!token) return;
+    let live = true;
+    (async () => {
+      try {
+        const ctx = await loadBackendCtx();
+        if (live) await loadSavedPicks(ctx);
+      } catch {
+        // Backend tournament unavailable � sheet stays local-only.
+      }
+    })();
+    return () => { live = false; };
+  }, [token, loadBackendCtx, loadSavedPicks]);
+
+  // Live clock for the CIERRE EN countdown
+  useEffect(() => {
+    const id = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Community strategy shares � live backend aggregates (global scope)
+  useEffect(() => {
+    let live = true;
+    fetchJson('/statistics/global')
+      .then((d) => {
+        if (!live) return;
+        const usage = d?.strategyUsage || [];
+        const pct = (k) => usage.find((s) => s.strategyKey === k)?.percent ?? null;
+        setShares({ full: pct('full_point'), dual: pct('dual_point'), smart: pct('smart_pick') });
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const strategy = strategies.find((s) => s.id === activeStrategy);
   const totalPointsRemaining = 50 - (strategy?.allocation?.slice(0, selectedHorses.length).reduce((s, v) => s + v, 0) || 0);
@@ -44,9 +143,97 @@ export default function RaceClient() {
     setSelectedHorses([]);
   }, []);
 
-  const handleConfirm = useCallback(() => {
-    setShowConfirmation(true);
-  }, []);
+  const handleConfirm = useCallback(async () => {
+    if (!isPicksComplete) return;
+    setSaveState({ phase: 'saving', message: '' });
+    try {
+      // Session (registered or M4 guest) � required to persist the ticket
+      const session = await ensureGuestSession();
+      if (!session?.token && !token) {
+        setSaveState({ phase: 'needs-auth', message: '' });
+        return;
+      }
+      const ctx = backendCtx || (await loadBackendCtx());
+      const backendRace = ctx.races.find((r) => r.raceNumber === race.number);
+      if (!backendRace) {
+        throw new Error('Esta carrera no existe en el torneo activo del backend');
+      }
+      const byPost = new Map(backendRace.horses.map((h) => [h.postPosition, h.id]));
+      const runnerIds = selectedHorses.map((id) => {
+        const picked = race.horses.find((h) => h.id === id);
+        return picked ? byPost.get(picked.postPosition) : undefined;
+      });
+      if (runnerIds.some((v) => v == null)) {
+        throw new Error('Alg�n caballo elegido no existe en la carrera oficial');
+      }
+      await fetchAuthJson('/tickets', {
+        method: 'POST',
+        body: JSON.stringify({
+          raceId: backendRace.id,
+          strategy: BACKEND_STRATEGY[activeStrategy],
+          picks: runnerIds,
+          ticketNumber: ticketNumber,
+        }),
+      });
+      setSaveState({ phase: 'saved', message: '' });
+      await loadSavedPicks(ctx);
+      setShowConfirmation(true);
+    } catch (err) {
+      setSaveState({ phase: 'error', message: err?.message || 'No se pudo guardar el boleto' });
+    }
+  }, [isPicksComplete, ensureGuestSession, token, backendCtx, loadBackendCtx, loadSavedPicks, race, selectedHorses, activeStrategy, ticketNumber]);
+
+  // Lock the complete 7-race ticket via /aggregate (persists + survives refresh).
+  const readyCount = useMemo(() => {
+    const have = new Set(savedTickets.map((t) => t.raceNumber));
+    if (selectedHorses.length > 0) have.add(race.number);
+    return [1, 2, 3, 4, 5, 6, 7].filter((n) => have.has(n)).length;
+  }, [savedTickets, selectedHorses, race.number]);
+
+  const handleLockAggregate = useCallback(async () => {
+    setAggregateState({ phase: 'saving', message: '' });
+    try {
+      const session = await ensureGuestSession();
+      if (!session?.token && !token) {
+        setAggregateState({ phase: 'error', message: 'Inicia sesi�n o entra como invitado para bloquear el ticket' });
+        return;
+      }
+      const ctx = backendCtx || (await loadBackendCtx());
+      const byRace = new Map(savedTickets.map((t) => [t.raceNumber, t]));
+      const selections = [];
+      for (let n = 1; n <= 7; n += 1) {
+        const backendRace = ctx.races.find((r) => r.raceNumber === n);
+        if (!backendRace) throw new Error(`La carrera ${n} no existe en el torneo activo`);
+        if (n === race.number) {
+          if (selectedHorses.length === 0) throw new Error(`Falta tu selecci�n de la carrera ${n} (esta p�gina)`);
+          const byPost = new Map(backendRace.horses.map((h) => [h.postPosition, h.id]));
+          const runnerIds = selectedHorses.map((id) => {
+            const picked = race.horses.find((h) => h.id === id);
+            return picked ? byPost.get(picked.postPosition) : undefined;
+          });
+          if (runnerIds.some((v) => v == null)) throw new Error(`Selecci�n inv�lida en la carrera ${n}`);
+          selections.push({ raceId: backendRace.id, strategy: BACKEND_STRATEGY[activeStrategy], picks: runnerIds });
+        } else {
+          const saved = byRace.get(n);
+          if (!saved || !Array.isArray(saved.picks) || saved.picks.length === 0) {
+            throw new Error(`Falta guardar la carrera ${n}: �brela y confirma tu boleto`);
+          }
+          const validIds = new Set(backendRace.horses.map((h) => h.id));
+          for (const pid of saved.picks) {
+            if (!validIds.has(pid)) throw new Error(`Boleto guardado inv�lido en la carrera ${n}: vuelve a confirmarlo`);
+          }
+          selections.push({ raceId: backendRace.id, strategy: saved.strategy, picks: saved.picks });
+        }
+      }
+      const res = await fetchAuthJson('/tickets/aggregate', {
+        method: 'POST',
+        body: JSON.stringify({ tournamentId: ctx.tournamentId, ticketNumber: ticketNumber, selections }),
+      });
+      setAggregateState({ phase: 'saved', message: res?.message || 'Ticket de 7 carreras bloqueado' });
+    } catch (err) {
+      setAggregateState({ phase: 'error', message: err?.message || 'No se pudo bloquear el ticket' });
+    }
+  }, [ensureGuestSession, token, backendCtx, loadBackendCtx, savedTickets, race, selectedHorses, activeStrategy, ticketNumber]);
 
   const handleCloseConfirmation = useCallback(() => {
     setShowConfirmation(false);
@@ -56,7 +243,7 @@ export default function RaceClient() {
       if (currentIndex < tournament.races.length - 1) {
         const nextRace = tournament.races[currentIndex + 1];
         setSelectedHorses([]);
-        router.push(`/tournament/${tournament.id}/race/${nextRace.id}`);
+        router.push(`/tournament/${tournament.id}/race/${nextRace.id}?ticket=${ticketNumber}`);
       } else {
         router.push(`/tournament/${tournament.id}`);
       }
@@ -68,11 +255,28 @@ export default function RaceClient() {
   const prevRace = raceIndex > 0 ? tournament.races[raceIndex - 1] : null;
   const nextRace = raceIndex < (tournament?.races.length || 0) - 1 ? tournament.races[raceIndex + 1] : null;
 
+  // CIERRE EN � live countdown to today's post time (null-safe: runs before any early return)
+  const closeLabel = useMemo(() => {
+    const m = String(race?.postTime || '').match(/(\d{1,2}):(\d{2})/);
+    if (!m) return '�';
+    const target = new Date(nowTs);
+    target.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    const diff = target.getTime() - nowTs;
+    if (diff <= 0) return 'CERRADO';
+    const h = Math.floor(diff / 3600000);
+    const mi = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(h)}:${pad(mi)}:${pad(s)}`;
+  }, [race?.postTime, nowTs]);
+
+  const classBadge = String(race?.class || '').split(' ')[0].toUpperCase() || '�';
+
   if (!tournament || !race) {
     return (
       <div className="min-h-screen bg-[#161b30] flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4">🏇</div>
+          <div className="text-6xl mb-4">??</div>
           <p className="text-white/40 mb-2">Carrera no encontrada</p>
           <Link href="/" className="text-purple-light text-sm hover:underline">
             Volver al Inicio
@@ -82,22 +286,16 @@ export default function RaceClient() {
     );
   }
 
-  const surfaceColors = {
-    Dirt: 'text-amber-400 bg-amber-400/10',
-    Turf: 'text-green-400 bg-green-400/10',
-    Synthetic: 'text-cyan-400 bg-cyan-400/10',
-  };
-
-  const surfaceLabels = {
-    Dirt: 'Tierra',
-    Turf: 'Cesped',
-    Synthetic: 'Sintetico',
-  };
-
   const statusColors = {
     completed: { badge: 'bg-white/10 text-white/50', dot: '', label: 'COMPLETADO' },
     live: { badge: 'bg-red-500/20 text-red-400', dot: 'bg-red-400 animate-pulse-live', label: 'EN VIVO' },
     upcoming: { badge: 'bg-purple/20 text-purple-light', dot: '', label: 'PROXIMO' },
+  };
+
+  const strategyTabStyle = {
+    full: { border: 'border-purple-500', glow: 'shadow-[0_0_18px_rgba(168,85,247,0.45)]', text: 'text-purple-300', chip: 'bg-purple-600' },
+    dual: { border: 'border-cyan-400', glow: 'shadow-[0_0_18px_rgba(6,182,212,0.45)]', text: 'text-cyan-300', chip: 'bg-cyan-500' },
+    smart: { border: 'border-[#f5b301]', glow: 'shadow-[0_0_18px_rgba(245,179,1,0.45)]', text: 'text-[#f5b301]', chip: 'bg-[#f5b301]' },
   };
 
   return (
@@ -118,7 +316,7 @@ export default function RaceClient() {
           <div className="flex items-center gap-2">
             {prevRace && (
               <Link
-                href={`/tournament/${tournament.id}/race/${prevRace.id}`}
+                href={`/tournament/${tournament.id}/race/${prevRace.id}?ticket=${ticketNumber}`}
                 className="px-3 py-1.5 text-xs text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all"
               >
                 R{prevRace.number}
@@ -129,7 +327,7 @@ export default function RaceClient() {
             </span>
             {nextRace && (
               <Link
-                href={`/tournament/${tournament.id}/race/${nextRace.id}`}
+                href={`/tournament/${tournament.id}/race/${nextRace.id}?ticket=${ticketNumber}`}
                 className="px-3 py-1.5 text-xs text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all"
               >
                 R{nextRace.number}
@@ -143,52 +341,36 @@ export default function RaceClient() {
         </div>
       </div>
 
-      {/* Race Hero */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-purple/5 via-transparent to-transparent" />
-        <div className="relative app-page pt-6 pb-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColors[race.status].badge}`}>
-                {statusColors[race.status].dot && (
-                  <span className={`w-1.5 h-1.5 rounded-full ${statusColors[race.status].dot}`} />
-                )}
-                {statusColors[race.status].label}
-              </span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${surfaceColors[race.surface]}`}>
-                {surfaceLabels[race.surface] || race.surface}
-              </span>
+      {/* Race header strip � Figma spec */}
+      <div className="border-b border-[#f5b301]/25 bg-black">
+        <div className="app-page py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-white text-base sm:text-xl font-black tracking-tight truncate">
+              {tournament.track} Race {race.number}
+            </h1>
+            <span className="shrink-0 rounded bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 uppercase tracking-wider">
+              {classBadge}
+            </span>
+          </div>
+          <span className="text-white/70 text-xs sm:text-sm">
+            <span className="text-white/40">?</span> {race.distance}m <span className="text-[#f5b301]">?</span> {race.surface} <span className="text-[#f5b301]">?</span> Open
+          </span>
+          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColors[race.status].badge}`}>
+            {statusColors[race.status].dot && (
+              <span className={`w-1.5 h-1.5 rounded-full ${statusColors[race.status].dot}`} />
+            )}
+            {statusColors[race.status].label}
+          </span>
+          <div className="ml-auto flex items-stretch gap-2">
+            <div className="rounded-lg border border-white/20 bg-white/[0.03] px-3 py-1 text-center">
+              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Hora</p>
+              <p className="text-white text-sm font-black font-mono">{race.postTime}</p>
             </div>
-
-            <AppPageHeader
-              title={race.name !== `Race ${race.number}` ? race.name : `CARRERA ${race.number}`}
-              className="mb-2"
-            />
-
-            <div className="flex flex-wrap items-center gap-4 text-sm text-white/40">
-              <div className="flex items-center gap-1.5">
-                <MapPin size={13} className="text-cyan" />
-                <span>{tournament.track}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Zap size={13} className="text-purple-light" />
-                <span>{race.distance}m</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Clock size={13} />
-                <span>{race.postTime}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Users size={13} />
-                <span>{race.horses.length} participantes</span>
-              </div>
+            <div className="rounded-lg border border-[#f5b301]/60 bg-[#f5b301]/5 px-3 py-1 text-center">
+              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Cierre en</p>
+              <p className="text-[#f5b301] text-sm font-black font-mono">{closeLabel}</p>
             </div>
-
-            <p className="text-xs text-white/25 mt-1">{race.class}</p>
-          </motion.div>
+          </div>
         </div>
       </div>
 
@@ -198,20 +380,42 @@ export default function RaceClient() {
 
           {/* Left: Race card with picks */}
           <div className="flex-1 min-w-0 space-y-4">
-            {/* Pick Selector */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white/[0.02] border border-white/10 rounded-xl p-4 backdrop-blur-lg"
-            >
-              <PickSelector
-                activeStrategy={activeStrategy}
-                onStrategyChange={handleStrategyChange}
-                picksCount={selectedHorses.length}
-                totalPoints={totalPointsRemaining}
-              />
-            </motion.div>
+            {/* Strategy tabs � Figma spec */}
+            <div className="rounded-xl border border-[#f5b301]/30 bg-black p-3">
+              <p className="text-center text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                Estrategia de puntos
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {strategies.map((s) => {
+                  const st = strategyTabStyle[s.id];
+                  const isActive = activeStrategy === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => handleStrategyChange(s.id)}
+                      className={`rounded-lg border-2 px-2 py-2 flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                        isActive ? `${st.border} ${st.glow} bg-white/[0.04]` : 'border-white/10 bg-white/[0.02] opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <span className={`text-[11px] sm:text-xs font-black uppercase tracking-wide ${isActive ? st.text : 'text-white/60'}`}>
+                        {s.name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        {s.allocation.map((pts, idx) => (
+                          <span
+                            key={idx}
+                            className={`text-[10px] font-black rounded px-1.5 py-0.5 ${isActive ? `${st.chip} text-black` : 'bg-white/10 text-white/50'}`}
+                          >
+                            {pts}
+                          </span>
+                        ))}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Full race card (always expanded, no header toggle) */}
             <motion.div
@@ -229,6 +433,116 @@ export default function RaceClient() {
                 showHeader={false}
               />
             </motion.div>
+
+            {/* ATR�S / OK � Figma spec */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="rounded-xl border-2 border-purple-500 bg-purple-600/80 hover:bg-purple-600 text-white text-sm font-black uppercase tracking-widest py-3 transition-all cursor-pointer"
+              >
+                Atr�s
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={!isPicksComplete || saveState.phase === 'saving'}
+                className="rounded-xl border-2 border-purple-400 bg-purple-600 hover:bg-purple-500 text-white text-sm font-black uppercase tracking-widest py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_18px_rgba(168,85,247,0.45)]"
+              >
+                {saveState.phase === 'saving' ? 'Guardando�' : 'OK'}
+              </button>
+            </div>
+
+            {/* Persist status � honest backend feedback, never silent */}
+            {saveState.phase === 'saved' && (
+              <p className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-2.5 text-emerald-300 text-xs font-bold text-center" role="status">
+                ? Boleto guardado en el torneo oficial
+              </p>
+            )}
+            {saveState.phase === 'error' && (
+              <p className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-2.5 text-red-300 text-xs font-bold text-center" role="alert">
+                {saveState.message}
+              </p>
+            )}
+            {saveState.phase === 'needs-auth' && (
+              <div className="rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-center">
+                <p className="text-amber-200 text-xs font-bold mb-2">
+                  Inicia sesi�n o entra como invitado para guardar tu boleto
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await playAsGuest();
+                        setSaveState({ phase: 'idle', message: '' });
+                      } catch {
+                        setSaveState({ phase: 'error', message: 'No se pudo crear la sesi�n de invitado' });
+                      }
+                    }}
+                    className="rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase px-4 py-2 cursor-pointer"
+                  >
+                    Entrar como invitado
+                  </button>
+                  <Link
+                    href="/login"
+                    className="rounded-lg border border-purple-400/60 text-purple-200 text-xs font-black uppercase px-4 py-2"
+                  >
+                    Iniciar sesi�n
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Community strategy shares � live backend aggregates */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { key: 'full', label: 'Full Points', bg: 'bg-purple-600', text: 'text-white' },
+                { key: 'dual', label: 'Dual Points', bg: 'bg-cyan-400', text: 'text-black' },
+                { key: 'smart', label: 'Smart Points', bg: 'bg-[#f5b301]', text: 'text-black' },
+              ].map((b) => (
+                <div key={b.key} className={`rounded-xl ${b.bg} ${b.text} p-3 text-center`}>
+                  <p className="text-[10px] font-black uppercase tracking-wider opacity-80">{b.label}</p>
+                  <p className="text-2xl font-black font-mono">
+                    {shares?.[b.key] == null ? '�' : `${Math.round(shares[b.key])}%`}
+                  </p>
+                  <p className="text-[9px] font-bold opacity-70">Porcentaje acumulado</p>
+                </div>
+              ))}
+            </div>
+
+            {/* 7-race aggregate lock � persists the complete ticket, survives refresh */}
+            <div className="rounded-xl border-2 border-[#f5b301]/50 bg-black p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-black uppercase tracking-wider text-white">
+                  Boleto {ticketNumber} · torneo <span className="text-[#f5b301] font-mono">{readyCount}/7</span>
+                </p>
+                <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 via-cyan-400 to-[#f5b301] transition-all"
+                    style={{ width: `${Math.round((readyCount / 7) * 100)}%` }}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLockAggregate}
+                disabled={readyCount < 7 || aggregateState.phase === 'saving'}
+                className="mt-3 w-full rounded-xl bg-[#f5b301] hover:brightness-110 text-black text-sm font-black uppercase tracking-widest py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {aggregateState.phase === 'saving' ? 'Bloqueando�' : 'Bloquear ticket 7 carreras'}
+              </button>
+              {aggregateState.phase === 'saved' && (
+                <p className="mt-2 text-emerald-300 text-xs font-bold text-center" role="status">
+                  ? {aggregateState.message}
+                </p>
+              )}
+              {aggregateState.phase === 'error' && (
+                <p className="mt-2 text-red-300 text-xs font-bold text-center" role="alert">
+                  {aggregateState.message}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Right: Ticket Summary sidebar */}
@@ -259,7 +573,7 @@ export default function RaceClient() {
                   return (
                     <Link
                       key={r.id}
-                      href={`/tournament/${tournament.id}/race/${r.id}`}
+                      href={`/tournament/${tournament.id}/race/${r.id}?ticket=${ticketNumber}`}
                       className={`
                         py-2 rounded-lg text-center text-xs font-bold transition-all
                         ${isCurrent

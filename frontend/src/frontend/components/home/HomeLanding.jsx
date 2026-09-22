@@ -62,13 +62,13 @@ function LaurelTrophy() {
   );
 }
 
-const STRATEGY_IMAGES = {
+export const STRATEGY_IMAGES = {
   full: "/Img/FULL POINT.png",
   dual: "/Img/DUAL POINT.png",
   smart: "/Img/SMART POINT.png",
 };
 
-function StrategyDivider() {
+export function StrategyDivider() {
   return (
     <>
       <div className="strategy-divider-v hidden sm:block" aria-hidden />
@@ -77,7 +77,7 @@ function StrategyDivider() {
   );
 }
 
-function StrategyPointColumn({ variant, label, taglineLines, imageSrc }) {
+export function StrategyPointColumn({ variant, label, taglineLines, imageSrc }) {
   const accentText = {
     full: "text-[#b855f7]",
     dual: "text-[#22d3ee]",
@@ -108,7 +108,7 @@ function StrategyPointColumn({ variant, label, taglineLines, imageSrc }) {
   );
 }
 
-function MyFiftyPointsBrand({ tagline }) {
+export function MyFiftyPointsBrand({ tagline }) {
   return (
     <div className="my-points-brand">
       <p className="my-points-brand-label">MY</p>

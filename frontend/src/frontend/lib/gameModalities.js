@@ -148,10 +148,12 @@ const COVER_PASSED_KEY = "50points_cover_passed";
 export function normalizeModalityId(id) {
   if (!id) return "free";
   const s = String(id).toLowerCase().trim();
-  if (s === "1" || s === "guest" || s === "modalidad-1" || s === "modalidad-guest") return "guest";
+  // Numeric aliases follow the Figma numbering: M1 paid (prize), M2 free,
+  // M3 special, M4 guest — NOT the internal gameMode enum.
+  if (s === "1" || s === "paid" || s === "modalidad-1" || s === "modalidad-paid") return "paid";
   if (s === "2" || s === "free" || s === "modalidad-2" || s === "modalidad-free") return "free";
-  if (s === "3" || s === "paid" || s === "modalidad-3" || s === "modalidad-paid") return "paid";
-  if (s === "4" || s === "special" || s === "modalidad-4" || s === "modalidad-special") return "special";
+  if (s === "3" || s === "special" || s === "modalidad-3" || s === "modalidad-special") return "special";
+  if (s === "4" || s === "guest" || s === "modalidad-4" || s === "modalidad-guest") return "guest";
   return MODALITY_IDS.includes(s) ? s : "free";
 }
 

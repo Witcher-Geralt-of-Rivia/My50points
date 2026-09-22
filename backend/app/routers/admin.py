@@ -31,7 +31,13 @@ def sync_racing(db: Session = Depends(get_db)):
 
 @router.post("/simulate/race-result", dependencies=[Depends(require_admin)])
 def simulate_race_result(body: SimulateRaceResultBody, db: Session = Depends(get_db)):
-    """Set winner + dividend, then score all picks for that race."""
+    """Freeze the official dividend, then score all picks for that race.
+
+    The dividend is written to the immutable OfficialDividend table (derived
+    from the $2 Win payoff base) and scoring reads ONLY that table. Live
+    Horse.odds are never mutated here, so later odds moves cannot rewrite
+    history — re-posting a corrected result rescoring is idempotent.
+    """
     race = (
         db.query(Race)
         .options(joinedload(Race.horses))
@@ -46,8 +52,7 @@ def simulate_race_result(body: SimulateRaceResultBody, db: Session = Depends(get
     if not winner:
         raise HTTPException(status_code=400, detail="Winner horse not in this race")
 
-    winner.odds = float(body.officialDividend)
-    db.flush()
+    dividend = float(body.officialDividend)
 
     others = [h for h in horses if h.id != winner.id]
     if len(others) < 2:
@@ -58,4 +63,11 @@ def simulate_race_result(body: SimulateRaceResultBody, db: Session = Depends(get
         {"position": 2, "horseId": others[0].id},
         {"position": 3, "horseId": others[1].id},
     ]
-    return post_race_result(body.raceId, results, db)
+    # Single write path: post_race_result freezes the dividend table first,
+    # then scores exclusively from it.
+    return post_race_result(
+        body.raceId,
+        results,
+        db,
+        dividends=[{"horseId": winner.id, "dividend": dividend}],
+    )

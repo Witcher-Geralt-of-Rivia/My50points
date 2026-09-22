@@ -58,6 +58,7 @@ export default function Header() {
   }, [langMenuOpen]);
 
   const navLinks = [
+    { href: "/landing", label: "PÁG 22 (NEON RACER)" },
     { href: "/tournaments", label: t("nav.tournaments") },
     { href: "/leaderboard", label: t("nav.ranking") },
     { href: "/hall-of-fame", label: t("nav.hallOfFame") },

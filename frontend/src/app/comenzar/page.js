@@ -1,14 +1,14 @@
-import ComenzarPageClient from "./ComenzarPageClient";
+import Page22LandingClient from "../landing/Page22LandingClient";
 import { buildPageMetadata } from "@/frontend/lib/seo/metadata";
 
 export const metadata = buildPageMetadata({
-  title: "Comenzar",
+  title: "MY 50 POINTS - Comenzar | Torneo Oficial",
   description:
-    "Learn how 50points tournaments work and choose your game mode — free general tournaments with 3 independent tickets per racetrack.",
+    "Aprende cómo funciona el torneo MY 50 POINTS y elige tu modalidad. 3 tickets independientes por hipódromo.",
   path: "/comenzar",
-  keywords: ["how to play", "game modes", "free tickets", "horse racing tournament"],
+  keywords: ["comenzar", "how to play", "game modes", "free tickets", "horse racing tournament"],
 });
 
 export default function ComenzarPage() {
-  return <ComenzarPageClient />;
+  return <Page22LandingClient />;
 }

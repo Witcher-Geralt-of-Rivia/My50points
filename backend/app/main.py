@@ -96,11 +96,31 @@ def _ensure_horse_scratched_column():
         pass
 
 
+def _ensure_user_role_column():
+    """SQLite dev DB only: add User.role column if missing (founder | admin | member)."""
+    from sqlalchemy import inspect, text
+
+    if not str(engine.url).startswith("sqlite"):
+        return
+
+    try:
+        insp = inspect(engine)
+        if "User" not in insp.get_table_names():
+            return
+        cols = {c["name"] for c in insp.get_columns("User")}
+        if "role" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE User ADD COLUMN role VARCHAR DEFAULT 'member'"))
+    except Exception:
+        pass
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
     _ensure_leaderboard_columns()
     _ensure_horse_scratched_column()
+    _ensure_user_role_column()
     db = SessionLocal()
     try:
         ensure_seeded_if_empty(db)
@@ -147,8 +167,8 @@ app.add_middleware(
     allow_origins=settings.cors_origin_list,
     allow_origin_regex=settings.cors_origin_regex,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "x-admin-secret"],
 )
 
 api_prefix = "/api"

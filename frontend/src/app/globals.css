@@ -11164,6 +11164,18 @@ body:has(.av-tracks-surface) {
   color: rgba(245, 158, 11, 0.7) !important;
 }
 
+/* Ad-locked ticket (matches TicketCarousel BLOQUEADO state). */
+.tournament-ticket-sheet__tab--locked {
+  border-color: rgba(113, 113, 122, 0.55) !important;
+  background: rgba(113, 113, 122, 0.15) !important;
+}
+.tournament-ticket-sheet__tab--locked .tournament-ticket-sheet__tab-title {
+  color: #d4d4d8 !important;
+}
+.tournament-ticket-sheet__tab--locked .tournament-ticket-sheet__tab-meta {
+  color: rgba(212, 212, 216, 0.7) !important;
+}
+
 .tournament-ticket-sheet__tab-title {
   font-size: 0.68rem;
   font-weight: 800;

@@ -243,33 +243,40 @@ def sync_theracingapi_results(db: Session, race_date: str) -> int:
             if not matching_api_race:
                 continue
 
-            # Map results to local horse IDs
+            # Map results to local horse IDs + freeze official dividends.
+            # sp_dec is the official decimal Win quote: the frozen dividend.
+            # Live Horse.odds are NEVER mutated here (Admin rule).
             runners = matching_api_race.get("runners") or []
             results_payload = []
-            
+            dividends_payload = []
+
             for runner in runners:
                 pos_str = str(runner.get("position", ""))
                 if pos_str in ("1", "2", "3"):
                     pos = int(pos_str)
                     runner_horse = runner.get("horse", "").lower().strip()
                     runner_horse_clean = re.sub(r"\s*\(\s*[a-z]{2,3}\s*\)$", "", runner_horse).strip()
-                    
+
                     local_horse = None
                     for h in local_horses:
                         if h.name.lower().strip() == runner_horse_clean or h.name.lower().strip() == runner_horse:
                             local_horse = h
                             break
-                    
+
                     if local_horse:
-                        odds_val = float(runner.get("sp_dec") or local_horse.odds or 5.0)
-                        local_horse.odds = odds_val
+                        try:
+                            sp = float(runner.get("sp_dec")) if runner.get("sp_dec") else None
+                        except (TypeError, ValueError):
+                            sp = None
+                        if sp and sp > 0:
+                            dividends_payload.append({"horseId": local_horse.id, "dividend": sp})
                         results_payload.append({"position": pos, "horseId": local_horse.id})
 
             if len(results_payload) >= 3:
                 results_payload.sort(key=lambda x: x["position"])
                 try:
                     logger.info("Auto-scoring race %s (Number %s) for tournament %s", race.id, race.raceNumber, tournament.name)
-                    post_race_result(race.id, results_payload, db)
+                    post_race_result(race.id, results_payload, db, dividends=dividends_payload or None)
                     scored_count += 1
                 except Exception as exc:
                     logger.exception("Failed to auto-score race %s: %s", race.id, exc)
@@ -388,10 +395,10 @@ def _score_races_from_source(db: Session, race_date: str, fetcher, *, label: str
 
             # Dividendo oficial del hipódromo: el pago Win viene en base $2 (tanto
             # en `win_payoff` de la API como en la tabla de HRN), así que la cuota
-            # decimal real del ganador = payout / 2. Se aplica ANTES de puntuar para
-            # que score_ticket use el dividendo oficial y no la cuota orientativa de
-            # la cartelera (ley #3 del cliente).
+            # decimal real del ganador = payout / 2. Se congela en la tabla
+            # inmutable y NUNCA se escribe en Horse.odds (Admin rule).
             win_payout = match.get("winPayout")
+            dividends_payload = []
             if (
                 win_payout
                 and results_payload
@@ -400,10 +407,7 @@ def _score_races_from_source(db: Session, race_date: str, fetcher, *, label: str
                 dividend = round(float(win_payout) / 2.0, 2)
                 if dividend >= 1.0:
                     winner_id = results_payload[0]["horseId"]
-                    for h in local_horses:
-                        if h.id == winner_id:
-                            h.odds = dividend
-                            break
+                    dividends_payload.append({"horseId": winner_id, "dividend": dividend})
 
             if len(results_payload) >= 3:
                 try:
@@ -411,7 +415,7 @@ def _score_races_from_source(db: Session, race_date: str, fetcher, *, label: str
                         "%s auto-scoring race %s (Number %s) for tournament %s",
                         label, race.id, race.raceNumber, tournament.name,
                     )
-                    post_race_result(race.id, results_payload, db)
+                    post_race_result(race.id, results_payload, db, dividends=dividends_payload or None)
                     scored_count += 1
                     tournament_scored += 1
                 except Exception as exc:

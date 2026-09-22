@@ -14,6 +14,7 @@ import { profileHubAsset } from "@/frontend/lib/config/profileHubAssets";
 import { getTrackImageUrl } from "@/frontend/lib/tournamentImages";
 import ProfileTopTicketsToday from "@/frontend/components/profile/hub/ProfileTopTicketsToday";
 import { fetchAuthJson, fetchJson } from "@/frontend/lib/api/client";
+import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 
 const TABS = [
   { id: "today", labelKey: "profile.hub.historyTabToday", iconKey: "iconHistoryTabToday" },
@@ -160,11 +161,14 @@ function GuestHistoryUpsell({ t }) {
 }
 
 export default function ProfileTicketHistoryPanel({
-  t,
+  t: propT,
   profile,
   isRegistered = false,
   liveTracks = [],
 }) {
+  const { t: contextT, language } = useLanguage();
+  const t = propT || contextT;
+  const isEn = language === "en";
   const [activeTab, setActiveTab] = useState("today");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTrackSlug, setSelectedTrackSlug] = useState(null);
@@ -354,10 +358,12 @@ export default function ProfileTicketHistoryPanel({
         {activeTab === "claim" ? (
           <div className="profile-hub-claim-panel" style={{ padding: "1.5rem", background: "rgba(255, 255, 255, 0.02)", borderRadius: "1rem", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
             <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#fff", marginBottom: "0.5rem" }}>
-              Reclamar Tickets de Invitado (Modalidad 4)
+              {isEn ? "Claim Guest Tickets (Modality 4)" : "Reclamar Tickets de Invitado (Modalidad 4)"}
             </h3>
             <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.6)", marginBottom: "1.5rem", lineHeight: "1.4" }}>
-              Transfiere tus jugadas hechas en modo Invitado a tu cuenta registrada. Al reclamar un ticket, se preserva el alias original de creación (ej. "Maria Won") y debes sacrificar un ticket de tu Top 5 Personal.
+              {isEn
+                ? "Transfer your picks made in Guest mode to your registered account. When claiming a ticket, the original creation alias is preserved (e.g. \"Maria Won\") and you must sacrifice one ticket from your Personal Top 5."
+                : "Transfiere tus jugadas hechas en modo Invitado a tu cuenta registrada. Al reclamar un ticket, se preserva el alias original de creación (ej. \"Maria Won\") y debes sacrificar un ticket de tu Top 5 Personal."}
             </p>
 
             {claimSuccess && (
@@ -374,14 +380,14 @@ export default function ProfileTicketHistoryPanel({
 
             {!guestToken || guestTickets.length === 0 ? (
               <p style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.4)", textAlign: "center", padding: "2rem 0" }}>
-                No tienes tickets de invitado pendientes por reclamar en este navegador.
+                {isEn ? "You have no pending guest tickets to claim in this browser." : "No tienes tickets de invitado pendientes por reclamar en este navegador."}
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
                 {/* 1. Select guest ticket to claim */}
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-                    1. Selecciona el ticket de invitado a reclamar:
+                    {isEn ? "1. Select the guest ticket to claim:" : "1. Selecciona el ticket de invitado a reclamar:"}
                   </label>
                   <select
                     value={selectedGuestTicket ? `${selectedGuestTicket.tournamentId}-${selectedGuestTicket.ticketNumber}` : ""}
@@ -394,7 +400,7 @@ export default function ProfileTicketHistoryPanel({
                   >
                     {guestTickets.map((t) => (
                       <option key={`${t.tournamentId}-${t.ticketNumber}`} value={`${t.tournamentId}-${t.ticketNumber}`}>
-                        {t.tournamentName} ({t.track}) — {t.totalPoints} Pts (Ticket #{t.ticketNumber})
+                        {t.tournamentName} ({t.track}) — {t.totalPoints} Pts ({isEn ? "Ticket" : "Boleto"} #{t.ticketNumber})
                       </option>
                     ))}
                   </select>
@@ -404,7 +410,7 @@ export default function ProfileTicketHistoryPanel({
                 {top5Tickets.length > 0 ? (
                   <div>
                     <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-                      2. Selecciona el ticket a sacrificar (de tu Top 5):
+                      {isEn ? "2. Select ticket to sacrifice (from your Top 5):" : "2. Selecciona el ticket a sacrificar (de tu Top 5):"}
                     </label>
                     <select
                       value={selectedSacrificeTicket ? `${selectedSacrificeTicket.tournamentId}-${selectedSacrificeTicket.ticketNumber}` : ""}
@@ -417,17 +423,17 @@ export default function ProfileTicketHistoryPanel({
                     >
                       {top5Tickets.map((t) => (
                         <option key={`${t.tournamentId}-${t.ticketNumber}`} value={`${t.tournamentId}-${t.ticketNumber}`}>
-                          {t.tournamentName} ({t.track}) — {t.totalPoints} Pts (Ticket #{t.ticketNumber})
+                          {t.tournamentName} ({t.track}) — {t.totalPoints} Pts ({isEn ? "Ticket" : "Boleto"} #{t.ticketNumber})
                         </option>
                       ))}
                     </select>
                     <p style={{ fontSize: "0.75rem", color: "#ef4444", marginTop: "0.5rem", fontWeight: "bold" }}>
-                      * ADVERTENCIA: El ticket seleccionado aquí será ELIMINADO de forma permanente.
+                      {isEn ? "* WARNING: The ticket selected here will be PERMANENTLY DELETED." : "* ADVERTENCIA: El ticket seleccionado aquí será ELIMINADO de forma permanente."}
                     </p>
                   </div>
                 ) : (
                   <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.5)", fontStyle: "italic" }}>
-                    No tienes tickets en tu cuenta registrada aún. Reclama el ticket de invitado directamente sin sacrificar.
+                    {isEn ? "You don't have tickets in your registered account yet. Claim the guest ticket directly without sacrificing." : "No tienes tickets en tu cuenta registrada aún. Reclama el ticket de invitado directamente sin sacrificar."}
                   </p>
                 )}
 
@@ -452,7 +458,7 @@ export default function ProfileTicketHistoryPanel({
                     transition: "all 0.2s"
                   }}
                 >
-                  {claiming ? "Procesando..." : "Confirmar Intercambio y Reclamar"}
+                  {claiming ? (isEn ? "Processing..." : "Procesando...") : (isEn ? "Confirm Swap & Claim" : "Confirmar Intercambio y Reclamar")}
                 </button>
               </div>
             )}
