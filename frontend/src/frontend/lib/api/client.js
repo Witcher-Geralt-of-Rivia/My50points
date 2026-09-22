@@ -1,5 +1,4 @@
 import {
-  PRODUCTION_API_URL,
   PUBLIC_API_URL,
   isLocalApiUrl,
   resolvePublicApiUrl,
@@ -25,12 +24,10 @@ export function getApiBases() {
   }
 
   const bases = [];
-  const host = window.location.hostname;
 
-  if (host.includes('vercel.app') || host.endsWith('50-points.vercel.app')) {
-    bases.push(`${PRODUCTION_API_URL}/api`);
-  }
-
+  // Only the configured backend is used. The previous host-based branch
+  // injected a hardcoded backend ahead of this one on *.vercel.app, so the
+  // deployment called the wrong API first.
   if (PUBLIC_API_URL && !isLocalApiUrl(PUBLIC_API_URL)) {
     bases.push(`${PUBLIC_API_URL}/api`);
   }

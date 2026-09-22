@@ -1,5 +1,8 @@
-/** Production Render API — used when env vars are missing from the client bundle. */
-export const PRODUCTION_API_URL = 'https://backend-production-7512.up.railway.app';
+/**
+ * No hardcoded backend host. The API base comes only from the configured
+ * environment (API_BACKEND_URL / NEXT_PUBLIC_API_URL); when it is missing the
+ * app uses the same-origin /api proxy instead of guessing a remote backend.
+ */
 
 /**
  * Inlined at build time. On Vercel, set API_BACKEND_URL — next.config copies it here.
@@ -19,7 +22,8 @@ export function resolvePublicApiUrl() {
   if (PUBLIC_API_URL && !isLocalApiUrl(PUBLIC_API_URL)) {
     return PUBLIC_API_URL;
   }
-  return PRODUCTION_API_URL;
+  // Server-side default (localhost in dev, API_BACKEND_URL on the host).
+  return getServerBackendUrl();
 }
 
 /**
