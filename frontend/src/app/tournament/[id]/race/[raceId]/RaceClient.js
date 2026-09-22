@@ -48,7 +48,7 @@ export default function RaceClient() {
     const data = await fetchJson('/tournaments', { cache: 'no-store' });
     const list = data?.tournaments || [];
     const bt = list.find((t) => t.track === tournament.track);
-    if (!bt) throw new Error('Este hip�dromo no tiene torneo activo en el backend');
+    if (!bt) throw new Error('Este hipódromo no tiene torneo activo en el backend');
     const detail = await fetchJson(`/tournaments/${bt.slug}`, { cache: 'no-store' });
     const races = (detail?.tournament?.races || []).map((r) => ({
       id: r.id,
@@ -95,7 +95,7 @@ export default function RaceClient() {
         const ctx = await loadBackendCtx();
         if (live) await loadSavedPicks(ctx);
       } catch {
-        // Backend tournament unavailable � sheet stays local-only.
+        // Backend tournament unavailable — sheet stays local-only.
       }
     })();
     return () => { live = false; };
@@ -107,7 +107,7 @@ export default function RaceClient() {
     return () => clearInterval(id);
   }, []);
 
-  // Community strategy shares � live backend aggregates (global scope)
+  // Community strategy shares — live backend aggregates (global scope)
   useEffect(() => {
     let live = true;
     fetchJson('/statistics/global')
@@ -147,7 +147,7 @@ export default function RaceClient() {
     if (!isPicksComplete) return;
     setSaveState({ phase: 'saving', message: '' });
     try {
-      // Session (registered or M4 guest) � required to persist the ticket
+      // Session (registered or M4 guest) — required to persist the ticket
       const session = await ensureGuestSession();
       if (!session?.token && !token) {
         setSaveState({ phase: 'needs-auth', message: '' });
@@ -164,7 +164,7 @@ export default function RaceClient() {
         return picked ? byPost.get(picked.postPosition) : undefined;
       });
       if (runnerIds.some((v) => v == null)) {
-        throw new Error('Alg�n caballo elegido no existe en la carrera oficial');
+        throw new Error('Algún caballo elegido no existe en la carrera oficial');
       }
       await fetchAuthJson('/tickets', {
         method: 'POST',
@@ -195,7 +195,7 @@ export default function RaceClient() {
     try {
       const session = await ensureGuestSession();
       if (!session?.token && !token) {
-        setAggregateState({ phase: 'error', message: 'Inicia sesi�n o entra como invitado para bloquear el ticket' });
+        setAggregateState({ phase: 'error', message: 'Inicia sesión o entra como invitado para bloquear el ticket' });
         return;
       }
       const ctx = backendCtx || (await loadBackendCtx());
@@ -205,22 +205,22 @@ export default function RaceClient() {
         const backendRace = ctx.races.find((r) => r.raceNumber === n);
         if (!backendRace) throw new Error(`La carrera ${n} no existe en el torneo activo`);
         if (n === race.number) {
-          if (selectedHorses.length === 0) throw new Error(`Falta tu selecci�n de la carrera ${n} (esta p�gina)`);
+          if (selectedHorses.length === 0) throw new Error(`Falta tu selección de la carrera ${n} (esta página)`);
           const byPost = new Map(backendRace.horses.map((h) => [h.postPosition, h.id]));
           const runnerIds = selectedHorses.map((id) => {
             const picked = race.horses.find((h) => h.id === id);
             return picked ? byPost.get(picked.postPosition) : undefined;
           });
-          if (runnerIds.some((v) => v == null)) throw new Error(`Selecci�n inv�lida en la carrera ${n}`);
+          if (runnerIds.some((v) => v == null)) throw new Error(`Selección inválida en la carrera ${n}`);
           selections.push({ raceId: backendRace.id, strategy: BACKEND_STRATEGY[activeStrategy], picks: runnerIds });
         } else {
           const saved = byRace.get(n);
           if (!saved || !Array.isArray(saved.picks) || saved.picks.length === 0) {
-            throw new Error(`Falta guardar la carrera ${n}: �brela y confirma tu boleto`);
+            throw new Error(`Falta guardar la carrera ${n}: ábrela y confirma tu boleto`);
           }
           const validIds = new Set(backendRace.horses.map((h) => h.id));
           for (const pid of saved.picks) {
-            if (!validIds.has(pid)) throw new Error(`Boleto guardado inv�lido en la carrera ${n}: vuelve a confirmarlo`);
+            if (!validIds.has(pid)) throw new Error(`Boleto guardado inválido en la carrera ${n}: vuelve a confirmarlo`);
           }
           selections.push({ raceId: backendRace.id, strategy: saved.strategy, picks: saved.picks });
         }
@@ -255,10 +255,10 @@ export default function RaceClient() {
   const prevRace = raceIndex > 0 ? tournament.races[raceIndex - 1] : null;
   const nextRace = raceIndex < (tournament?.races.length || 0) - 1 ? tournament.races[raceIndex + 1] : null;
 
-  // CIERRE EN � live countdown to today's post time (null-safe: runs before any early return)
+  // CIERRE EN — live countdown to today's post time (null-safe: runs before any early return)
   const closeLabel = useMemo(() => {
     const m = String(race?.postTime || '').match(/(\d{1,2}):(\d{2})/);
-    if (!m) return '�';
+    if (!m) return '—';
     const target = new Date(nowTs);
     target.setHours(Number(m[1]), Number(m[2]), 0, 0);
     const diff = target.getTime() - nowTs;
@@ -270,7 +270,7 @@ export default function RaceClient() {
     return `${pad(h)}:${pad(mi)}:${pad(s)}`;
   }, [race?.postTime, nowTs]);
 
-  const classBadge = String(race?.class || '').split(' ')[0].toUpperCase() || '�';
+  const classBadge = String(race?.class || '').split(' ')[0].toUpperCase() || '—';
 
   if (!tournament || !race) {
     return (
@@ -341,7 +341,7 @@ export default function RaceClient() {
         </div>
       </div>
 
-      {/* Race header strip � Figma spec */}
+      {/* Race header strip — Figma spec */}
       <div className="border-b border-[#f5b301]/25 bg-black">
         <div className="app-page py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -380,7 +380,7 @@ export default function RaceClient() {
 
           {/* Left: Race card with picks */}
           <div className="flex-1 min-w-0 space-y-4">
-            {/* Strategy tabs � Figma spec */}
+            {/* Strategy tabs — Figma spec */}
             <div className="rounded-xl border border-[#f5b301]/30 bg-black p-3">
               <p className="text-center text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
                 Estrategia de puntos
@@ -434,14 +434,14 @@ export default function RaceClient() {
               />
             </motion.div>
 
-            {/* ATR�S / OK � Figma spec */}
+            {/* ATRÁS / OK — Figma spec */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => router.back()}
                 className="rounded-xl border-2 border-purple-500 bg-purple-600/80 hover:bg-purple-600 text-white text-sm font-black uppercase tracking-widest py-3 transition-all cursor-pointer"
               >
-                Atr�s
+                Atrás
               </button>
               <button
                 type="button"
@@ -449,11 +449,11 @@ export default function RaceClient() {
                 disabled={!isPicksComplete || saveState.phase === 'saving'}
                 className="rounded-xl border-2 border-purple-400 bg-purple-600 hover:bg-purple-500 text-white text-sm font-black uppercase tracking-widest py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_18px_rgba(168,85,247,0.45)]"
               >
-                {saveState.phase === 'saving' ? 'Guardando�' : 'OK'}
+                {saveState.phase === 'saving' ? 'Guardando…' : 'OK'}
               </button>
             </div>
 
-            {/* Persist status � honest backend feedback, never silent */}
+            {/* Persist status — honest backend feedback, never silent */}
             {saveState.phase === 'saved' && (
               <p className="rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-2.5 text-emerald-300 text-xs font-bold text-center" role="status">
                 ? Boleto guardado en el torneo oficial
@@ -467,7 +467,7 @@ export default function RaceClient() {
             {saveState.phase === 'needs-auth' && (
               <div className="rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-center">
                 <p className="text-amber-200 text-xs font-bold mb-2">
-                  Inicia sesi�n o entra como invitado para guardar tu boleto
+                  Inicia sesión o entra como invitado para guardar tu boleto
                 </p>
                 <div className="flex items-center justify-center gap-2">
                   <button
@@ -477,7 +477,7 @@ export default function RaceClient() {
                         await playAsGuest();
                         setSaveState({ phase: 'idle', message: '' });
                       } catch {
-                        setSaveState({ phase: 'error', message: 'No se pudo crear la sesi�n de invitado' });
+                        setSaveState({ phase: 'error', message: 'No se pudo crear la sesión de invitado' });
                       }
                     }}
                     className="rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase px-4 py-2 cursor-pointer"
@@ -488,13 +488,13 @@ export default function RaceClient() {
                     href="/login"
                     className="rounded-lg border border-purple-400/60 text-purple-200 text-xs font-black uppercase px-4 py-2"
                   >
-                    Iniciar sesi�n
+                    Iniciar sesión
                   </Link>
                 </div>
               </div>
             )}
 
-            {/* Community strategy shares � live backend aggregates */}
+            {/* Community strategy shares — live backend aggregates */}
             <div className="grid grid-cols-3 gap-2">
               {[
                 { key: 'full', label: 'Full Points', bg: 'bg-purple-600', text: 'text-white' },
@@ -504,14 +504,14 @@ export default function RaceClient() {
                 <div key={b.key} className={`rounded-xl ${b.bg} ${b.text} p-3 text-center`}>
                   <p className="text-[10px] font-black uppercase tracking-wider opacity-80">{b.label}</p>
                   <p className="text-2xl font-black font-mono">
-                    {shares?.[b.key] == null ? '�' : `${Math.round(shares[b.key])}%`}
+                    {shares?.[b.key] == null ? '—' : `${Math.round(shares[b.key])}%`}
                   </p>
                   <p className="text-[9px] font-bold opacity-70">Porcentaje acumulado</p>
                 </div>
               ))}
             </div>
 
-            {/* 7-race aggregate lock � persists the complete ticket, survives refresh */}
+            {/* 7-race aggregate lock — persists the complete ticket, survives refresh */}
             <div className="rounded-xl border-2 border-[#f5b301]/50 bg-black p-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-black uppercase tracking-wider text-white">
@@ -530,7 +530,7 @@ export default function RaceClient() {
                 disabled={readyCount < 7 || aggregateState.phase === 'saving'}
                 className="mt-3 w-full rounded-xl bg-[#f5b301] hover:brightness-110 text-black text-sm font-black uppercase tracking-widest py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {aggregateState.phase === 'saving' ? 'Bloqueando�' : 'Bloquear ticket 7 carreras'}
+                {aggregateState.phase === 'saving' ? 'Bloqueando…' : 'Bloquear ticket 7 carreras'}
               </button>
               {aggregateState.phase === 'saved' && (
                 <p className="mt-2 text-emerald-300 text-xs font-bold text-center" role="status">
