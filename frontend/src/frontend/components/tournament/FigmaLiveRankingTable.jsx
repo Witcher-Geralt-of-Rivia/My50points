@@ -104,7 +104,10 @@ export default function FigmaLiveRankingTable({
           const wins = plays.filter((p) => p?.won).length;
           const gap = leaderPoints - (e?.totalPoints ?? 0);
           const delta = e?.rankChange ?? 0;
-          const modality = Math.min(Math.max(Number(e?.gameMode) || 2, 1), 3);
+          // Modality pill: M4 guests must never render as M1. Launch modes
+          // only distinguish guest (M4) vs registered (M2); paid M1/M3 need
+          // their own gameMode values once those modalities launch.
+          const modality = e?.isGuest ? 4 : 2;
 
           return (
             <div

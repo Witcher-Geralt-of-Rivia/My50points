@@ -11,6 +11,7 @@ export default function TicketCarousel({
   totalRaces = 7,
   completedCount = 0,
   lockedTickets = {},
+  confirmedTickets = {},
   isGuest = false,
   onUnlockRequest,
 }) {
@@ -50,16 +51,19 @@ export default function TicketCarousel({
           const isComplete = ticketPicksCount >= totalRaces;
           // Guests (M4) unlock Tickets 2 & 3 with one ad view each — same as M2.
           const isLocked = Boolean(lockedTickets[t.id]);
+          // Aggregate-confirmed tickets read USADO straight from the backend,
+          // so refresh never shows them as EN PROCESO again.
+          const isConfirmed = Boolean(confirmedTickets[t.id]);
 
           let statusText = isEn ? "AVAILABLE" : "DISPONIBLE";
           let statusBg = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
 
-          if (isLocked) {
-            statusText = isEn ? "LOCKED" : "BLOQUEADO";
-            statusBg = "bg-zinc-500/20 text-zinc-300 border-zinc-500/40";
-          } else if (isSubmitted) {
+          if (isConfirmed || isSubmitted) {
             statusText = isEn ? "SUBMITTED" : "USADO";
             statusBg = "bg-purple-600/30 text-purple-200 border-purple-400/50";
+          } else if (isLocked) {
+            statusText = isEn ? "LOCKED" : "BLOQUEADO";
+            statusBg = "bg-zinc-500/20 text-zinc-300 border-zinc-500/40";
           } else if (ticketPicksCount > 0) {
             statusText = isEn ? "IN PROGRESS" : "EN PROCESO";
             statusBg = "bg-amber-500/20 text-amber-300 border-amber-500/40";
@@ -71,7 +75,7 @@ export default function TicketCarousel({
               id={`ticket-voucher-${t.id}`}
               type="button"
               onClick={() => {
-                if (isLocked) {
+                if (isLocked && !isConfirmed) {
                   onUnlockRequest?.(t.id);
                   return;
                 }
@@ -85,7 +89,7 @@ export default function TicketCarousel({
                   : 'border-white/15 bg-gradient-to-b from-slate-900/90 to-slate-950/90 hover:border-purple-400/40 hover:bg-slate-900 cursor-pointer'
               }`}
             >
-              {isLocked && (
+              {isLocked && !isConfirmed && (
                 <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/70 border border-amber-400/50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
                   <Lock className="w-3 h-3" />
                   <span>{isEn ? "Ad" : "Anuncio"}</span>
@@ -123,7 +127,7 @@ export default function TicketCarousel({
                 >
                   {statusText}
                 </div>
-                {isLocked && (
+                {isLocked && !isConfirmed && (
                   <span className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-400/15 border border-amber-400/50 px-3 py-1.5 text-[11px] font-black uppercase text-amber-300">
                     <Play className="w-3.5 h-3.5" />
                     <span>{isEn ? "Watch ad to unlock" : "Ver anuncio para desbloquear"}</span>

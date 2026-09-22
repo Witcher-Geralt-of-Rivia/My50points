@@ -41,13 +41,20 @@ def _normalize_picks(picks) -> list[int]:
 def _horse_dividend(horses: list | None, horse_id: int, official_dividends: dict[int, float] | None = None) -> float:
     """
     Official frozen payout dividend for the selected horse.
-    Prefers official track dividends table (derived from $2 Win payoff: win_payoff / 2.0).
-    Falls back to frozen runner odds.
+    Two modes (Admin rule):
+    - official_dividends is not None (official result path): ONLY the frozen
+      table decides. A missing row scores 0.0 — live Horse.odds are NEVER
+      consulted, so later odds moves cannot rewrite an official result.
+    - official_dividends is None (legacy/unit path): falls back to frozen
+      runner odds, as before.
     """
-    if official_dividends and int(horse_id) in official_dividends:
-        val = official_dividends[int(horse_id)]
-        if val > 0:
-            return float(val)
+    if official_dividends is not None:
+        val = official_dividends.get(int(horse_id))
+        try:
+            val = float(val)
+        except (TypeError, ValueError):
+            return 0.0
+        return val if val > 0 else 0.0
 
     if not horses:
         return 1.0

@@ -127,3 +127,51 @@ def test_real_race_result_path_freezes_dividends(client, db):
     assert res.status_code == 200, res.text
     db.refresh(ticket)
     assert ticket.pointsEarned == round(50 * 5.0)
+
+
+def test_result_path_without_dividends_never_uses_live_odds(client, db):
+    """P0-1 regression: an official result posted WITHOUT frozen dividends
+    must NOT fall back to mutable live odds. The winner scores 0, and moving
+    Horse.odds afterwards cannot change the already-scored result
+    (the audit reproduced 152 -> 4950 through exactly this hole).
+    """
+    user = _member(db, "div_no_fallback")
+    token = sign_token(user.id, user.username)
+    race, horses = _santa_race_1(db)
+    winner = horses[0]
+    others = [h for h in horses if h.id != winner.id][:2]
+
+    res = client.post(
+        "/api/tickets",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"raceId": race.id, "strategy": "full_point", "picks": [winner.id], "ticketNumber": 1},
+    )
+    assert res.status_code == 200, res.text
+
+    body = {
+        "results": [
+            {"position": 1, "horseId": winner.id},
+            {"position": 2, "horseId": others[0].id},
+            {"position": 3, "horseId": others[1].id},
+        ]
+    }
+    res = client.post(
+        f"/api/races/{race.id}/result",
+        headers={"x-admin-secret": "test-admin-secret"},
+        json=body,
+    )
+    assert res.status_code == 200, res.text
+
+    ticket = db.query(Ticket).filter(Ticket.userId == user.id, Ticket.raceId == race.id).first()
+    assert ticket.pointsEarned == 0
+
+    db.query(Horse).filter(Horse.id == winner.id).update({"odds": 99.0})
+    db.commit()
+    res = client.post(
+        f"/api/races/{race.id}/result",
+        headers={"x-admin-secret": "test-admin-secret"},
+        json=body,
+    )
+    assert res.status_code == 200, res.text
+    db.refresh(ticket)
+    assert ticket.pointsEarned == 0

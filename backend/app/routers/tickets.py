@@ -690,10 +690,24 @@ def ticket_unlocks(
         .all()
     )
     unlocked = {r.ticketNumber: bool(r.isAdUnlocked) for r in rows}
+    confirmed_rows = (
+        db.query(TournamentTicket.ticketNumber)
+        .filter(
+            TournamentTicket.userId == user.id,
+            TournamentTicket.tournamentId == tournamentId,
+            TournamentTicket.status == "confirmed",
+        )
+        .all()
+    )
+    confirmed = {1: False, 2: False, 3: False}
+    for (num,) in confirmed_rows:
+        if num in confirmed:
+            confirmed[num] = True
     return {
         "tournamentId": tournamentId,
         "ticket1": True,
         "ticket2": unlocked.get(2, False),
         "ticket3": unlocked.get(3, False),
         "guestRestricted": bool(user.isGuest),
+        "confirmed": confirmed,
     }

@@ -272,17 +272,32 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
         if (!data?.tickets) return;
         const ticketMap = {};
         for (const t of data.tickets) {
-          ticketMap[`${t.raceId}-${t.ticketNumber}`] = t;
+          // A persisted row means the race was submitted: mark it so the
+          // carousel/sheet show USADO (not EN PROCESO) right after refresh.
+          ticketMap[`${t.raceId}-${t.ticketNumber}`] = {
+            ...t,
+            isSubmitted: true,
+            picksCount: Array.isArray(t.picks) ? t.picks.length : 0,
+          };
         }
         setSubmittedTickets(ticketMap);
       })
       .catch(() => {});
 
-    // M2 ad entitlements for Tickets 2 & 3 (server-issued unlock records).
+    // M2/M4 ad entitlements + confirmed (aggregate-locked) state.
     fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw.id}`)
       .then((data) => {
         if (!data) return;
         setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
+        if (data.confirmed) {
+          setAggregateStatus((p) => {
+            const next = { ...p };
+            for (const [num, on] of Object.entries(data.confirmed)) {
+              if (on) next[num] = 'locked';
+            }
+            return next;
+          });
+        }
       })
       .catch(() => {});
   }, [token, tournamentRaw]);
@@ -545,6 +560,10 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
     if (!tournament || !token || !tournamentRaw?.id) return;
     if (confirmedCount < (tournament.totalRaces || 7)) return;
     if (aggregateStatus[activeTicketNumber] === 'locked') return;
+    // Never re-submit once the tournament is closed: the persisted state
+    // above already shows the locked ticket, no raw 400s.
+    const submittable = ['upcoming', 'live', 'open'].includes(tournament.status);
+    if (!submittable) return;
     const triedKey = `${activeTicketNumber}:${confirmedCount}:${aggregateRetryTick}`;
     if (aggregateTried.current[triedKey]) return;
     aggregateTried.current[triedKey] = true;
@@ -960,6 +979,11 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
             totalRaces={tournament.races.length || 7}
             completedCount={confirmedCount}
             lockedTickets={{ 2: isTicketLocked(2), 3: isTicketLocked(3) }}
+            confirmedTickets={{
+              1: aggregateStatus[1] === 'locked',
+              2: aggregateStatus[2] === 'locked',
+              3: aggregateStatus[3] === 'locked',
+            }}
             isGuest={isGuestUser}
             onUnlockRequest={(n) => setUnlockModalFor(n)}
           />

@@ -70,17 +70,16 @@ def post_race_result(race_id: int, results: list, db: Session, dividends: list |
             payoff = d.get("winPayoff") if isinstance(d, dict) else d.winPayoff
             if hid not in horse_ids or not div or float(div) <= 0:
                 continue
-            db.query(OfficialDividend).filter(
+            row = db.query(OfficialDividend).filter(
                 OfficialDividend.raceId == race_id,
                 OfficialDividend.horseId == hid,
-            ).delete()
-            db.add(OfficialDividend(
-                raceId=race_id,
-                horseId=hid,
-                winPayoff=float(payoff) if payoff else round(float(div) * 2.0, 2),
-                dividend=float(div),
-                isDeadHeat=len(winner_ids) > 1 and hid in winner_ids,
-            ))
+            ).first()
+            if row is None:
+                row = OfficialDividend(raceId=race_id, horseId=hid)
+                db.add(row)
+            row.winPayoff = float(payoff) if payoff else round(float(div) * 2.0, 2)
+            row.dividend = float(div)
+            row.isDeadHeat = len(winner_ids) > 1 and hid in winner_ids
         db.flush()
 
     official_div_records = db.query(OfficialDividend).filter(OfficialDividend.raceId == race_id).all()
