@@ -88,7 +88,10 @@ export default function Page22LandingClient() {
                 imageSrc={staticFile(STRATEGY_IMAGES.smart)}
               />
             </div>
-            <LanguageToggle />
+            {/* Mobile stacks this row, which would drop the toggle under the
+                whole strategy strip; order-first + self-end keeps it in the
+                top-right corner. From sm up the row layout is unchanged. */}
+            <LanguageToggle className="order-first self-end sm:order-none sm:self-auto" />
           </div>
 
           {/* MY 50 POINTS brand */}
