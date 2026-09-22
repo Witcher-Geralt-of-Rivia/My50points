@@ -62,11 +62,10 @@ export default function Page22LandingClient() {
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7 pb-8 flex flex-col min-h-[100svh]">
-          {/* Top row: language + strategy strip.
-              The toggle sits top-left on empty artwork, clear of the baked
-              LANGUAGE pill (top-right) so nothing overlaps. */}
+          {/* Top row: strategy strip + language. A second LanguageToggle used
+              to render here on the left, so the page showed the control twice;
+              only the top-right one below is kept. */}
           <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
-            <LanguageToggle />
             <div className="hero-strategy-points flex flex-1 flex-col sm:flex-row items-stretch bg-transparent">
               <StrategyPointColumn
                 variant="full"
