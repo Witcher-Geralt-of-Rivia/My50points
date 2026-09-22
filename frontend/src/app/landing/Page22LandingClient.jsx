@@ -65,7 +65,7 @@ export default function Page22LandingClient() {
           {/* Top row: strategy strip + language. A second LanguageToggle used
               to render here on the left, so the page showed the control twice;
               only the top-right one below is kept. */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
+          <div className="flex flex-col lg:flex-row items-start lg:items-start justify-between gap-3">
             <div className="hero-strategy-points flex flex-1 flex-col sm:flex-row items-stretch bg-transparent">
               <StrategyPointColumn
                 variant="full"
@@ -88,10 +88,11 @@ export default function Page22LandingClient() {
                 imageSrc={staticFile(STRATEGY_IMAGES.smart)}
               />
             </div>
-            {/* Mobile stacks this row, which would drop the toggle under the
-                whole strategy strip; order-first + self-end keeps it in the
-                top-right corner. From sm up the row layout is unchanged. */}
-            <LanguageToggle className="order-first self-end sm:order-none sm:self-auto" />
+            {/* While the top row is stacked, order-first + self-end keep the
+                toggle in the top-right corner instead of under the strip.
+                From lg the row has room for both side by side, so the toggle
+                returns to normal order/alignment. */}
+            <LanguageToggle className="order-first self-end lg:order-none lg:self-auto" />
           </div>
 
           {/* MY 50 POINTS brand */}
