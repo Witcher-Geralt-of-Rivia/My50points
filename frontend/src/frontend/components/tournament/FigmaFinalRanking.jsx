@@ -1,189 +1,419 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Trophy, Search, CheckCircle } from 'lucide-react';
+/**
+ * Final ranking / podium (design pages 61 & 64).
+ *
+ * Renders ONLY real leaderboard data supplied by the caller. The previous
+ * version shipped a hardcoded sample leaderboard taken from the design file;
+ * that has been removed — when no entries are available the component says so
+ * and links to the dedicated ranking page instead of inventing standings.
+ *
+ * The caller decides whether this section is allowed to appear at all (it is
+ * gated on tournament phase); this component never asserts that a tournament
+ * is finished on its own.
+ */
+
+import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Search, ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
+
+const PODIUM_STYLE = [
+  {
+    // 1st
+    plinth: 'linear-gradient(180deg, var(--my50-gold) 0%, #a9760a 100%)',
+    ring: 'var(--my50-gold)',
+    height: 150,
+    order: 2,
+  },
+  {
+    // 2nd
+    plinth: 'linear-gradient(180deg, #cbd5e1 0%, #64748b 100%)',
+    ring: '#cbd5e1',
+    height: 116,
+    order: 1,
+  },
+  {
+    // 3rd
+    plinth: 'linear-gradient(180deg, #b45309 0%, #5c2a06 100%)',
+    ring: '#b45309',
+    height: 92,
+    order: 3,
+  },
+];
+
+function formatDate(value, isEn) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(isEn ? 'en-GB' : 'es-ES', {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
 
 export default function FigmaFinalRanking({
   entries = [],
-  tournamentName = "SANTA ANITA PARK",
-  isFinished = true,
+  tournamentName = '',
+  tournamentDate = null,
+  fullRankingHref = '/leaderboard',
+  // On the tournament detail page this renders a preview; the dedicated
+  // ranking route keeps the complete list. No data is removed or altered —
+  // only how much of it this surface shows.
+  previewLimit = null,
+  showSearch = true,
 }) {
   const { language } = useLanguage();
   const isEn = language === 'en';
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Certified demo leaderboard matching Figma Page 6
-  const defaultFigmaData = [
-    { pos: 1, name: "María López", ticket: "T1", points: 7890, diff: "—" },
-    { pos: 2, name: "Alex Martín", ticket: "T2", points: 4560, diff: "-3,330" },
-    { pos: 3, name: "David Ruiz", ticket: "T3", points: 2180, diff: "-5,710" },
-    { pos: 4, name: "HIPÓDROMO KING", ticket: "T1", points: 1950, diff: "-5,940" },
-    { pos: 5, name: "FAST BET", ticket: "T3", points: 1880, diff: "-6,010" },
-    { pos: 6, name: "QUEEN RUSH", ticket: "T2", points: 1740, diff: "-6,150" },
-    { pos: 7, name: "JOCKEY LEGEND", ticket: "T1", points: 1620, diff: "-6,270" },
-    { pos: 8, name: "RÁPIDO Y FURIOSO", ticket: "T2", points: 1540, diff: "-6,350" },
-    { pos: 9, name: "PURAS APUESTAS", ticket: "T1", points: 1420, diff: "-6,470" },
-    { pos: 10, name: "INVITADO TOP", ticket: "T3", points: 1310, diff: "-6,580" },
-    { pos: 11, name: "BET MASTER", ticket: "T2", points: 1240, diff: "-6,650" },
-    { pos: 12, name: "GOLDEN HORSE", ticket: "T1", points: 1180, diff: "-6,710" },
-    { pos: 13, name: "BLACK POWER", ticket: "T3", points: 1090, diff: "-6,800" },
-    { pos: 14, name: "TURF INVITADO", ticket: "T2", points: 1020, diff: "-6,870" },
-    { pos: 15, name: "VELOCIDAD TOTAL", ticket: "T1", points: 960, diff: "-6,930" },
-  ];
-
-  const filteredData = defaultFigmaData.filter((r) =>
-    r.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const rows = useMemo(
+    () =>
+      (entries || [])
+        .map((e, idx) => ({
+          pos: Number(e.pos ?? e.rank ?? idx + 1),
+          name: e.name || e.username || e.playerName || '—',
+          ticket: e.ticket || (e.ticketNumber ? `T${e.ticketNumber}` : null),
+          points: Number(e.points ?? e.score ?? 0),
+          diff: e.diff ?? null,
+        }))
+        .sort((a, b) => a.pos - b.pos),
+    [entries],
   );
+
+  const filtered = useMemo(() => {
+    const q = showSearch ? searchTerm.trim().toLowerCase() : '';
+    const matched = q ? rows.filter((r) => r.name.toLowerCase().includes(q)) : rows;
+    return previewLimit ? matched.slice(0, previewLimit) : matched;
+  }, [rows, searchTerm, showSearch, previewLimit]);
+
+  const hiddenCount = previewLimit ? Math.max(0, rows.length - filtered.length) : 0;
+
+  const dateLabel = formatDate(tournamentDate, isEn);
+  const podium = rows.slice(0, 3);
 
   return (
-    <div className="w-full mt-12 rounded-3xl border-2 border-purple-900/40 bg-black p-6 sm:p-10 shadow-[0_0_50px_rgba(124,58,237,0.25)] text-white relative overflow-hidden">
-      {/* Laser Neon Light Accents */}
-      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[250px] bg-gradient-to-r from-purple-600/30 via-cyan-500/20 to-amber-500/30 blur-[100px] pointer-events-none" />
-
+    <section className="tp-panel" style={{ padding: 'var(--my50-space-6)' }}>
       {/* Header */}
-      <div className="text-center relative z-10 pb-6 border-b border-white/10">
-        <span className="text-xs sm:text-sm font-black tracking-[0.25em] text-[#06B6D4] uppercase">
+      <div
+        style={{
+          textAlign: 'center',
+          paddingBottom: 'var(--my50-space-5)',
+          borderBottom: '1px solid var(--my50-border)',
+        }}
+      >
+        <p className="tp-eyebrow" style={{ color: 'var(--my50-aqua)' }}>
           MY 50 POINTS
-        </span>
-        <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-white mt-1 drop-shadow">
-          {isEn ? "FINAL RANKING" : "RANKING FINAL"}
+        </p>
+        <h2
+          style={{
+            fontSize: 'var(--my50-font-h1)',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            margin: '4px 0 0',
+          }}
+        >
+          {isEn ? 'Final ranking' : 'Ranking final'}
         </h2>
-        <div className="text-xs sm:text-sm font-black uppercase tracking-widest text-[#FACC15] mt-1">
-          {isEn ? "OFFICIAL RECORD · TOURNAMENT COMPLETED" : "REGISTRO OFICIAL · TORNEO FINALIZADO"}
-        </div>
+        <p
+          style={{
+            margin: '6px 0 0',
+            fontSize: 'var(--my50-font-label)',
+            fontWeight: 800,
+            letterSpacing: 'var(--my50-tracking-label)',
+            color: 'var(--my50-gold)',
+            textTransform: 'uppercase',
+          }}
+        >
+          {isEn ? 'Official record' : 'Registro oficial'}
+          {tournamentName ? ` · ${tournamentName}` : ''}
+          {dateLabel ? ` · ${dateLabel}` : ''}
+        </p>
       </div>
 
-      {/* 3D Podium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto my-10 items-end relative z-10">
-        {/* 2nd Place (Silver - Left) */}
-        <div className="order-2 md:order-1 flex flex-col items-center">
-          <div className="w-24 h-24 rounded-full border-4 border-slate-300 p-1 bg-slate-900 shadow-[0_0_20px_rgba(203,213,225,0.4)] mb-3 overflow-hidden flex items-center justify-center">
-            <span className="text-3xl">🥈</span>
-          </div>
-          <div className="w-full max-w-[200px] bg-white text-black text-center py-2 px-3 rounded-xl shadow-lg font-black">
-            <div className="text-xs truncate">Alex Martín</div>
-            <div className="text-[11px] text-zinc-600 font-bold">4,560 {isEn ? "POINTS" : "PUNTOS"}</div>
-          </div>
-          <div className="w-full max-w-[200px] h-36 mt-2 rounded-2xl bg-gradient-to-b from-slate-400 via-slate-600 to-slate-800 flex items-center justify-center border-2 border-slate-300 shadow-xl">
-            <div className="w-16 h-16 rounded-xl bg-white/90 text-black font-black text-4xl flex items-center justify-center shadow-inner font-mono">
-              2
-            </div>
-          </div>
-        </div>
-
-        {/* 1st Place (Gold - Center) */}
-        <div className="order-1 md:order-2 flex flex-col items-center">
-          <div className="w-28 h-28 rounded-full border-4 border-[#FACC15] p-1 bg-amber-950 shadow-[0_0_35px_rgba(250,204,21,0.6)] mb-3 overflow-hidden flex items-center justify-center relative">
-            <span className="text-5xl">👑</span>
-          </div>
-          <div className="w-full max-w-[220px] bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-400 text-black text-center py-2.5 px-3 rounded-xl shadow-2xl font-black">
-            <div className="text-sm truncate">María López</div>
-            <div className="text-xs text-amber-950 font-black">7,890 {isEn ? "POINTS" : "PUNTOS"}</div>
-          </div>
-          <div className="w-full max-w-[220px] h-48 mt-2 rounded-2xl bg-gradient-to-b from-[#FACC15] via-[#CA8A04] to-[#854D0E] flex items-center justify-center border-2 border-yellow-300 shadow-2xl">
-            <div className="w-20 h-20 rounded-xl bg-white text-black font-black text-5xl flex items-center justify-center shadow-2xl font-mono">
-              1
-            </div>
-          </div>
-        </div>
-
-        {/* 3rd Place (Bronze - Right) */}
-        <div className="order-3 flex flex-col items-center">
-          <div className="w-24 h-24 rounded-full border-4 border-amber-700 p-1 bg-stone-900 shadow-[0_0_20px_rgba(180,83,9,0.4)] mb-3 overflow-hidden flex items-center justify-center">
-            <span className="text-3xl">🥉</span>
-          </div>
-          <div className="w-full max-w-[200px] bg-white text-black text-center py-2 px-3 rounded-xl shadow-lg font-black">
-            <div className="text-xs truncate">David Ruiz</div>
-            <div className="text-[11px] text-zinc-600 font-bold">2,180 {isEn ? "POINTS" : "PUNTOS"}</div>
-          </div>
-          <div className="w-full max-w-[200px] h-28 mt-2 rounded-2xl bg-gradient-to-b from-[#B45309] via-[#78350F] to-[#451A03] flex items-center justify-center border-2 border-amber-700 shadow-xl">
-            <div className="w-16 h-16 rounded-xl bg-[#FDE68A]/90 text-amber-950 font-black text-4xl flex items-center justify-center shadow-inner font-mono">
-              3
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Subheader Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950 border border-white/10 mb-5 relative z-10">
-        <div>
-          <h3 className="text-sm font-black uppercase text-white tracking-wide">
-            {isEn ? "FINAL RANKING" : "RANKING FINAL"} · {tournamentName}
-          </h3>
-          <p className="text-[11px] text-white/50">
-            {isEn ? "CLOSED STANDINGS · CERTIFIED PERMANENT RECORD" : "CLASIFICACIÓN CERRADA · REGISTRO PERMANENTE CERTIFICADO"}
+      {rows.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 'var(--my50-space-6) 0' }}>
+          <p style={{ color: 'var(--my50-text-muted)', fontSize: 'var(--my50-font-body-lg)', margin: 0 }}>
+            {isEn
+              ? 'Final standings are not available yet.'
+              : 'La clasificación final aún no está disponible.'}
           </p>
+          <Link
+            href={fullRankingHref}
+            className="tp-btn tp-btn--ghost"
+            style={{ marginTop: 'var(--my50-space-4)' }}
+          >
+            {isEn ? 'Open full ranking' : 'Ver ranking completo'}
+            <ArrowRight size={15} />
+          </Link>
         </div>
-        <div className="text-right">
-          <span className="text-[10px] text-white/40 uppercase font-mono block">{isEn ? "TOURNAMENT DATE" : "FECHA DEL TORNEO"}</span>
-          <span className="text-xs font-black font-mono text-white">02/08/2026</span>
-        </div>
-      </div>
-
-      {/* Search Bar */}
-      <div className="relative mb-4 max-w-md z-10">
-        <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={isEn ? "Search player..." : "Buscar jugador..."}
-          className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white placeholder-white/30 focus:outline-none focus:border-cyan-400 transition-colors"
-        />
-      </div>
-
-      {/* Leaderboard Table */}
-      <div className="overflow-x-auto rounded-xl border border-white/10 relative z-10 bg-slate-950">
-        <table className="w-full text-left text-xs border-collapse font-sans">
-          <thead className="border-b border-white/10 text-white/40 uppercase tracking-wider text-[10px] bg-white/[0.02]">
-            <tr>
-              <th className="py-3 px-3 text-center w-14">{isEn ? "POS." : "POS."}</th>
-              <th className="py-3 px-3">{isEn ? "PLAYER" : "JUGADOR"}</th>
-              <th className="py-3 px-3 text-center w-24">{isEn ? "TICKET N°" : "N° TICKET"}</th>
-              <th className="py-3 px-3 text-right">{isEn ? "POINTS" : "PUNTOS"}</th>
-              <th className="py-3 px-3 text-right">{isEn ? "DIFF" : "DIFERENCIA"}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5 font-mono">
-            {filteredData.map((row) => {
-              // Pos color badges
-              let posBadgeBg = 'bg-white/10 text-white';
-              if (row.pos === 1) posBadgeBg = 'bg-[#FACC15] text-black font-black';
-              else if (row.pos === 2) posBadgeBg = 'bg-slate-300 text-black font-black';
-              else if (row.pos === 3) posBadgeBg = 'bg-[#B45309] text-white font-black';
-
+      ) : (
+        <>
+          {/* Podium — only for the places that actually exist */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${Math.min(podium.length, 3)}, minmax(0, 1fr))`,
+              gap: 'var(--my50-space-4)',
+              alignItems: 'end',
+              maxWidth: 720,
+              margin: 'var(--my50-space-6) auto',
+            }}
+          >
+            {podium.map((row, idx) => {
+              const style = PODIUM_STYLE[idx] || PODIUM_STYLE[2];
               return (
-                <tr key={row.pos} className="hover:bg-white/[0.04] transition-colors">
-                  <td className="py-2.5 px-3 text-center">
-                    <span className={`inline-flex items-center justify-center w-7 h-5 rounded-md text-xs ${posBadgeBg}`}>
+                <div
+                  key={row.pos}
+                  style={{
+                    order: style.order,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '100%',
+                      maxWidth: 210,
+                      background: 'var(--my50-cream)',
+                      color: 'var(--my50-cream-ink)',
+                      borderRadius: 'var(--my50-radius-sm)',
+                      padding: '8px 10px',
+                      textAlign: 'center',
+                      border: `2px solid ${style.ring}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 900,
+                        fontSize: 'var(--my50-font-label)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {row.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 'var(--my50-font-micro)',
+                        fontWeight: 800,
+                        color: 'var(--my50-cream-ink-muted)',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {row.points.toLocaleString()} {isEn ? 'POINTS' : 'PUNTOS'}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      width: '100%',
+                      maxWidth: 210,
+                      height: style.height,
+                      marginTop: 8,
+                      borderRadius: 'var(--my50-radius-md)',
+                      background: style.plinth,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 'var(--my50-num-xl)',
+                        fontWeight: 900,
+                        color: '#0b0b0b',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
                       {row.pos}
                     </span>
-                  </td>
-                  <td className="py-2.5 px-3 font-sans font-bold text-white">
-                    {row.name}
-                  </td>
-                  <td className="py-2.5 px-3 text-center">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white text-black">
-                      {row.ticket}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-right font-black text-[#22C55E] text-sm">
-                    {row.points.toLocaleString()} pts
-                  </td>
-                  <td className="py-2.5 px-3 text-right font-bold text-red-400">
-                    {row.diff}
-                  </td>
-                </tr>
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      <div className="text-center text-[10px] text-white/40 uppercase tracking-widest mt-4">
-        {isEn ? "CERTIFIED FINAL RESULT · NO FURTHER UPDATES" : "RESULTADO FINAL CERTIFICADO · SIN ACTUALIZACIONES"}
-      </div>
-    </div>
+          {/* Search */}
+          {showSearch && (
+          <div style={{ position: 'relative', maxWidth: 380, marginBottom: 'var(--my50-space-4)' }}>
+            <Search
+              size={15}
+              style={{
+                position: 'absolute',
+                left: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--my50-text-faint)',
+              }}
+            />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={isEn ? 'Search player…' : 'Buscar jugador…'}
+              style={{
+                width: '100%',
+                padding: '10px 14px 10px 34px',
+                borderRadius: 'var(--my50-radius-sm)',
+                background: 'var(--my50-panel-2)',
+                border: '1px solid var(--my50-border)',
+                color: 'var(--my50-text)',
+                fontSize: 'var(--my50-font-body)',
+              }}
+            />
+          </div>
+          )}
+
+          {previewLimit && (
+            <p
+              className="tp-eyebrow"
+              style={{ marginBottom: 'var(--my50-space-3)' }}
+            >
+              {isEn
+                ? `TOP ${Math.min(previewLimit, rows.length)} OF ${rows.length}`
+                : `TOP ${Math.min(previewLimit, rows.length)} DE ${rows.length}`}
+            </p>
+          )}
+
+          {/* Table */}
+          <div
+            style={{
+              overflowX: 'auto',
+              borderRadius: 'var(--my50-radius-md)',
+              border: '1px solid var(--my50-border)',
+            }}
+          >
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--my50-font-body)' }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <th style={thStyle(56, 'center')}>POS.</th>
+                  <th style={thStyle(null, 'left')}>{isEn ? 'PLAYER' : 'JUGADOR'}</th>
+                  <th style={thStyle(96, 'center')}>{isEn ? 'TICKET' : 'TICKET'}</th>
+                  <th style={thStyle(null, 'right')}>{isEn ? 'POINTS' : 'PUNTOS'}</th>
+                  <th style={thStyle(null, 'right')}>{isEn ? 'DIFF' : 'DIFERENCIA'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row) => (
+                  <tr key={`${row.pos}-${row.name}`} style={{ borderTop: '1px solid var(--my50-border)' }}>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: 28,
+                          padding: '2px 6px',
+                          borderRadius: 6,
+                          fontWeight: 900,
+                          background:
+                            row.pos === 1
+                              ? 'var(--my50-gold)'
+                              : row.pos === 2
+                                ? '#cbd5e1'
+                                : row.pos === 3
+                                  ? '#b45309'
+                                  : 'rgba(255,255,255,0.08)',
+                          color: row.pos <= 3 ? '#0b0b0b' : 'var(--my50-text)',
+                        }}
+                      >
+                        {row.pos}
+                      </span>
+                    </td>
+                    <td style={{ ...tdStyle, fontWeight: 700 }}>{row.name}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      {row.ticket ? (
+                        <span
+                          style={{
+                            padding: '2px 10px',
+                            borderRadius: 999,
+                            background: '#fff',
+                            color: '#000',
+                            fontSize: 'var(--my50-font-micro)',
+                            fontWeight: 900,
+                          }}
+                        >
+                          {row.ticket}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--my50-text-faint)' }}>—</span>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign: 'right',
+                        fontWeight: 900,
+                        color: 'var(--my50-success)',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {row.points.toLocaleString()}
+                    </td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign: 'right',
+                        fontWeight: 700,
+                        color: row.diff ? 'var(--my50-negative)' : 'var(--my50-text-faint)',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {row.diff ?? '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--my50-space-3)',
+              marginTop: 'var(--my50-space-4)',
+            }}
+          >
+            {hiddenCount > 0 && (
+              <span style={{ color: 'var(--my50-text-muted)', fontSize: 'var(--my50-font-label)' }}>
+                {isEn
+                  ? `+${hiddenCount} more in the full ranking`
+                  : `+${hiddenCount} más en el ranking completo`}
+              </span>
+            )}
+            <Link href={fullRankingHref} className="tp-btn tp-btn--ghost">
+              {isEn ? 'Open full ranking' : 'Ver ranking completo'}
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+        </>
+      )}
+    </section>
   );
+}
+
+const tdStyle = {
+  padding: '10px 12px',
+  color: 'var(--my50-text)',
+};
+
+function thStyle(width, align) {
+  return {
+    padding: '10px 12px',
+    textAlign: align,
+    width: width || undefined,
+    fontSize: 'var(--my50-font-micro)',
+    fontWeight: 800,
+    letterSpacing: 'var(--my50-tracking-label)',
+    color: 'var(--my50-text-faint)',
+    textTransform: 'uppercase',
+  };
 }

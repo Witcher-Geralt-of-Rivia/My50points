@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MapPin, Calendar, Users, Trophy, Clock, ChevronLeft,
-  Flame, Timer, CheckCircle2, ArrowRight, Zap, Lock, AlertCircle,
+  Trophy, ChevronLeft, CheckCircle2, ArrowRight, Lock, AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import AppPageHeader from '@/frontend/components/layout/AppPageHeader';
@@ -13,9 +12,8 @@ import RaceCard from '@/frontend/components/tournament/RaceCard';
 import PickSelector, { strategies } from '@/frontend/components/tournament/PickSelector';
 import TicketSummary from '@/frontend/components/tournament/TicketSummary';
 import TicketConfirmation from '@/frontend/components/tournament/TicketConfirmation';
-import TournamentTicketSheet from '@/frontend/components/tournament/TournamentTicketSheet';
 import { useAuth } from '@/frontend/contexts/AuthContext';
-import { fetchAuthJson } from '@/frontend/lib/api/client';
+import { fetchAuthJson, fetchJson } from '@/frontend/lib/api/client';
 import { fetchTournamentDetail } from '@/frontend/lib/api/tournaments';
 import ModalityScope from '@/frontend/components/modalities/ModalityScope';
 import StepTracker from '@/frontend/components/layout/StepTracker';
@@ -25,14 +23,16 @@ import {
   withModalityQuery,
 } from '@/frontend/lib/gameModalities';
 import { markTrackTicketUsed } from '@/frontend/lib/trackTicketUsage';
-import WorkspaceOnboardingTour from '@/frontend/components/onboarding/WorkspaceOnboardingTour';
+import WorkspaceOnboardingTour, { OPEN_TOUR_EVENT } from '@/frontend/components/onboarding/WorkspaceOnboardingTour';
 import DividendsTableModal from '@/frontend/components/modals/DividendsTableModal';
 import RaceSummaryMatrix from '@/frontend/components/tournament/RaceSummaryMatrix';
 import TicketCarousel from '@/frontend/components/tournament/TicketCarousel';
 import TicketUnlockModal from '@/frontend/components/tournament/TicketUnlockModal';
 import FigmaStrategySlips from '@/frontend/components/tournament/FigmaStrategySlips';
 import FigmaFinalRanking from '@/frontend/components/tournament/FigmaFinalRanking';
-import { FileSpreadsheet } from 'lucide-react';
+import TournamentHero, { TournamentKpiStrip } from '@/frontend/components/tournament/TournamentHero';
+import { getTournamentPhase, getPhaseVisibility } from '@/frontend/lib/tournamentState';
+import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
 
 const STRATEGY_MAP = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
 const STRATEGY_REVERSE = { full_point: 'full', dual_point: 'dual', smart_pick: 'smart' };
@@ -99,6 +99,8 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
   const searchParams = useSearchParams();
   const tournamentSlug = tournamentSlugParam || params?.id;
   const { token, isAuthenticated, ensureGuestSession, loading: authLoading, user } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const fromQuery = searchParams.get('modality');
   const modalityId = isValidModalityId(fromQuery)
     ? fromQuery
@@ -129,6 +131,7 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
   const [aggregateLocking, setAggregateLocking] = useState({});
   const [ticketMarkedComplete, setTicketMarkedComplete] = useState(false);
   const [showDividendsModal, setShowDividendsModal] = useState(false);
+  const [leaderboardRows, setLeaderboardRows] = useState([]);
   const [gameAlert, setGameAlert] = useState({
     show: false,
     title: "",
@@ -643,6 +646,52 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
     tournament?.slug,
   ]);
 
+  // Presentation phase derived from the authoritative backend status. Used to
+  // stop mutually exclusive sections rendering at the same time; it does not
+  // gate any request and does not change any rule.
+  const phase = useMemo(() => getTournamentPhase(tournament), [tournament]);
+  const visibility = useMemo(() => getPhaseVisibility(phase), [phase]);
+
+  const rankingHref = withModalityQuery(
+    tournament?.slug ? `/tournament/${tournament.slug}/ranking` : '/leaderboard',
+    modalityId,
+  );
+
+  // Real standings for the final ranking. Only fetched when the tournament has
+  // actually finished — never fabricated.
+  useEffect(() => {
+    if (!visibility.showFinalRanking || !tournament?.slug) {
+      setLeaderboardRows([]);
+      return;
+    }
+    let live = true;
+    fetchJson(`/tournaments/${tournament.slug}/leaderboard`)
+      .then((data) => {
+        if (live) setLeaderboardRows(data?.leaderboard || []);
+      })
+      .catch(() => {
+        if (live) setLeaderboardRows([]);
+      });
+    return () => { live = false; };
+  }, [visibility.showFinalRanking, tournament?.slug]);
+
+  const finalRankingEntries = useMemo(() => {
+    const rows = leaderboardRows || [];
+    if (rows.length === 0) return [];
+    const leader = Number(rows[0]?.totalPoints ?? 0);
+    return rows.map((r, idx) => {
+      const points = Number(r.totalPoints ?? 0);
+      const gap = leader - points;
+      return {
+        pos: r.rank ?? idx + 1,
+        name: r.username || '—',
+        ticket: r.ticketNumber ? `T${r.ticketNumber}` : null,
+        points,
+        diff: idx === 0 || gap <= 0 ? null : `-${gap.toLocaleString()}`,
+      };
+    });
+  }, [leaderboardRows]);
+
   const backHref = returnPath
     ? withModalityQuery(returnPath, modalityId)
     : withModalityQuery('/tournaments', modalityId);
@@ -709,6 +758,13 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
     ]
   );
 
+  const openNextRace = () => {
+    if (!nextRace) return;
+    toggleRace(nextRace.id);
+    const el = document.getElementById(`race-${nextRace.id}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   if (loading) return <TournamentSkeleton />;
 
   if (error || !tournament) {
@@ -725,70 +781,84 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
     );
   }
 
-  const statusConfig = {
-    live: { label: 'EN VIVO', color: 'bg-red-500', glow: 'shadow-[0_0_20px_rgba(239,68,68,0.5)]', textColor: 'text-red-400' },
-    upcoming: { label: 'PROXIMO', color: 'bg-purple', glow: 'shadow-[0_0_20px_rgba(124,58,237,0.3)]', textColor: 'text-purple-light' },
-    open: { label: 'ABIERTO', color: 'bg-green-500', glow: 'shadow-[0_0_20px_rgba(34,197,94,0.3)]', textColor: 'text-green-400' },
-    completed: { label: 'COMPLETADO', color: 'bg-white/20', glow: '', textColor: 'text-white/50' },
-  };
-  const status = statusConfig[tournament.status] || statusConfig.upcoming;
 
   return (
     <ModalityScope modalityId={modalityId}>
-      <WorkspaceOnboardingTour modalityId={modalityId} />
-      <div className="min-h-screen">
+      <WorkspaceOnboardingTour modalityId={modalityId} showFloatingTrigger={false} />
+      <div className="min-h-screen tp-root">
       <div className="app-page pt-4">
         <StepTracker
           currentStep={
-            (tournament.status === 'live' || tournament.status === 'completed')
-              ? "torneo"
-              : (ticketIsFullyComplete ? "confirmacion" : "estrategias")
+            // A finished tournament sits on stage 7 (Ranking y Resultados);
+            // a running one on stage 6. Display only — no state is changed.
+            visibility.showFinalRanking
+              ? 'ranking'
+              : tournament.status === 'live'
+                ? 'torneo'
+                : ticketIsFullyComplete
+                  ? 'confirmacion'
+                  : 'estrategias'
           }
           modalityId={modalityId}
+          rankingHref={rankingHref}
         />
       </div>
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0">
-          <img src="/images/live-feed.jpg" alt="" className="w-full h-full object-cover opacity-25" />
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/60 via-brand-dark/90 to-brand-dark" />
-        </div>
-        <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full blur-[120px]"
-          style={{ backgroundColor: 'var(--modality-glow, rgba(124,58,237,0.05))' }}
-        />
-
-        <div className="relative app-page pt-6 pb-8">
-          <AppPageHeader title={tournament.name} className="mb-6" />
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            {onClose ? (
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors bg-transparent border-0 cursor-pointer"
-              >
-                <ChevronLeft size={16} />
-                <span>Volver a hipódromos</span>
-              </button>
-            ) : (
-              <Link href={backHref} className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors">
-                <ChevronLeft size={16} />
-                <span>{returnPath ? 'Volver a hipódromos' : 'Volver a Torneos'}</span>
-              </Link>
-            )}
-
+      <div className="tp-container" style={{ paddingTop: 'var(--my50-space-5)' }}>
+        <AppPageHeader title={tournament.name} className="mb-4" />
+        <div className="flex flex-wrap items-center gap-3">
+          {onClose ? (
             <button
-              id="tournament-view-dividends-btn"
               type="button"
-              onClick={() => setShowDividendsModal(true)}
-              className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/40 hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all cursor-pointer"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 text-white/55 hover:text-white text-sm transition-colors bg-transparent border-0 cursor-pointer"
             >
-              <FileSpreadsheet size={14} />
-              <span>Tabla de Dividendos Fijos</span>
+              <ChevronLeft size={16} />
+              <span>Volver a hipodromos</span>
             </button>
-          </div>
+          ) : (
+            <Link
+              href={backHref}
+              className="inline-flex items-center gap-1.5 text-white/55 hover:text-white text-sm transition-colors"
+            >
+              <ChevronLeft size={16} />
+              <span>{returnPath ? 'Volver a hipodromos' : 'Volver a Torneos'}</span>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <div className="tp-container" style={{ paddingTop: 'var(--my50-space-5)', paddingBottom: 'var(--my50-space-7)' }}>
+        <div className="tp-stack">
+          <TournamentHero
+            tournament={tournament}
+            phase={phase}
+            visibility={visibility}
+            countdown={countdown}
+            nextRace={nextRace}
+            totalRaces={tournament.totalRaces || 7}
+            racesCompleted={tournament.racesCompleted || 0}
+            onPrimaryAction={nextRace ? openNextRace : undefined}
+            onOpenDividends={() => setShowDividendsModal(true)}
+            onOpenGuide={() => window.dispatchEvent(new CustomEvent(OPEN_TOUR_EVENT))}
+            rankingHref={rankingHref}
+            isEn={isEn}
+          />
+
+          <TournamentKpiStrip
+            phase={phase}
+            showProgress={visibility.showProgress}
+            showTicketKpis={visibility.showTicketKpis}
+            totalRaces={tournament.totalRaces || 7}
+            racesCompleted={tournament.racesCompleted || 0}
+            confirmedCount={confirmedCount}
+            pendingCount={pendingCount}
+            activeTicketNumber={activeTicketNumber}
+            playersJoined={tournament.playersJoined}
+            isEn={isEn}
+          />
 
           {ticketIsFullyComplete ? (
-            <div className="mb-6 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 to-teal-950/40 px-5 py-4 backdrop-blur-sm">
+            <div className="rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 to-teal-950/40 px-5 py-4 backdrop-blur-sm">
               <div className="flex items-start gap-3">
                 <span className="text-3xl mt-0.5">🏆</span>
                 <div className="flex-1">
@@ -821,7 +891,7 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               </div>
             </div>
           ) : allRacesPlayed && returnPath ? (
-            <div className="mb-6 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3">
+            <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3">
               <p className="text-sm text-emerald-200/90 mb-2">
                 Completaste las 7 carreras con el Ticket {ticketFromQuery}. Tu ticket quedó marcado como usado.
               </p>
@@ -835,122 +905,8 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
             </div>
           ) : null}
 
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-white ${status.color} ${status.glow}`}>
-                  {tournament.status === 'live' && (
-                    <span className="w-2 h-2 bg-white rounded-full animate-pulse-live" />
-                  )}
-                  {status.label}
-                </span>
-              </div>
-
-              <p className="text-[11px] text-purple-light uppercase tracking-[0.2em] font-bold mb-2">TORNEO</p>
-
-              <p className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-light to-cyan bg-clip-text text-transparent mb-2">
-                POINT RUSH
-              </p>
-
-              <p className="text-sm sm:text-base font-bold text-white/60 uppercase tracking-widest mb-3">
-                {tournament.track}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-4 text-sm text-white/50">
-                <div className="flex items-center gap-1.5">
-                  <MapPin size={14} className="text-cyan" />
-                  <span>{tournament.track}, {tournament.location}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar size={14} className="text-purple-light" />
-                  <span>{new Date(tournament.date).toLocaleDateString('es-ES', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-              </div>
-
-              <p className="text-white/30 text-sm mt-3 max-w-2xl">
-                {tournament.description}
-              </p>
-
-              <div className="flex flex-wrap gap-3 mt-5">
-                <button
-                  onClick={() => {
-                    if (nextRace) {
-                      toggleRace(nextRace.id);
-                      const el = document.getElementById(`race-${nextRace.id}`);
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-purple to-purple-light hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] transition-shadow"
-                >
-                  HACER MI TICKET AHORA
-                  <ArrowRight size={16} />
-                </button>
-                <Link
-                  href="/leaderboard"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-colors"
-                >
-                  <Trophy size={16} className="text-gold" />
-                  VER RANKING
-                </Link>
-              </div>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white/[0.03] backdrop-blur-lg border border-white/10 rounded-xl p-5 lg:min-w-[280px]"
-            >
-              <div className="text-center mb-4">
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mb-1">Jugadores Activos</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-purple-light to-cyan bg-clip-text text-transparent">
-                  {tournament.playersJoined.toLocaleString()}
-                </p>
-                <p className="text-xs text-white/30 mt-1">de {tournament.totalPlayers.toLocaleString()} cupos</p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/40 flex items-center gap-1.5"><Users size={12} />Participacion</span>
-                  <span className="text-white font-medium">{Math.round((tournament.playersJoined / tournament.totalPlayers) * 100)}%</span>
-                </div>
-                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-purple to-cyan rounded-full"
-                    style={{ width: `${(tournament.playersJoined / tournament.totalPlayers) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-
-      <div className="app-page pb-32 lg:pb-12">
-        <div className="max-w-4xl mx-auto flex flex-col gap-6">
-          <div className="grid grid-cols-3 gap-3">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center backdrop-blur-lg">
-              <div className="flex items-center justify-center gap-1.5 text-green-400 mb-1">
-                <CheckCircle2 size={14} />
-                <span className="text-lg font-bold">{confirmedCount}</span>
-              </div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">Confirmadas</p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center backdrop-blur-lg">
-              <div className="flex items-center justify-center gap-1.5 text-cyan mb-1">
-                <Trophy size={14} />
-                <span className="text-lg font-bold">{tournament.races.length}</span>
-              </div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">En Torneo</p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center backdrop-blur-lg">
-              <div className="flex items-center justify-center gap-1.5 text-purple-light mb-1">
-                <Timer size={14} />
-                <span className="text-lg font-bold">{pendingCount}</span>
-              </div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">Pendientes</p>
-            </motion.div>
-          </div>
-
+          {visibility.showTicketWorkflow ? (
+            <>
           {/* Aggregate lock status: complete 7-race ticket persisted via /aggregate */}
           <div
             className={`rounded-xl border px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold ${
@@ -1002,6 +958,7 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               3: aggregateStatus[3] === 'locked',
             }}
             isGuest={isGuestUser}
+            modalityId={modalityId}
             onUnlockRequest={(n) => setUnlockModalFor(n)}
           />
           {unlockModalFor && (
@@ -1022,6 +979,7 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
           )}
 
           {/* Figma 7-Race General Summary Matrix (Pages 28–36, 48–52, 76–80) */}
+          <div className="tour-step-races-bar">
           <RaceSummaryMatrix
             tournament={tournament}
             races={tournament.races}
@@ -1033,24 +991,12 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
             picks={effectivePicks}
             onOpenDividends={() => setShowDividendsModal(true)}
           />
-
-          <div className="tour-step-races-bar">
-            <TournamentTicketSheet
-              races={tournament.races}
-              activeTicketNumber={activeTicketNumber}
-              onSelectTicket={handleSelectTicket}
-              submittedTickets={submittedTickets}
-              expandedRaceId={expandedRace}
-              onSelectRace={toggleRace}
-              lockedTickets={{ 2: isTicketLocked(2), 3: isTicketLocked(3) }}
-              confirmedTickets={{
-                1: aggregateStatus[1] === 'locked',
-                2: aggregateStatus[2] === 'locked',
-                3: aggregateStatus[3] === 'locked',
-              }}
-              onUnlockRequest={(n) => setUnlockModalFor(n)}
-            />
           </div>
+
+          {/* The ticket tabs + race badges that used to live here duplicated
+              TicketCarousel and RaceSummaryMatrix exactly. Removed from this
+              page; the space is reserved for the Pass 2 strategy + horse
+              selection interface. TournamentTicketSheet itself is untouched. */}
 
           {currentRace && (
             <motion.div
@@ -1097,103 +1043,92 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
               )}
             </motion.div>
           )}
+            </>
+          ) : (
+            <RaceSummaryMatrix
+              tournament={tournament}
+              races={tournament.races}
+              currentRaceIndex={-1}
+              picks={effectivePicks}
+              onOpenDividends={() => setShowDividendsModal(true)}
+              readOnly
+            />
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {nextRace && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white/[0.03] backdrop-blur-lg border border-white/10 rounded-xl p-5 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Clock size={14} className="text-cyan" />
-                    <span className="text-xs text-white/40 uppercase tracking-wider font-medium">Proxima Carrera En</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    {(() => {
-                      const units = [];
-                      if (countdown.days > 0) {
-                        units.push({ value: countdown.days, label: 'DIAS' });
-                      }
-                      units.push({ value: countdown.hours, label: 'HRS' });
-                      units.push({ value: countdown.minutes, label: 'MIN' });
-                      units.push({ value: countdown.seconds, label: 'SEC' });
-                      return units;
-                    })().map((unit) => (
-                      <div key={unit.label} className="text-center">
-                        <div className="bg-white/[0.05] border border-white/10 rounded-lg w-16 h-16 flex items-center justify-center">
-                          <span className="text-2xl font-bold text-white font-mono">{String(unit.value).padStart(2, '0')}</span>
-                        </div>
-                        <span className="text-[9px] text-white/30 uppercase tracking-widest mt-1 block">{unit.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="bg-white/[0.03] rounded-lg p-3 border border-white/5">
-                    <p className="text-xs text-white/50">
-                      <span className="text-white font-semibold">CARRERA {nextRace.number}</span>
-                      <span className="mx-1.5 text-white/20">|</span>
-                      {nextRace.distance}m {nextRace.surface}
-                    </p>
-                    <p className="text-[10px] text-white/30 mt-0.5">{nextRace.class} - Post time {nextRace.postTime}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      toggleRace(nextRace.id);
-                      const el = document.getElementById(`race-${nextRace.id}`);
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }}
-                    className="mt-3 w-full py-2.5 rounded-lg text-center text-xs font-bold text-white bg-gradient-to-r from-purple to-purple-light block hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] transition-shadow"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      Ver Carrera Completa
-                      <ArrowRight size={12} />
-                    </div>
-                  </button>
-                </div>
-              </motion.div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section className="tp-panel">
+              <p className="tp-eyebrow">{isEn ? 'Tournament info' : 'Info del torneo'}</p>
+              <div className="mt-4 space-y-3">
+                <InfoRow label={isEn ? 'Track' : 'Pista'} value={tournament.track} />
+                <InfoRow label={isEn ? 'Location' : 'Ubicacion'} value={tournament.location} />
+                <InfoRow
+                  label={isEn ? 'Date' : 'Fecha'}
+                  value={new Date(tournament.date).toLocaleDateString(isEn ? 'en-GB' : 'es-ES', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })}
+                />
+                <InfoRow label={isEn ? 'Races' : 'Carreras'} value={`${tournament.racesCompleted} / ${tournament.totalRaces}`} />
+              </div>
+            </section>
 
-            <div className="space-y-4">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white/[0.03] backdrop-blur-lg border border-white/10 rounded-xl p-5">
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">Info del Torneo</h3>
-                <div className="space-y-3">
-                  <InfoRow label="Pista" value={tournament.track} />
-                  <InfoRow label="Ubicacion" value={tournament.location} />
-                  <InfoRow label="Fecha" value={new Date(tournament.date).toLocaleDateString('es-ES', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })} />
-                  <InfoRow label="Carreras" value={`${tournament.racesCompleted} / ${tournament.totalRaces}`} />
-                  <InfoRow label="Entrada" value="Gratis" />
-                  <InfoRow label="Tipo" value="Competencia de Puntos" />
+            <section className="tp-panel">
+              <p className="tp-eyebrow">{isEn ? 'How it works' : 'Como funciona'}</p>
+              <div className="mt-4 flex flex-col gap-3" style={{ fontSize: 'var(--my50-font-body)', color: 'var(--my50-text-muted)' }}>
+                <div className="flex gap-2.5">
+                  <span className="tp-step-num">1</span>
+                  <p className="m-0">Distribuye <strong style={{ color: 'var(--my50-gold)' }}>50 puntos</strong> apostando al <strong style={{ color: 'var(--my50-success)' }}>GANADOR</strong> de cada carrera</p>
                 </div>
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white/[0.03] backdrop-blur-lg border border-white/10 rounded-xl p-5">
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-3">Como Funciona</h3>
-                <div className="space-y-2.5 text-xs text-white/50">
-                  <div className="flex gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple/20 text-purple-light flex items-center justify-center text-[10px] font-bold flex-shrink-0">1</span>
-                    <p>Distribuye <span className="text-gold font-semibold">50 puntos</span> apostando al <span className="text-green-400 font-semibold">GANADOR</span> de cada carrera</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple/20 text-purple-light flex items-center justify-center text-[10px] font-bold flex-shrink-0">2</span>
-                    <p>Full Point: 50 pts en 1 caballo. Dual: 25+25 en 2. Smart: 30+15+5 en 3</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple/20 text-purple-light flex items-center justify-center text-[10px] font-bold flex-shrink-0">3</span>
-                    <p>Todas las apuestas son al ganador. Si tu caballo gana, sumas sus puntos</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple/20 text-purple-light flex items-center justify-center text-[10px] font-bold flex-shrink-0">4</span>
-                    <p>Tienes <span className="text-gold font-semibold">3 tickets gratis</span> por torneo: cada uno recorre las 7 carreras y suma su propio total (no se mezclan)</p>
-                  </div>
+                <div className="flex gap-2.5">
+                  <span className="tp-step-num">2</span>
+                  <p className="m-0">Full Point: 50 pts en 1 caballo. Dual: 25+25 en 2. Smart: 30+15+5 en 3</p>
                 </div>
-              </motion.div>
-            </div>
+                <div className="flex gap-2.5">
+                  <span className="tp-step-num">3</span>
+                  <p className="m-0">Todas las apuestas son al ganador. Si tu caballo gana, sumas sus puntos</p>
+                </div>
+                <div className="flex gap-2.5">
+                  <span className="tp-step-num">4</span>
+                  <p className="m-0">Cada torneo tiene <strong style={{ color: 'var(--my50-gold)' }}>3 boletos</strong>: cada uno recorre las 7 carreras y suma su propio total (no se mezclan)</p>
+                </div>
+              </div>
+            </section>
           </div>
 
-          {/* Official Figma Final Ranking Podium & Leaderboard (Pages 6–9, 63, 65) */}
-          <FigmaFinalRanking
-            tournamentName={tournament.name}
-            isFinished={tournament.status === 'finished' || allRacesPlayed}
-          />
+          {/* Ranking: the final podium belongs to a finished tournament only.
+              Everywhere else the page keeps a compact entry point so access to
+              the full ranking is never removed. */}
+          {visibility.showFinalRanking ? (
+            <FigmaFinalRanking
+              entries={finalRankingEntries}
+              tournamentName={tournament.name}
+              tournamentDate={tournament.date}
+              fullRankingHref={rankingHref}
+              previewLimit={10}
+              showSearch={false}
+            />
+          ) : (
+            <div className="tp-ranking-teaser">
+              <div>
+                <p className="tp-eyebrow">MY 50 POINTS</p>
+                <h2 className="tp-section-title">
+                  {visibility.showLiveRanking
+                    ? (isEn ? 'Live ranking' : 'Ranking en vivo')
+                    : (isEn ? 'Tournament ranking' : 'Ranking del torneo')}
+                </h2>
+                <p style={{ margin: '6px 0 0', color: 'var(--my50-text-muted)' }}>
+                  {visibility.showLiveRanking
+                    ? (isEn
+                      ? 'Standings update while the tournament races are running.'
+                      : 'Las posiciones se actualizan mientras corren las carreras.')
+                    : (isEn
+                      ? 'Standings are published once the tournament starts.'
+                      : 'Las posiciones se publican cuando comienza el torneo.')}
+                </p>
+              </div>
+              <Link href={rankingHref} className="tp-btn tp-btn--ghost">
+                {isEn ? 'Open full ranking' : 'Ver ranking completo'}
+                <ArrowRight size={15} />
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 

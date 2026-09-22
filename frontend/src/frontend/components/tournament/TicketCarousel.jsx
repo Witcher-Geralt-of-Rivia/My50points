@@ -1,8 +1,26 @@
 'use client';
 
+/**
+ * Ticket 1 / 2 / 3 selector — visual layer only (design page 43).
+ *
+ * The ticket state machine is unchanged: `lockedTickets`, `confirmedTickets`,
+ * `ticketsState` and `onUnlockRequest` are consumed exactly as before. In
+ * particular BLOQUEADO keeps its existing meaning (the ticket is not yet
+ * entitled per the caller's rules) and this component never decides
+ * entitlement, never assumes tickets must be filled in order, and never
+ * changes M2 / M4 ad behaviour.
+ */
+
 import React from 'react';
-import { Ticket, CheckCircle2, ChevronDown, Lock, Play } from 'lucide-react';
+import { Ticket, CheckCircle2, Lock, Play } from 'lucide-react';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
+
+const MODALITY_ACCENT = {
+  paid: 'var(--my50-m1)',
+  free: 'var(--my50-m2)',
+  special: 'var(--my50-m3)',
+  guest: 'var(--my50-m4)',
+};
 
 export default function TicketCarousel({
   activeTicketId = 1,
@@ -14,59 +32,68 @@ export default function TicketCarousel({
   confirmedTickets = {},
   isGuest = false,
   onUnlockRequest,
+  modalityId = 'free',
 }) {
   const { language } = useLanguage();
   const isEn = language === 'en';
+  const accent = MODALITY_ACCENT[modalityId] || 'var(--my50-m2)';
 
   const tickets = [
-    { id: 1, num: "1", label: "TICKET 1" },
-    { id: 2, num: "2", label: "TICKET 2" },
-    { id: 3, num: "3", label: "TICKET 3" },
+    { id: 1, num: '1' },
+    { id: 2, num: '2' },
+    { id: 3, num: '3' },
   ];
 
   return (
-    <div className="w-full mb-8 rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-5 shadow-2xl">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+    <section className="tp-panel">
+      <div className="tp-section-head">
         <div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">
-            {isEn ? 'Tournament Mode · Ticket Selection' : 'Modalidad de Torneo · Selección de Boletos'}
-          </span>
-          <h3 className="text-xl font-black text-white flex items-center gap-2 mt-0.5">
-            <Ticket className="w-5 h-5 text-purple-400" />
-            <span>{isEn ? 'Your Entry Tickets (Up to 3 Options)' : 'Tus Boletos de Participación (Hasta 3 Opciones)'}</span>
-          </h3>
+          <p className="tp-eyebrow">
+            {isEn ? 'MY 50 POINTS · TICKET SELECTION' : 'MY 50 POINTS · SELECCIÓN DE BOLETO'}
+          </p>
+          <h2 className="tp-section-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Ticket className="w-5 h-5" style={{ color: accent }} />
+            <span>{isEn ? 'Your tickets' : 'Tus boletos'}</span>
+          </h2>
         </div>
-        <div className="text-xs text-white/60">
-          {isEn ? 'Active Ticket Progress:' : 'Progreso Boleto Activo:'} <strong className="text-emerald-400 font-mono">{completedCount} / {totalRaces}</strong>
+        <div style={{ fontSize: 'var(--my50-font-label)', color: 'var(--my50-text-muted)' }}>
+          {isEn ? 'Active ticket progress' : 'Progreso del boleto activo'}{' '}
+          <strong style={{ color: 'var(--my50-success)', fontVariantNumeric: 'tabular-nums' }}>
+            {completedCount} / {totalRaces}
+          </strong>
         </div>
       </div>
 
-      {/* Ticket Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="tp-tickets">
         {tickets.map((t) => {
           const isActive = t.id === activeTicketId;
           const ticketData = ticketsState[t.id] || {};
           const isSubmitted = ticketData.isSubmitted || false;
           const ticketPicksCount = ticketData.picksCount || (isActive ? completedCount : 0);
           const isComplete = ticketPicksCount >= totalRaces;
-          // Guests (M4) unlock Tickets 2 & 3 with one ad view each — same as M2.
           const isLocked = Boolean(lockedTickets[t.id]);
-          // Aggregate-confirmed tickets read USADO straight from the backend,
-          // so refresh never shows them as EN PROCESO again.
           const isConfirmed = Boolean(confirmedTickets[t.id]);
 
-          let statusText = isEn ? "AVAILABLE" : "DISPONIBLE";
-          let statusBg = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+          let statusText = isEn ? 'AVAILABLE' : 'DISPONIBLE';
+          let statusBg = 'rgba(56, 224, 123, 0.16)';
+          let statusInk = 'var(--my50-success)';
+          let statusBorder = 'rgba(56, 224, 123, 0.5)';
 
           if (isConfirmed || isSubmitted) {
-            statusText = isEn ? "SUBMITTED" : "USADO";
-            statusBg = "bg-purple-600/30 text-purple-200 border-purple-400/50";
+            statusText = isEn ? 'SUBMITTED' : 'USADO';
+            statusBg = 'rgba(123, 45, 190, 0.28)';
+            statusInk = '#e2c9ff';
+            statusBorder = 'rgba(155, 79, 217, 0.6)';
           } else if (isLocked) {
-            statusText = isEn ? "LOCKED" : "BLOQUEADO";
-            statusBg = "bg-zinc-500/20 text-zinc-300 border-zinc-500/40";
+            statusText = isEn ? 'LOCKED' : 'BLOQUEADO';
+            statusBg = 'rgba(255, 255, 255, 0.07)';
+            statusInk = 'var(--my50-text-muted)';
+            statusBorder = 'var(--my50-border-strong)';
           } else if (ticketPicksCount > 0) {
-            statusText = isEn ? "IN PROGRESS" : "EN PROCESO";
-            statusBg = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+            statusText = isEn ? 'IN PROGRESS' : 'EN PROCESO';
+            statusBg = 'rgba(245, 168, 36, 0.16)';
+            statusInk = 'var(--my50-warning)';
+            statusBorder = 'rgba(245, 168, 36, 0.5)';
           }
 
           return (
@@ -74,6 +101,8 @@ export default function TicketCarousel({
               key={t.id}
               id={`ticket-voucher-${t.id}`}
               type="button"
+              aria-pressed={isActive}
+              className="tour-step-ticket-tab"
               onClick={() => {
                 if (isLocked && !isConfirmed) {
                   onUnlockRequest?.(t.id);
@@ -81,81 +110,204 @@ export default function TicketCarousel({
                 }
                 if (onSelectTicket) onSelectTicket(t.id);
               }}
-              className={`flex flex-col items-center p-5 rounded-2xl border-2 transition-all relative overflow-hidden text-center group ${
-                isLocked
-                  ? 'border-white/10 bg-slate-950/60 cursor-pointer'
-                  : isActive
-                  ? 'border-purple-400 bg-gradient-to-b from-[#1c1836] via-[#121124] to-[#0d0d17] shadow-[0_0_30px_rgba(168,85,247,0.35)] ring-2 ring-purple-400/50 scale-[1.02] cursor-pointer'
-                  : 'border-white/15 bg-gradient-to-b from-slate-900/90 to-slate-950/90 hover:border-purple-400/40 hover:bg-slate-900 cursor-pointer'
-              }`}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                cursor: 'pointer',
+                padding: 'var(--my50-space-4) var(--my50-space-3) var(--my50-space-3)',
+                background: isActive ? 'var(--my50-panel-3)' : 'var(--my50-panel-2)',
+                borderRadius: 'var(--my50-radius-md)',
+                border: `2px solid ${isActive ? 'var(--my50-border-selected)' : 'var(--my50-border)'}`,
+                boxShadow: isActive ? 'var(--my50-ring-selected)' : 'none',
+                opacity: isLocked && !isConfirmed ? 0.78 : 1,
+                minWidth: 0,
+              }}
             >
-              {isLocked && !isConfirmed && (
-                <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/70 border border-amber-400/50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
-                  <Lock className="w-3 h-3" />
-                  <span>{isEn ? "Ad" : "Anuncio"}</span>
+              {/* Ticket-stub notches */}
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  left: -9,
+                  top: '52%',
+                  width: 16,
+                  height: 16,
+                  borderRadius: 999,
+                  background: 'var(--my50-panel)',
+                  border: '1px solid var(--my50-border)',
+                }}
+              />
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  right: -9,
+                  top: '52%',
+                  width: 16,
+                  height: 16,
+                  borderRadius: 999,
+                  background: 'var(--my50-panel)',
+                  border: '1px solid var(--my50-border)',
+                }}
+              />
+
+              {/* Brand stripe header + 50 POINTS roundel */}
+              <span
+                style={{
+                  position: 'relative',
+                  display: 'block',
+                  width: '100%',
+                  maxWidth: 220,
+                  height: 34,
+                  borderRadius: 'var(--my50-radius-xs)',
+                  overflow: 'hidden',
+                  background: `linear-gradient(180deg,
+                    var(--my50-purple) 0 33.33%,
+                    var(--my50-aqua) 33.33% 66.66%,
+                    var(--my50-gold) 66.66% 100%)`,
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: 42,
+                    height: 42,
+                    borderRadius: 999,
+                    background: '#000',
+                    border: '2px solid #fff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
+                  }}
+                >
+                  <span style={{ color: '#fff', fontWeight: 900, fontSize: 13 }}>50</span>
+                  <span
+                    style={{
+                      color: 'var(--my50-gold)',
+                      fontWeight: 800,
+                      fontSize: 7,
+                      letterSpacing: '0.12em',
+                    }}
+                  >
+                    POINTS
+                  </span>
                 </span>
-              )}
-              {/* Notch Cutout Left & Right */}
-              <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-950 border border-white/20" />
-              <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-950 border border-white/20" />
-
-              {/* Three Horizontal Brand Stripes with Logo */}
-              <div className="relative w-full max-w-[200px] h-9 mb-3 flex flex-col justify-center">
-                <div className="w-full h-2.5 bg-[#7C3AED] rounded-t" />
-                <div className="w-full h-2.5 bg-[#0D9488]" />
-                <div className="w-full h-2.5 bg-[#EAB308] rounded-b" />
-
-                {/* Circular Badge */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black border-2 border-white flex flex-col items-center justify-center shadow-lg">
-                  <span className="text-white font-black text-xs leading-none tracking-tight">50</span>
-                  <span className="text-[7px] text-amber-400 font-bold leading-none tracking-widest">POINTS</span>
-                </div>
-              </div>
-
-              {/* Title & Number */}
-              <span className="text-xs font-black tracking-widest uppercase text-white/70 mt-1">
-                TICKET
               </span>
-              <span className="text-4xl font-black text-white font-mono tracking-tight my-1 drop-shadow">
+
+              <span
+                style={{
+                  marginTop: 'var(--my50-space-3)',
+                  fontSize: 'var(--my50-font-micro)',
+                  fontWeight: 900,
+                  letterSpacing: 'var(--my50-tracking-label)',
+                  color: 'var(--my50-text-faint)',
+                }}
+              >
+                {isEn ? 'TICKET' : 'BOLETO'}
+              </span>
+              <span
+                style={{
+                  fontSize: 'var(--my50-num-xl)',
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  color: isActive ? 'var(--my50-gold)' : 'var(--my50-text)',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
                 {t.num}
               </span>
 
-              {/* Status Pill */}
-              <div className="w-full max-w-[190px] mt-2">
-                <div
-                  className={`w-full py-1.5 rounded-lg text-xs font-black uppercase tracking-wider border shadow-sm ${statusBg}`}
-                >
-                  {statusText}
-                </div>
-                {isLocked && !isConfirmed && (
-                  <span className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-400/15 border border-amber-400/50 px-3 py-1.5 text-[11px] font-black uppercase text-amber-300">
-                    <Play className="w-3.5 h-3.5" />
-                    <span>{isEn ? "Watch ad to unlock" : "Ver anuncio para desbloquear"}</span>
-                  </span>
-                )}
-              </div>
+              {/* Status band */}
+              <span
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  marginTop: 'var(--my50-space-3)',
+                  padding: '7px 8px',
+                  borderRadius: 'var(--my50-radius-xs)',
+                  background: statusBg,
+                  color: statusInk,
+                  border: `1px solid ${statusBorder}`,
+                  fontSize: 'var(--my50-font-label)',
+                  fontWeight: 900,
+                  letterSpacing: '0.08em',
+                }}
+              >
+                {statusText}
+              </span>
 
-              {/* Progress Bar & Counter */}
-              <div className="w-full max-w-[190px] mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
-                <span>{ticketPicksCount} / {totalRaces} {isEn ? 'races' : 'carreras'}</span>
+              {isLocked && !isConfirmed && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 'var(--my50-space-2)',
+                    padding: '6px 10px',
+                    borderRadius: 'var(--my50-radius-xs)',
+                    background: 'rgba(245, 168, 36, 0.14)',
+                    border: '1px solid rgba(245, 168, 36, 0.5)',
+                    color: 'var(--my50-warning)',
+                    fontSize: 'var(--my50-font-micro)',
+                    fontWeight: 800,
+                  }}
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  {isEn ? 'Watch ad to unlock' : 'Ver anuncio para desbloquear'}
+                </span>
+              )}
+
+              {/* Progress footer */}
+              <span
+                style={{
+                  display: 'flex',
+                  width: '100%',
+                  marginTop: 'var(--my50-space-3)',
+                  paddingTop: 'var(--my50-space-2)',
+                  borderTop: '1px solid var(--my50-border)',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: 'var(--my50-font-micro)',
+                  color: 'var(--my50-text-muted)',
+                }}
+              >
+                <span>
+                  {ticketPicksCount} / {totalRaces} {isEn ? 'races' : 'carreras'}
+                </span>
                 {isComplete ? (
-                  <span className="text-emerald-400 font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>{isEn ? 'Complete' : 'Completo'}</span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      color: 'var(--my50-success)',
+                      fontWeight: 800,
+                    }}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {isEn ? 'Complete' : 'Completo'}
+                  </span>
+                ) : isLocked && !isConfirmed ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Lock className="w-3.5 h-3.5" />
+                    {isEn ? 'Locked' : 'Bloqueado'}
                   </span>
                 ) : (
-                  <span className="text-white/40">{isEn ? 'Incomplete' : 'Incompleto'}</span>
+                  <span>{isEn ? 'Incomplete' : 'Incompleto'}</span>
                 )}
-              </div>
-
-              {/* Down Indicator */}
-              <div className="mt-2 text-white/30 group-hover:text-purple-400 transition-colors">
-                <ChevronDown className="w-4 h-4" />
-              </div>
+              </span>
             </button>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

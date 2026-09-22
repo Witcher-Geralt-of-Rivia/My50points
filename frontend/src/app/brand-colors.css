@@ -126,3 +126,105 @@ html[data-modality="guest"]:has(.tracks-workflow-surface:not(.tracks-workflow-su
 html[data-modality="guest"]:has(.modality-page--workflow-tracks) .app-surface {
   color: var(--modality-matte-fg, #18181b);
 }
+
+/* ==========================================================================
+ * MY50POINTS — Milestone 1 design tokens (visual pass 1)
+ * Derived from MY50Points.pdf. Numeric values (container width, type sizes,
+ * radii, spacing) are implementation estimates and are expected to be tuned
+ * during screenshot QA. Additive only: nothing here changes behaviour.
+ * ========================================================================== */
+:root {
+  /* --- Surfaces ------------------------------------------------------- */
+  --my50-bg: #000000;
+  --my50-bg-elevated: #07090d;
+  --my50-panel: #0b0f14;
+  --my50-panel-2: #111720;
+  --my50-panel-3: #18202b;
+
+  /* Light review surface. Reserved for ticket review / confirmation only —
+     the rest of the app stays dark (see design plan §7). */
+  --my50-cream: #f7f1e3;
+  --my50-cream-alt: #efe5cf;
+  --my50-cream-line: rgba(20, 16, 10, 0.14);
+  --my50-cream-ink: #17120a;
+  --my50-cream-ink-muted: #5b5344;
+
+  /* --- Brand / modality ------------------------------------------------ */
+  --my50-purple: #7b2dbe;
+  --my50-purple-deep: #4c1580;
+  --my50-purple-light: #9b4fd9;
+  --my50-aqua: #00c4dc;
+  --my50-aqua-deep: #00889a;
+  --my50-gold: #f5c518;
+  --my50-gold-deep: #c99a08;
+  --my50-white: #ffffff;
+
+  /* M1 purple · M2 aquamarine · M3 yellow · M4 white/purple */
+  --my50-m1: var(--my50-purple);
+  --my50-m2: var(--my50-aqua);
+  --my50-m3: var(--my50-gold);
+  --my50-m4: var(--my50-white);
+  --my50-m4-accent: var(--my50-purple-light);
+
+  /* --- Semantic -------------------------------------------------------- */
+  --my50-dividend-bg: #14692a;
+  --my50-dividend-ink: #ffd54a;
+  --my50-success: #38e07b;
+  --my50-negative: #e11d2e;
+  --my50-live: #ff2d46;
+  --my50-warning: #f5a824;
+
+  /* --- Text ------------------------------------------------------------ */
+  --my50-text: #f7f7f8;
+  --my50-text-muted: rgba(247, 247, 248, 0.64);
+  --my50-text-faint: rgba(247, 247, 248, 0.42);
+
+  /* --- Border hierarchy ------------------------------------------------ */
+  --my50-border: rgba(255, 255, 255, 0.1);
+  --my50-border-strong: rgba(255, 255, 255, 0.2);
+  --my50-border-brand: rgba(123, 45, 190, 0.55);
+  --my50-border-selected: var(--my50-gold);
+
+  /* --- Selection emphasis ---------------------------------------------- *
+   * The client material uses solid blocks + borders, not ambient haze, so
+   * emphasis is a ring rather than a blurred glow.                        */
+  --my50-ring-selected: 0 0 0 2px rgba(245, 197, 24, 0.55);
+  --my50-ring-live: 0 0 0 2px rgba(255, 45, 70, 0.45);
+  --my50-ring-brand: 0 0 0 2px rgba(155, 79, 217, 0.45);
+
+  /* --- Spacing rhythm -------------------------------------------------- */
+  --my50-space-1: 4px;
+  --my50-space-2: 8px;
+  --my50-space-3: 12px;
+  --my50-space-4: 16px;
+  --my50-space-5: 24px;
+  --my50-space-6: 32px;
+  --my50-space-7: 40px;
+  --my50-section-gap: 40px;
+  --my50-section-gap-sm: 24px;
+  --my50-gutter: 20px;
+
+  /* --- Radii ----------------------------------------------------------- */
+  --my50-radius-xs: 6px;
+  --my50-radius-sm: 10px;
+  --my50-radius-md: 14px;
+  --my50-radius-lg: 20px;
+  --my50-radius-pill: 999px;
+
+  /* --- Typography hierarchy -------------------------------------------- */
+  --my50-font-display: clamp(28px, 4.2vw, 46px);
+  --my50-font-h1: clamp(22px, 3vw, 32px);
+  --my50-font-h2: clamp(18px, 2.2vw, 22px);
+  --my50-font-h3: 16px;
+  --my50-font-body-lg: 16px;
+  --my50-font-body: 15px;
+  --my50-font-label: 12px;
+  --my50-font-micro: 11px;
+  --my50-num-xl: clamp(32px, 5vw, 52px);
+  --my50-num-lg: clamp(22px, 3vw, 30px);
+  --my50-num-md: 20px;
+  --my50-tracking-label: 0.14em;
+
+  /* --- Content grid ---------------------------------------------------- */
+  --my50-container: 1240px;
+}

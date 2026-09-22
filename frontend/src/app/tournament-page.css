@@ -1,0 +1,585 @@
+/* ==========================================================================
+ * MY50POINTS — tournament page layout (Milestone 1, visual pass 1)
+ *
+ * Scoped to `.tp-root` so nothing here leaks into the rest of the app and
+ * globals.css is left untouched. Presentation only: no rule in this file
+ * implies or enforces any game rule.
+ *
+ * Breakpoints exercised: 1440 / 1024 / 768 / 390.
+ * ========================================================================== */
+
+.tp-root {
+  background: var(--my50-bg);
+  color: var(--my50-text);
+  font-size: var(--my50-font-body);
+}
+
+/* --- One shared content grid for every section -------------------------- */
+.tp-container {
+  width: 100%;
+  max-width: var(--my50-container);
+  margin-inline: auto;
+  padding-inline: var(--my50-gutter);
+  box-sizing: border-box;
+}
+
+.tp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--my50-section-gap);
+}
+
+.tp-stack--tight {
+  gap: var(--my50-section-gap-sm);
+}
+
+/* --- Panels ------------------------------------------------------------- */
+.tp-panel {
+  background: var(--my50-panel);
+  border: 1px solid var(--my50-border);
+  border-radius: var(--my50-radius-lg);
+  padding: var(--my50-space-5);
+}
+
+/* --- Section headings --------------------------------------------------- */
+.tp-eyebrow {
+  font-size: var(--my50-font-micro);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-text-faint);
+  margin: 0;
+}
+
+.tp-section-title {
+  font-size: var(--my50-font-h2);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--my50-text);
+  margin: 2px 0 0;
+}
+
+.tp-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--my50-space-3);
+  margin-bottom: var(--my50-space-4);
+}
+
+/* --- Buttons ------------------------------------------------------------ */
+.tp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 var(--my50-space-5);
+  border-radius: var(--my50-radius-sm);
+  font-size: var(--my50-font-label);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  text-decoration: none;
+}
+
+.tp-btn--primary {
+  background: var(--my50-purple);
+  border-color: var(--my50-gold);
+  color: #fff;
+}
+
+.tp-btn--primary:hover {
+  background: var(--my50-purple-light);
+}
+
+.tp-btn--ghost {
+  background: transparent;
+  border-color: var(--my50-border-strong);
+  color: var(--my50-text);
+}
+
+.tp-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tp-btn--dividends {
+  background: rgba(20, 105, 42, 0.18);
+  border-color: rgba(20, 105, 42, 0.75);
+  color: var(--my50-dividend-ink);
+}
+
+.tp-btn--dividends:hover {
+  background: rgba(20, 105, 42, 0.32);
+}
+
+/* --- Status pill -------------------------------------------------------- */
+.tp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: var(--my50-radius-pill);
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: var(--my50-tracking-label);
+  border: 1px solid transparent;
+}
+
+.tp-status--upcoming {
+  background: rgba(123, 45, 190, 0.18);
+  border-color: var(--my50-border-brand);
+  color: #d9b9ff;
+}
+
+.tp-status--open {
+  background: rgba(0, 196, 220, 0.14);
+  border-color: rgba(0, 196, 220, 0.5);
+  color: #8ef0ff;
+}
+
+.tp-status--live {
+  background: rgba(255, 45, 70, 0.16);
+  border-color: rgba(255, 45, 70, 0.6);
+  color: #ff9aa6;
+}
+
+.tp-status--completed {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--my50-border-strong);
+  color: var(--my50-text-muted);
+}
+
+.tp-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* --- Hero --------------------------------------------------------------- */
+.tp-hero {
+  position: relative;
+  border: 1px solid var(--my50-border);
+  border-radius: var(--my50-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(123, 45, 190, 0.18) 0%, rgba(0, 0, 0, 0) 62%),
+    var(--my50-panel);
+  padding: var(--my50-space-6);
+  overflow: hidden;
+}
+
+/* Brand stripe motif: purple - aquamarine - gold */
+.tp-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--my50-purple) 0 33.33%,
+    var(--my50-aqua) 33.33% 66.66%,
+    var(--my50-gold) 66.66% 100%
+  );
+}
+
+.tp-hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--my50-space-6);
+}
+
+.tp-hero__title {
+  font-size: var(--my50-font-display);
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  margin: var(--my50-space-2) 0 0;
+}
+
+.tp-hero__track {
+  font-size: var(--my50-font-h3);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--my50-text-muted);
+  margin: 6px 0 0;
+}
+
+.tp-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--my50-space-4);
+  margin-top: var(--my50-space-4);
+  font-size: var(--my50-font-body);
+  color: var(--my50-text-muted);
+}
+
+.tp-hero__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.tp-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--my50-space-3);
+  margin-top: var(--my50-space-5);
+}
+
+/* Right-hand fact block: 7 races / countdown / progression */
+.tp-hero__facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--my50-space-3);
+  min-width: 264px;
+}
+
+.tp-fact {
+  border: 1px solid var(--my50-border);
+  border-radius: var(--my50-radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  padding: var(--my50-space-3) var(--my50-space-4);
+}
+
+.tp-fact__label {
+  display: block;
+  font-size: var(--my50-font-micro);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-text-faint);
+}
+
+.tp-fact__value {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--my50-num-md);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--my50-text);
+}
+
+.tp-fact__value--gold {
+  color: var(--my50-gold);
+}
+
+/* Countdown */
+.tp-count {
+  display: flex;
+  gap: var(--my50-space-2);
+}
+
+.tp-count__cell {
+  flex: 1;
+  min-width: 52px;
+  text-align: center;
+  border: 1px solid var(--my50-border);
+  border-radius: var(--my50-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 4px;
+}
+
+.tp-count__num {
+  display: block;
+  font-size: var(--my50-num-md);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.tp-count__unit {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-text-faint);
+}
+
+/* --- KPI strip ---------------------------------------------------------- */
+.tp-kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--my50-border);
+  border: 1px solid var(--my50-border);
+  border-radius: var(--my50-radius-md);
+  overflow: hidden;
+}
+
+.tp-kpi__cell {
+  background: var(--my50-panel);
+  padding: var(--my50-space-3) var(--my50-space-4);
+  min-width: 0;
+}
+
+.tp-kpi__label {
+  display: block;
+  font-size: var(--my50-font-micro);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tp-kpi__value {
+  display: block;
+  margin-top: 3px;
+  font-size: var(--my50-num-lg);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.tp-kpi__value--gold { color: var(--my50-gold); }
+.tp-kpi__value--aqua { color: var(--my50-aqua); }
+.tp-kpi__value--green { color: var(--my50-success); }
+.tp-kpi__value--purple { color: var(--my50-purple-light); }
+
+/* --- Ticket group ------------------------------------------------------- */
+.tp-tickets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--my50-space-4);
+}
+
+/* --- Seven-race strip --------------------------------------------------- */
+.tp-races {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--my50-space-2);
+}
+
+/* --- Numbered step bullet ("How it works") ----------------------------- */
+.tp-step-num {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(123, 45, 190, 0.25);
+  border: 1px solid var(--my50-border-brand);
+  color: var(--my50-purple-light);
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- Compact ranking access -------------------------------------------- */
+.tp-ranking-teaser {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--my50-space-4);
+  border: 1px solid var(--my50-border);
+  border-radius: var(--my50-radius-lg);
+  background:
+    linear-gradient(90deg, rgba(123, 45, 190, 0.22) 0%, rgba(0, 0, 0, 0) 70%),
+    var(--my50-panel);
+  padding: var(--my50-space-5);
+}
+
+/* --------------------------------------------------------------------------
+ * Journey rail (StepTracker) — global, because the component is shared.
+ * > 768px keeps the full horizontal chip rail; <= 768px collapses to the
+ * current stage plus a dot progress indicator.
+ * -------------------------------------------------------------------------- */
+.step-tracker__compact {
+  display: none;
+}
+
+.step-tracker__rail {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .step-tracker__compact {
+    display: flex;
+  }
+
+  .step-tracker__rail {
+    display: none;
+  }
+
+  .step-tracker {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+}
+
+/* > 768: the 7 stages get their own full-width row under the title and the
+   status badge. Sharing one row with them makes the rail wrap mid-journey on
+   any page whose tracker sits in a narrower container, so the row is given
+   unconditionally rather than guessed at per breakpoint. */
+@media (min-width: 769px) {
+  .step-tracker {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 0.5rem;
+  }
+
+  .step-tracker__title {
+    order: 1;
+  }
+
+  .step-tracker__badge {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .step-tracker__rail {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* 769-1023: short stage labels, tightened so all seven stay on one line
+   instead of dropping the last stage onto a row of its own. */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .step-tracker__rail {
+    column-gap: 0.125rem;
+  }
+
+  .step-tracker__rail > div {
+    gap: 0.125rem;
+  }
+
+  .step-tracker__rail [title] {
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+    letter-spacing: 0;
+  }
+
+  .step-tracker__rail > div > span:first-child:not([title]) {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* ==========================================================================
+ * Responsive
+ * ========================================================================== */
+
+/* Large laptop */
+@media (max-width: 1200px) {
+  .tp-root {
+    --my50-section-gap: 32px;
+  }
+}
+
+/* Tablet landscape - 1024 */
+@media (max-width: 1024px) {
+  .tp-hero__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tp-hero__facts {
+    min-width: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .tp-hero__facts > * {
+    flex: 1 1 200px;
+  }
+
+  .tp-races {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Tablet portrait - 768 */
+@media (max-width: 820px) {
+  .tp-root {
+    --my50-section-gap: 28px;
+    --my50-gutter: 16px;
+  }
+
+  .tp-hero {
+    padding: var(--my50-space-5);
+  }
+
+  .tp-panel {
+    padding: var(--my50-space-4);
+  }
+
+  .tp-kpi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tp-tickets {
+    gap: var(--my50-space-3);
+  }
+
+  .tp-races {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Phone - 390 and below */
+@media (max-width: 560px) {
+  .tp-root {
+    --my50-section-gap: 24px;
+    --my50-gutter: 16px;
+  }
+
+  .tp-hero__actions .tp-btn {
+    flex: 1 1 100%;
+  }
+
+  /* Let KPI labels wrap instead of truncating on a narrow screen. */
+  .tp-kpi__label {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  /* Tickets and races become snap rails so tap targets stay comfortable
+     instead of shrinking to fit three / seven columns on a 390px screen. */
+  .tp-tickets {
+    display: flex;
+    gap: var(--my50-space-3);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: var(--my50-space-2);
+  }
+
+  .tp-tickets > * {
+    scroll-snap-align: center;
+    flex: 0 0 72%;
+  }
+
+  .tp-races {
+    display: flex;
+    gap: var(--my50-space-2);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: var(--my50-space-2);
+  }
+
+  .tp-races > * {
+    scroll-snap-align: center;
+    flex: 0 0 136px;
+  }
+}

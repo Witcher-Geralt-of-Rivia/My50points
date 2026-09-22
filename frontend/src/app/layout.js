@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 import "./brand-colors.css";
 import "./globals.css";
 import "./tournament-guide.css";
+import "./tournament-page.css";
 import "./modality-workspace.css";
 import "./profile-hub.css";
 import Providers from "@/frontend/components/layout/Providers";

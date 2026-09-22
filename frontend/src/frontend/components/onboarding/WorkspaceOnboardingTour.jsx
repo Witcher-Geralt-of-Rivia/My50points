@@ -38,7 +38,16 @@ const TOUR_STEPS = [
   },
 ];
 
-export default function WorkspaceOnboardingTour({ modalityId }) {
+/**
+ * `showFloatingTrigger`: when false the component renders no fixed pill and the
+ * tour is started instead by dispatching `window.dispatchEvent(new CustomEvent(
+ * "my50:open-tour"))`. Used by pages that host the trigger inline so it can
+ * never float over actionable content. Default stays true for every other
+ * route, whose behaviour is unchanged.
+ */
+export const OPEN_TOUR_EVENT = "my50:open-tour";
+
+export default function WorkspaceOnboardingTour({ modalityId, showFloatingTrigger = true }) {
   const { t, language } = useLanguage();
   
   const [active, setActive] = useState(false);
@@ -146,12 +155,19 @@ export default function WorkspaceOnboardingTour({ modalityId }) {
     localStorage.setItem("50points-tour-completed", "true");
   };
 
-  const handleManualStart = () => {
+  const handleManualStart = useCallback(() => {
     setShowCongrats(false);
     setShowIntro(false);
     setActive(true);
     setCurrentStepIdx(0);
-  };
+  }, []);
+
+  // Inline triggers (see OPEN_TOUR_EVENT) start the same tour as the pill.
+  useEffect(() => {
+    const open = () => handleManualStart();
+    window.addEventListener(OPEN_TOUR_EVENT, open);
+    return () => window.removeEventListener(OPEN_TOUR_EVENT, open);
+  }, [handleManualStart]);
 
   // Determine styles for the tooltip card
   const getTooltipStyle = () => {
@@ -209,15 +225,18 @@ export default function WorkspaceOnboardingTour({ modalityId }) {
 
   return (
     <div ref={containerRef}>
-      {/* Floating Manual Restart Button */}
-      <button
-        onClick={handleManualStart}
-        className="fixed bottom-4 right-4 z-40 bg-gradient-to-r from-purple to-purple-light text-white px-4 py-3 rounded-full shadow-[0_4px_20px_rgba(124,58,237,0.4)] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all duration-200 font-bold text-xs uppercase tracking-wider"
-        title={t("floatingMenu.tournamentGuide")}
-      >
-        <HelpCircle size={16} />
-        <span>{language === "en" ? "How to Play" : "Cómo Jugar"}</span>
-      </button>
+      {/* Floating Manual Restart Button — omitted where the host page provides
+          an inline trigger, so it never overlaps actionable content. */}
+      {showFloatingTrigger && (
+        <button
+          onClick={handleManualStart}
+          className="fixed bottom-4 right-4 z-40 bg-gradient-to-r from-purple to-purple-light text-white px-4 py-3 rounded-full shadow-[0_4px_20px_rgba(124,58,237,0.4)] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all duration-200 font-bold text-xs uppercase tracking-wider"
+          title={t("floatingMenu.tournamentGuide")}
+        >
+          <HelpCircle size={16} />
+          <span>{language === "en" ? "How to Play" : "Cómo Jugar"}</span>
+        </button>
+      )}
 
       <AnimatePresence>
         {/* Dark Spotlight overlay when active */}
