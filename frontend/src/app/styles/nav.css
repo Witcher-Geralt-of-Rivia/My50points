@@ -41,7 +41,7 @@
   .nav-link svg { opacity: 0.85; }
   .nav-rot { transform: rotate(180deg); }
 
-  .site-nav__tools { display: none; align-items: center; gap: 10px; margin-left: auto; }
+  .site-nav__tools { display: none; align-items: center; gap: 10px; margin-left: auto; min-width: 0; flex: 0 1 auto; }
   .site-nav__menu-btn { display: none; margin-left: auto; }
 
   /* modality chip */
@@ -66,14 +66,16 @@
   .nav-lang__opt.is-on { color: #fff; background: linear-gradient(180deg, #9B4FE0, var(--my50-purple-core)); box-shadow: 0 0 12px rgba(168, 85, 247, 0.45); }
 
   /* account */
-  .nav-account-wrap { position: relative; }
+  .nav-account-wrap { position: relative; min-width: 0; }
   .nav-account {
     display: inline-flex; align-items: center; gap: 9px; height: 42px; padding: 0 12px 0 5px; border-radius: 999px;
     border: 1px solid var(--my50-border-mid); background: rgba(8, 10, 22, 0.6); color: var(--my50-text-primary);
     font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; white-space: nowrap;
+    max-width: 100%; min-width: 0;
   }
   .nav-account--login { padding: 0 16px; gap: 8px; border-color: rgba(61, 234, 255, 0.45); color: var(--my50-aqua-bright); font-family: var(--my50-font-display); font-weight: 700; font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase; }
-  .nav-account__name { max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  .nav-account__name { min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  .nav-account > svg, .nav-account .nav-avatar { flex: none; }
   .nav-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--av); color: #fff; font-weight: 800; font-size: 14px; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18); }
   .nav-menu {
     position: absolute; right: 0; top: calc(100% + 10px); z-index: 320; min-width: 240px; padding: 8px;
@@ -158,6 +160,16 @@
     .nav-link svg { display: none; }
     .nav-account__name, .nav-account .ui-chip { display: none; }
     .nav-mod__text { max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+  }
+  /* 1280–1439: the full link row plus a signed-in account used to push the bar
+     past the viewport. Keep every link and the account menu; compact the
+     account (no role chip, shorter name) and tighten spacing. */
+  @media (min-width: 1280px) and (max-width: 1439px) {
+    .site-nav__inner { gap: 14px; }
+    .nav-link { padding: 0 10px; }
+    .nav-account .ui-chip { display: none; }
+    .nav-account__name { max-width: 96px; }
+    .nav-mod__text { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
   }
 }
 @keyframes my50-sheet-in { from { transform: translateX(100%); } to { transform: none; } }

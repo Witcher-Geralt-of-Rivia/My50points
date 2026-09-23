@@ -18,6 +18,7 @@ import { fetchAuthJson } from "@/frontend/lib/api/client";
 import useRewardedAd, { AD_DURATION_SECONDS } from "@/frontend/lib/hooks/useRewardedAd";
 import { profileHubAsset } from "@/frontend/lib/config/profileHubAssets";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
+import GuideRing from "@/frontend/components/ui/GuideRing";
 
 export default function TicketUnlockModal({ ticketNumber, tournamentId, tournamentName, isGuest = false, onClose, onUnlocked }) {
   const { language } = useLanguage();
@@ -154,6 +155,7 @@ export default function TicketUnlockModal({ ticketNumber, tournamentId, tourname
         {phase === "done" ? (
           <button type="button" className={`ui-btn ${isGuest ? "ui-btn--primary" : "ui-btn--aqua"} ui-btn--lg ui-btn--block`} onClick={finish} data-autofocus>
             {isEn ? `Play ticket ${granted.includes(ticketNumber) ? ticketNumber : granted[0]}` : `Jugar boleto ${granted.includes(ticketNumber) ? ticketNumber : granted[0]}`}
+            <GuideRing />
           </button>
         ) : phase === "saving" ? (
           <button type="button" className="ui-btn ui-btn--secondary ui-btn--lg ui-btn--block" disabled aria-busy="true">
@@ -177,6 +179,7 @@ export default function TicketUnlockModal({ ticketNumber, tournamentId, tourname
               : showing
                 ? isEn ? "Watching…" : "Viendo anuncio…"
                 : isEn ? `Watch ad (${AD_DURATION_SECONDS} s)` : `Ver anuncio (${AD_DURATION_SECONDS} s)`}
+            {prep === "ready" && !showing ? <GuideRing /> : null}
           </button>
         )}
         {phase !== "done" ? (

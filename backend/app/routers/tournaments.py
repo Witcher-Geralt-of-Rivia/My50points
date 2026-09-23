@@ -1,16 +1,23 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
-from app.models import Horse, LeaderboardEntry, Race, RaceResult, Ticket, Tournament, User, UserStats
+from app.models import Horse, LeaderboardEntry, Race, RaceResult, Ticket, Tournament, TournamentTicket, User, UserStats
+from app.racing.config import RacingConfig
+from app.racing.status import data_status
 from app.services.leaderboard_snapshot import (
     dominant_strategy_key,
     get_recent_plays,
     refresh_tournament_rank_changes,
+)
+from app.services.tournament_display import (
+    dedupe_tournaments_by_track,
+    prepare_home_tournaments,
+    sort_tournaments_for_display,
 )
 
 STRATEGY_LABELS = {
@@ -18,49 +25,48 @@ STRATEGY_LABELS = {
     "dual_point": "DUAL POINT",
     "smart_pick": "SMART POINT",
 }
-from app.seed import ensure_seeded_if_empty
-from app.services.tournament_display import (
-    dedupe_tournaments_by_track,
-    prepare_home_tournaments,
-    sort_tournaments_for_display,
-)
-from app.services.racing_fetch import parse_odds_value
-from app.config import settings
-from app.services.tournament_sync import (
-    ensure_seven_races_for_tournament,
-    get_last_data_source,
-    get_sync_status,
-    retry_db_write_on_deadlock,
-    should_auto_sync,
-    sync_live_tournaments,
-    track_id_from_slug,
-)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tournaments", tags=["tournaments"])
+
+# READ-ONLY ROUTER (racing reads). No handler here seeds, synchronizes, starts
+# a sync job or writes: synchronization runs only in the background worker or
+# via the protected POST /api/admin/sync-racing. `refresh` is still accepted for
+# backwards compatibility but ignored.
 
 
 def _iso_datetime(value) -> str | None:
     if value is None:
         return None
     if isinstance(value, datetime):
-        return value.isoformat()
+        v = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return v.isoformat()
     return str(value)
+
+
+def _race_fields(r: Race) -> dict:
+    return {
+        "id": r.id,
+        "raceNumber": r.raceNumber,              # tournament race index 1..7
+        "trackRaceNumber": r.trackRaceNumber,    # the racetrack's own number (provider)
+        "name": r.name,
+        "status": r.status,
+        "resultStatus": r.resultStatus,
+        "availability": r.availability,
+        "scheduledTime": r.scheduledTime,
+        "postTime": _iso_datetime(r.postTime),
+        "distance": r.distance,
+        "surface": r.surface,
+        "raceClass": r.raceClass,
+        "purse": r.purse,
+    }
 
 
 def _race_summaries(races: list[Race], horse_counts: dict[int, int], result_race_ids: set[int]) -> list[dict]:
     return [
         {
-            "id": r.id,
-            "raceNumber": r.raceNumber,
-            "name": r.name,
-            "status": r.status,
-            "scheduledTime": r.scheduledTime,
-            "distance": r.distance,
-            "surface": r.surface,
-            "raceClass": r.raceClass,
-            "purse": r.purse,
+            **_race_fields(r),
             "horseCount": horse_counts.get(r.id, 0),
             "hasResults": r.id in result_race_ids,
         }
@@ -68,83 +74,36 @@ def _race_summaries(races: list[Race], horse_counts: dict[int, int], result_race
     ]
 
 
-def _list_tournaments_for_home(db: Session) -> list[dict]:
-    """Lightweight list for home/widgets — no horse/result payloads."""
-    tournaments = (
-        db.query(Tournament)
-        .options(selectinload(Tournament.races))
-        .filter(Tournament.status.in_(["live", "upcoming", "completed", "finished"]))
-        .order_by(Tournament.date.desc())
-        .all()
-    )
+def _tournament_card(db: Session, t: Tournament, ticket_counts, horse_counts, result_race_ids, config) -> dict:
+    races = sorted(t.races, key=lambda x: x.raceNumber)
+    return {
+        "id": t.id,
+        "slug": t.slug,
+        "name": t.name,
+        "track": t.track,
+        "location": t.location,
+        "status": t.status,
+        "totalRaces": t.totalRaces,
+        "currentRace": t.currentRace,
+        "date": _iso_datetime(t.date),
+        "description": t.description,
+        "imageUrl": t.imageUrl,
+        "origin": t.origin,
+        "players": ticket_counts.get(t.id, 0),
+        "dataStatus": data_status(db, t, races, config),
+        "races": _race_summaries(races, horse_counts, result_race_ids),
+    }
+
+
+def _list_cards(db: Session, *, for_home: bool) -> list[dict]:
+    q = db.query(Tournament).options(selectinload(Tournament.races))
+    if for_home:
+        q = q.filter(Tournament.status.in_(["live", "upcoming", "completed", "finished", "cancelled"]))
+    tournaments = q.order_by(Tournament.date.desc()).all()
     if not tournaments:
         return []
-
     tournament_ids = [t.id for t in tournaments]
     race_ids = [r.id for t in tournaments for r in t.races]
-
-    ticket_counts = dict(
-        db.query(Ticket.tournamentId, func.count(Ticket.id))
-        .filter(Ticket.tournamentId.in_(tournament_ids))
-        .group_by(Ticket.tournamentId)
-        .all()
-    )
-
-    horse_counts: dict[int, int] = {}
-    result_race_ids: set[int] = set()
-    if race_ids:
-        horse_counts = dict(
-            db.query(Horse.raceId, func.count(Horse.id))
-            .filter(Horse.raceId.in_(race_ids))
-            .group_by(Horse.raceId)
-            .all()
-        )
-        result_race_ids = {
-            row[0]
-            for row in db.query(RaceResult.raceId)
-            .filter(RaceResult.raceId.in_(race_ids))
-            .distinct()
-            .all()
-        }
-
-    out = []
-    for t in tournaments:
-        out.append(
-            {
-                "id": t.id,
-                "slug": t.slug,
-                "name": t.name,
-                "track": t.track,
-                "location": t.location,
-                "status": t.status,
-                "totalRaces": t.totalRaces,
-                "currentRace": t.currentRace,
-                "date": _iso_datetime(t.date),
-                "description": t.description,
-                "imageUrl": t.imageUrl,
-                "players": ticket_counts.get(t.id, 0),
-                "races": _race_summaries(t.races, horse_counts, result_race_ids),
-            }
-        )
-    return out
-
-
-def _list_tournaments_full(db: Session) -> list[dict]:
-    tournaments = (
-        db.query(Tournament)
-        .options(selectinload(Tournament.races))
-        .order_by(Tournament.date.desc())
-        .all()
-    )
-    if not tournaments:
-        return []
-
-    # Conteos con COUNT agrupado. NO cargar cientos de filas de caballos/resultados
-    # cross-region solo para contarlas (len(r.horses)) — esa era la causa principal
-    # de los ~2.4s. Se cuentan en 3 queries en vez de transferir todas las filas.
-    tournament_ids = [t.id for t in tournaments]
-    race_ids = [r.id for t in tournaments for r in t.races]
-
     ticket_counts = dict(
         db.query(Ticket.tournamentId, func.count(Ticket.id))
         .filter(Ticket.tournamentId.in_(tournament_ids))
@@ -162,87 +121,71 @@ def _list_tournaments_full(db: Session) -> list[dict]:
         )
         result_race_ids = {
             row[0]
-            for row in db.query(RaceResult.raceId)
-            .filter(RaceResult.raceId.in_(race_ids))
-            .distinct()
-            .all()
+            for row in db.query(RaceResult.raceId).filter(RaceResult.raceId.in_(race_ids)).distinct().all()
         }
+    config = RacingConfig.from_env()
+    return [_tournament_card(db, t, ticket_counts, horse_counts, result_race_ids, config) for t in tournaments]
 
-    out = []
-    for t in tournaments:
-        out.append(
-            {
-                "id": t.id,
-                "slug": t.slug,
-                "name": t.name,
-                "track": t.track,
-                "location": t.location,
-                "status": t.status,
-                "totalRaces": t.totalRaces,
-                "currentRace": t.currentRace,
-                "date": _iso_datetime(t.date),
-                "description": t.description,
-                "imageUrl": t.imageUrl,
-                "players": ticket_counts.get(t.id, 0),
-                "races": _race_summaries(t.races, horse_counts, result_race_ids),
-            }
-        )
-    return out
+
+def _sync_summary(db: Session) -> dict:
+    config = RacingConfig.from_env()
+    return {
+        "provider": config.provider if config.provider != "none" else None,
+        "syncEnabled": config.sync_enabled,
+        "backgroundSync": config.worker_enabled,
+    }
 
 
 @router.get("")
 def list_tournaments(
-    refresh: bool = Query(default=False),
+    refresh: bool = Query(default=False, description="Ignored: reads never trigger synchronization"),
     for_home: bool = Query(default=False, description="Dedupe by track and return top live/upcoming cards"),
     db: Session = Depends(get_db),
 ):
-    # El scrape NO bloquea la respuesta: antes 'refresh=1' tardaba ~20s scrapeando ~20
-    # hipódromos de forma síncrona. Ahora se dispara en segundo plano (su propia sesión).
-    needs_sync = refresh or (
-        not for_home and not settings.racing_background_sync and should_auto_sync(db)
-    )
-    if needs_sync:
-        import threading
-        from app.services.tournament_sync import run_sync_job
-        threading.Thread(target=run_sync_job, daemon=True).start()
-
-    ensure_seeded_if_empty(db)
-
-    out = _list_tournaments_for_home(db) if for_home else _list_tournaments_full(db)
-
+    out = _list_cards(db, for_home=for_home)
     if for_home:
         items = prepare_home_tournaments(out)
     else:
         items = sort_tournaments_for_display(dedupe_tournaments_by_track(out))
-
-    meta = {"syncTriggered": bool(needs_sync)}
-
+    summary = _sync_summary(db)
     return {
         "tournaments": items,
-        "dataSource": get_last_data_source(),
-        "refreshed": bool(refresh),
-        "syncStatus": get_sync_status(),
-        **meta,
+        "dataSource": "database",
+        "refreshed": False,
+        "syncTriggered": False,
+        "syncStatus": summary,
+    }
+
+
+def _horse_dict(h: Horse) -> dict:
+    return {
+        "id": h.id,
+        "postPosition": h.postPosition,
+        "programNumber": h.programNumber,
+        "name": h.name,
+        "jockey": h.jockey,          # None when not supplied — never "TBA"
+        "trainer": h.trainer,
+        "scratched": bool(h.scratched),
+        "runnerStatus": h.runnerStatus,
+        # Legacy/demo column only; provider runners return None. Never a MY50 dividend.
+        "odds": h.odds,
+        # Provider prices, clearly labelled as provider information.
+        "providerOdds": {
+            "morningLine": h.morningLineOdds,
+            "live": h.liveOdds,
+            "updatedAt": _iso_datetime(h.oddsUpdatedAt),
+        },
+        "silkPrimary": h.silkPrimary,
+        "silkSecondary": h.silkSecondary,
     }
 
 
 @router.get("/{slug}")
 def get_tournament(
     slug: str,
-    refresh: bool = Query(default=False),
+    refresh: bool = Query(default=False, description="Ignored: reads never trigger synchronization"),
     db: Session = Depends(get_db),
 ):
-    if refresh:
-        track_id = track_id_from_slug(slug)
-        try:
-            if track_id:
-                sync_live_tournaments(db, tracks=(track_id,), force=True)
-            else:
-                sync_live_tournaments(db, force=True)
-        except Exception as exc:
-            logger.exception("Tournament refresh sync failed for %s: %s", slug, exc)
-            db.rollback()
-
     t = (
         db.query(Tournament)
         .options(
@@ -255,22 +198,8 @@ def get_tournament(
     if not t:
         raise HTTPException(status_code=404, detail="Tournament not found")
 
-
     ticket_count = db.query(func.count(Ticket.id)).filter(Ticket.tournamentId == t.id).scalar() or 0
     races = sorted(t.races, key=lambda r: r.raceNumber)
-
-    def horse_dict(h: Horse):
-        pp = h.postPosition or 1
-        return {
-            "id": h.id,
-            "postPosition": pp,
-            "name": h.name,
-            "jockey": h.jockey,
-            "trainer": h.trainer,
-            "odds": parse_odds_value(h.odds, pp - 1),
-            "silkPrimary": h.silkPrimary,
-            "silkSecondary": h.silkSecondary,
-        }
 
     return {
         "tournament": {
@@ -282,24 +211,19 @@ def get_tournament(
             "status": t.status,
             "totalRaces": t.totalRaces,
             "currentRace": t.currentRace,
-            "date": t.date.isoformat() if t.date else None,
+            "date": _iso_datetime(t.date),
             "description": t.description,
             "imageUrl": t.imageUrl,
+            "origin": t.origin,
+            "selectionPolicy": t.selectionPolicy,
             "players": ticket_count,
+            "dataStatus": data_status(db, t, races),
             "races": [
                 {
-                    "id": r.id,
-                    "raceNumber": r.raceNumber,
-                    "name": r.name,
-                    "status": r.status,
-                    "scheduledTime": r.scheduledTime,
-                    "distance": r.distance,
-                    "surface": r.surface,
-                    "raceClass": r.raceClass,
-                    "purse": r.purse,
-                    "horses": [horse_dict(h) for h in sorted(r.horses, key=lambda x: x.postPosition)],
+                    **_race_fields(r),
+                    "horses": [_horse_dict(h) for h in sorted(r.horses, key=lambda x: x.postPosition)],
                     "results": [
-                        {"id": res.id, "position": res.position, "horseId": res.horseId}
+                        {"id": res.id, "position": res.position, "horseId": res.horseId, "isDeadHeat": bool(res.isDeadHeat)}
                         for res in sorted(r.results, key=lambda x: x.position)
                     ],
                 }
@@ -489,9 +413,31 @@ def tournament_leaderboard(
             }
         )
 
+    # Confirmed tickets, so the ranking can show who is in before the first race
+    # is scored (no positions or points are invented). Read-only.
+    registered = (
+        db.query(TournamentTicket, User)
+        .join(User, User.id == TournamentTicket.userId)
+        .filter(TournamentTicket.tournamentId == t.id)
+        .order_by(TournamentTicket.createdAt.asc(), TournamentTicket.id.asc())
+        .all()
+    )
+    registered_tickets = [
+        {
+            "userId": user.id,
+            "username": user.username,
+            "avatarColor": user.avatarColor,
+            "isGuest": user.isGuest,
+            "ticketNumber": tt.ticketNumber,
+            "confirmedAt": tt.createdAt.isoformat() if tt.createdAt else None,
+        }
+        for tt, user in registered
+    ]
+
     return {
         "leaderboard": leaderboard,
         "ticketEntries": ticket_entries,
+        "registeredTickets": registered_tickets,
         "tournamentName": t.name,
         "tournamentSlug": t.slug,
     }
@@ -499,7 +445,12 @@ def tournament_leaderboard(
 
 @router.get("/{slug}/dividends")
 def get_tournament_dividends(slug: str, db: Session = Depends(get_db)):
-    """Fixed official dividend table for all races in the tournament (Figma Page 94)."""
+    """Published MY50 dividends (OfficialDividend) for the tournament races.
+
+    `dividend` is ONLY the admin-published MY50 value; it is null when none is
+    published. It is never filled from provider odds, morning line, starting
+    price or a 2.0 default. Missing race metadata stays null (no invented
+    distance, surface, time, jockey, trainer or weight)."""
     t = db.query(Tournament).options(
         joinedload(Tournament.races).joinedload(Race.horses),
         joinedload(Tournament.races).joinedload(Race.dividends),
@@ -507,34 +458,32 @@ def get_tournament_dividends(slug: str, db: Session = Depends(get_db)):
     if not t:
         raise HTTPException(status_code=404, detail="Tournament not found")
 
-    sorted_races = sorted(t.races, key=lambda r: r.raceNumber)
-    final_7 = sorted_races[-7:] if len(sorted_races) >= 7 else sorted_races
-
     tables = []
-    for idx, r in enumerate(final_7, start=1):
+    for r in sorted(t.races, key=lambda r: r.raceNumber):
         div_map = {d.horseId: d.dividend for d in (r.dividends or [])}
         runners = []
         for h in sorted(r.horses, key=lambda x: x.postPosition):
-            div_val = div_map.get(h.id, h.odds or 2.0)
+            value = div_map.get(h.id)
             runners.append({
                 "horseId": h.id,
                 "postPosition": h.postPosition,
-                "programNumber": h.programNumber or str(h.postPosition),
+                "programNumber": h.programNumber,
                 "name": h.name,
-                "jockey": h.jockey or "TBD",
-                "trainer": h.trainer or "TBD",
-                "weight": "124",
-                "odds": h.odds,
-                "dividend": round(float(div_val), 2),
-                "scratched": h.scratched,
+                "jockey": h.jockey,
+                "trainer": h.trainer,
+                "dividend": round(float(value), 2) if value is not None else None,
+                "dividendPublished": value is not None,
+                "scratched": bool(h.scratched),
+                "runnerStatus": h.runnerStatus,
             })
         tables.append({
             "raceNumber": r.raceNumber,
-            "tournamentRaceOrder": idx,
-            "name": r.name or f"Carrera {r.raceNumber}",
-            "distance": f"{r.distance or 1600} METROS",
-            "surface": (r.surface or "ARENA").upper(),
-            "scheduledTime": r.scheduledTime or "1:45 PM",
+            "trackRaceNumber": r.trackRaceNumber,
+            "tournamentRaceOrder": r.raceNumber,
+            "name": r.name,
+            "distance": r.distance,
+            "surface": r.surface,
+            "scheduledTime": r.scheduledTime,
             "runners": runners,
         })
 
@@ -542,7 +491,7 @@ def get_tournament_dividends(slug: str, db: Session = Depends(get_db)):
         "tournamentSlug": t.slug,
         "tournamentName": t.name,
         "track": t.track,
-        "date": t.date.isoformat() if t.date else None,
+        "date": _iso_datetime(t.date),
         "races": tables,
     }
 

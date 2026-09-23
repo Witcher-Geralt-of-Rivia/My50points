@@ -88,6 +88,27 @@ def _require_ticket_entitlement(db, user, tournament_id: int, ticket_number: int
         )
 
 
+def _race_unavailable_reason(race) -> str | None:
+    """A frozen tournament race that is cancelled, or no longer on the
+    provider card, cannot take picks. The rule for such races is not defined
+    yet, so confirmation waits instead of guessing (no replacement race)."""
+    if race.status == "cancelled" or getattr(race, "resultStatus", None) == "void":
+        return "cancelled"
+    if getattr(race, "availability", "active") == "unavailable":
+        return "unavailable"
+    return None
+
+
+def _reject_unpickable_runners(race, picks: list[int]) -> None:
+    """A scratched runner, or one no longer on the provider's card, cannot be
+    picked (the UI disables them; this closes stale drafts / crafted requests)."""
+    by_id = {h.id: h for h in race.horses}
+    for p in picks:
+        h = by_id.get(p)
+        if h is not None and (h.scratched or getattr(h, "runnerStatus", "active") in ("scratched", "unavailable")):
+            raise HTTPException(status_code=400, detail=f"Runner {p} in race {race.id} is scratched or no longer available")
+
+
 @router.post("")
 def submit_ticket(body: TicketBody, payload: dict = Depends(get_bearer_user), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == payload["userId"]).first()
@@ -162,12 +183,20 @@ def submit_ticket(body: TicketBody, payload: dict = Depends(get_bearer_user), db
         except ValueError:
             pass
 
+    reason = _race_unavailable_reason(race)
+    if reason:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Race {race.raceNumber} is {reason}: picks are paused until the tournament rule is confirmed.",
+        )
+
     horse_ids = {h.id for h in race.horses}
     for pick_id in body.picks:
         if pick_id not in horse_ids:
             raise HTTPException(status_code=400, detail=f"Horse {pick_id} is not in this race")
     if len(set(body.picks)) != len(body.picks):
         raise HTTPException(status_code=400, detail="Duplicate picks not allowed")
+    _reject_unpickable_runners(race, body.picks)
 
     existing = (
         db.query(Ticket)
@@ -242,9 +271,22 @@ def submit_tournament_ticket(
     if len(tournament_races) < 7:
         raise HTTPException(status_code=400, detail=f"Tournament has {len(tournament_races)} races, minimum 7 required.")
 
-    # Tournament uses the final 7 races
+    # The ticket covers the tournament's 7 races (index 1..7). Provider
+    # tournaments store exactly the seven races frozen at creation
+    # (TOURNAMENT_RACE_SELECTION_POLICY); the slice only matters for legacy rows.
     final_7_races = tournament_races[-7:]
     race_1 = final_7_races[0]
+
+    # A frozen race that became cancelled/unavailable blocks confirmation (the
+    # scoring rule for it awaits product confirmation). Nothing is replaced or
+    # re-indexed and the player's local draft is untouched.
+    blocked = [(r.raceNumber, _race_unavailable_reason(r)) for r in final_7_races if _race_unavailable_reason(r)]
+    if blocked:
+        listed = ", ".join(f"race {n} {why}" for n, why in blocked)
+        raise HTTPException(
+            status_code=409,
+            detail=f"Tournament temporarily unavailable ({listed}). Your draft is kept; confirmation is paused.",
+        )
 
     # Enforce Race 1 post-time lock
     if race_1.status not in ("upcoming", "open"):
@@ -294,6 +336,7 @@ def submit_tournament_ticket(
                 raise HTTPException(status_code=400, detail=f"Runner ID {p} not found in race {sel.raceId}")
         if len(set(sel.picks)) != len(sel.picks):
             raise HTTPException(status_code=400, detail=f"Duplicate runner picks in race {sel.raceId}")
+        _reject_unpickable_runners(race_obj, sel.picks)
 
     # Upsert TournamentTicket aggregate root
     agg_ticket = (

@@ -166,8 +166,8 @@ export default function GuestOnboarding({ onDone }) {
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
             <span>
               {isEn
-                ? 'I am 18 or older and accept the game conditions: free play, no real-money prizes in this mode.'
-                : 'Soy mayor de 18 años y acepto las condiciones del juego: juego gratuito, sin premios en dinero en esta modalidad.'}
+                ? 'I am 18 or older and accept the game conditions: a free points competition.'
+                : 'Soy mayor de 18 años y acepto las condiciones del juego: competición gratuita por puntos.'}
             </span>
           </label>
           {error ? <p className="form-error" role="alert"><AlertTriangle size={16} aria-hidden />{error}</p> : null}

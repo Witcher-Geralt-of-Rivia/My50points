@@ -4,7 +4,8 @@ function normalizeHorse(h) {
   return {
     ...h,
     silkColors: { primary: h.silkPrimary || "#7c3aed", secondary: h.silkSecondary || "#ffffff" },
-    weight: 54 + (h.postPosition % 8),
+    // Real data only: no synthesized weight when the provider does not send one.
+    weight: h.weight ?? null,
   };
 }
 
@@ -30,8 +31,10 @@ export function normalizeRace(race) {
     number: race.raceNumber,
     class: race.raceClass || "",
     postTime: etTime,
-    surface: race.surface || "Dirt",
-    distance: race.distance || 1200,
+    // Missing provider fields stay null so the UI renders "—" / hides them,
+    // never an invented "Dirt" or "1200 m".
+    surface: race.surface || null,
+    distance: race.distance ?? null,
     tournamentRace: true,
     horses: (race.horses || []).map(normalizeHorse),
   };

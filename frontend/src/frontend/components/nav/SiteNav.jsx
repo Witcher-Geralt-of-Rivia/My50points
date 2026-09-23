@@ -20,6 +20,7 @@ import { PRIMARY_NAV, MORE_NAV, TABBAR_IDS, activeNavId, isMoreId, MODALITY_CHIP
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
 import { useAuth } from '@/frontend/contexts/AuthContext';
 import { useModality } from '@/frontend/contexts/ModalityContext';
+import { SINGLE_GUEST_ENTRY } from '@/frontend/lib/productFlags';
 
 const ICONS = {
   home: Home, flag: Flag, ticket: Ticket, trophy: Trophy, user: User, layers: Layers, grid: LayoutGrid,
@@ -96,6 +97,9 @@ function AccountControl({ onNavigate }) {
   }, [open]);
 
   if (!isAuthenticated) {
+    // Signing in is the registered (M2) path; it is not a public entry until M2
+    // is exposed. The game starts from the single guest entry on the home page.
+    if (SINGLE_GUEST_ENTRY) return null;
     const next = current.startsWith('/login') || current.startsWith('/register') ? '/' : current;
     return (
       <Link href={`/login?next=${encodeURIComponent(next)}`} className="nav-account nav-account--login" onClick={onNavigate}>
@@ -236,9 +240,11 @@ function MenuSheet({ open, onClose, activeId }) {
               </Link>
             ))}
           </nav>
-          <p className="t-label nav-sheet__label">{isEn ? 'Mode · Language · Account' : 'Modalidad · Idioma · Cuenta'}</p>
+          <p className="t-label nav-sheet__label">
+            {SINGLE_GUEST_ENTRY ? (isEn ? 'Language · Account' : 'Idioma · Cuenta') : isEn ? 'Mode · Language · Account' : 'Modalidad · Idioma · Cuenta'}
+          </p>
           <div className="nav-sheet__prefs">
-            <ModalityChip onNavigate={onClose} />
+            {SINGLE_GUEST_ENTRY ? null : <ModalityChip onNavigate={onClose} />}
             <LanguageSwitch />
             <AccountControl onNavigate={onClose} />
           </div>
@@ -294,7 +300,7 @@ export default function SiteNav({ overlay = false }) {
             <MoreMenu activeId={activeId} />
           </nav>
           <div className="site-nav__tools">
-            <ModalityChip />
+            {SINGLE_GUEST_ENTRY ? null : <ModalityChip />}
             <LanguageSwitch compact />
             <AccountControl />
           </div>

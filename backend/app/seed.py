@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from datetime import datetime, timedelta, timezone
 
@@ -102,17 +103,44 @@ def _shuffle(arr):
     return a
 
 
+class SeedRefused(RuntimeError):
+    """Demo seeding is not allowed in this environment."""
+
+
+_PRODUCTION_LIKE = {"production", "prod", "staging", "stage", "live"}
+
+
+def seed_block_reason() -> str | None:
+    """Why demo seeding is refused here, or None when it is allowed.
+
+    Seeding WIPES users and racing tables, so it requires BOTH a non-production
+    environment AND an explicit opt-in (ALLOW_DEMO_SEED=true). Evaluated at call
+    time from the environment (not a cached setting)."""
+    env = (os.getenv("ENVIRONMENT") or "development").strip().lower()
+    if env in _PRODUCTION_LIKE:
+        return f"ENVIRONMENT={env} is production-like"
+    railway_env = (os.getenv("RAILWAY_ENVIRONMENT_NAME") or os.getenv("RAILWAY_ENVIRONMENT") or "").strip().lower()
+    if railway_env in _PRODUCTION_LIKE:
+        return f"RAILWAY_ENVIRONMENT_NAME={railway_env} is production-like"
+    if (os.getenv("ALLOW_DEMO_SEED") or "").strip().lower() not in ("1", "true", "yes", "on"):
+        return "demo seeding is not enabled (ALLOW_DEMO_SEED is not true)"
+    return None
+
+
 def ensure_seeded_if_empty(db) -> dict | None:
-    """Populate demo tournaments when the database has none (e.g. fresh Render deploy)."""
-    if db.query(Tournament).count() > 0:
+    """Development-only convenience, called at startup ONLY when
+    DEMO_SEED_ON_STARTUP=true. Never called from a request handler."""
+    if seed_block_reason() is not None:
         return None
-    from app.config import settings
-    if settings.environment == "production":
+    if db.query(Tournament).count() > 0:
         return None
     return run_seed(db)
 
 
 def run_seed(db):
+    reason = seed_block_reason()
+    if reason is not None:
+        raise SeedRefused(reason)
     for model in (RaceResult, Ticket, LeaderboardEntry, UserStats, Horse, Race, Tournament, User):
         db.query(model).delete()
     db.commit()
@@ -136,7 +164,7 @@ def run_seed(db):
 
     name_idx = 0
     for t_data in TOURNAMENTS:
-        tournament = Tournament(**t_data)
+        tournament = Tournament(**t_data, origin="demo")
         db.add(tournament)
         db.flush()
 
@@ -152,9 +180,12 @@ def run_seed(db):
             race = Race(
                 tournamentId=tournament.id,
                 raceNumber=rn,
+                trackRaceNumber=rn,
                 name=f"Race {rn}",
                 status=status,
+                resultStatus="official" if is_finished else "none",
                 scheduledTime=sched_time,
+                postTime=datetime.fromisoformat(sched_time),
                 distance=random.choice([1100, 1200, 1400, 1600, 1800, 2000]),
                 surface=random.choice(["Dirt", "Turf", "Synthetic"]),
                 raceClass=random.choice(["Maiden", "Claiming", "Allowance", "Stakes"]),
@@ -185,7 +216,7 @@ def run_seed(db):
             if is_finished:
                 finishing = _shuffle(horses)
                 for pos in range(1, min(len(finishing), 5) + 1):
-                    db.add(RaceResult(raceId=race.id, horseId=finishing[pos - 1].id, position=pos))
+                    db.add(RaceResult(raceId=race.id, horseId=finishing[pos - 1].id, position=pos, source="demo"))
                 db.flush()
 
                 result_dicts = [
@@ -196,6 +227,10 @@ def run_seed(db):
                     strategy = random.choice(["full_point", "dual_point", "smart_pick"])
                     picks_count = {"full_point": 1, "dual_point": 2, "smart_pick": 3}[strategy]
                     picks = [h.id for h in _shuffle(horses)[:picks_count]]
+                    # DEMO ONLY: demo leaderboards use the demo runners' odds as a
+                    # stand-in dividend (legacy score_ticket path). Real results are
+                    # scored by app.scoring.evaluate_ticket from the MY50 dividend
+                    # table only, never from odds.
                     points = score_ticket(strategy, picks, result_dicts, horses)
 
                     exists = (
@@ -216,6 +251,7 @@ def run_seed(db):
                             picks=json.dumps(picks),
                             pointsEarned=points,
                             isScored=True,
+                            scoreStatus="scored",
                         )
                     )
                     entry = (

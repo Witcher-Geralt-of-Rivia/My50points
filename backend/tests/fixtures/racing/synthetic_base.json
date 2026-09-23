@@ -1,0 +1,1764 @@
+{
+  "_synthetic": true,
+  "_note": "SYNTHETIC provider-neutral fixture for MY50 tests/QA. NOT captured Orbistats or other provider data.",
+  "meetings": [
+    {
+      "id": "SYN-MEET-A",
+      "trackName": "Synthetic Downs",
+      "trackCode": "SYD",
+      "country": "USA",
+      "dayOffset": 0,
+      "timezone": "America/New_York",
+      "status": "scheduled",
+      "complete": true,
+      "races": [
+        {
+          "id": "SYN-A-R01",
+          "trackRaceNumber": 1,
+          "postOffsetMinutes": 150,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R01-H01",
+              "name": "Synthetic A 1-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R01-H02",
+              "name": "Synthetic A 1-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-A-R01-H03",
+              "name": "Synthetic A 1-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R01-H04",
+              "name": "Synthetic A 1-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-A-R01-H05",
+              "name": "Synthetic A 1-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R01-H06",
+              "name": "Synthetic A 1-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 1",
+          "distanceMeters": 1300,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 41000
+        },
+        {
+          "id": "SYN-A-R02",
+          "trackRaceNumber": 2,
+          "postOffsetMinutes": 180,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R02-H01",
+              "name": "Synthetic A 2-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R02-H02",
+              "name": "Synthetic A 2-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-A-R02-H03",
+              "name": "Synthetic A 2-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R02-H04",
+              "name": "Synthetic A 2-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-A-R02-H05",
+              "name": "Synthetic A 2-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R02-H06",
+              "name": "Synthetic A 2-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 2",
+          "distanceMeters": 1400,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 42000
+        },
+        {
+          "id": "SYN-A-R03",
+          "trackRaceNumber": 3,
+          "postOffsetMinutes": 210,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R03-H01",
+              "name": "Synthetic A 3-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R03-H02",
+              "name": "Synthetic A 3-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-A-R03-H03",
+              "name": "Synthetic A 3-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R03-H04",
+              "name": "Synthetic A 3-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-A-R03-H05",
+              "name": "Synthetic A 3-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R03-H06",
+              "name": "Synthetic A 3-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 3",
+          "distanceMeters": 1500,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 43000
+        },
+        {
+          "id": "SYN-A-R04",
+          "trackRaceNumber": 4,
+          "postOffsetMinutes": 240,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R04-H01",
+              "name": "Synthetic A 4-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R04-H02",
+              "name": "Synthetic A 4-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-A-R04-H03",
+              "name": "Synthetic A 4-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R04-H04",
+              "name": "Synthetic A 4-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-A-R04-H05",
+              "name": "Synthetic A 4-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R04-H06",
+              "name": "Synthetic A 4-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 4",
+          "distanceMeters": 1600,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 44000
+        },
+        {
+          "id": "SYN-A-R05",
+          "trackRaceNumber": 5,
+          "postOffsetMinutes": 270,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R05-H01",
+              "name": "Synthetic A 5-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R05-H02",
+              "name": "Synthetic A 5-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active"
+            },
+            {
+              "id": "SYN-A-R05-H03",
+              "name": "Synthetic A 5-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R05-H04",
+              "name": "Synthetic A 5-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active"
+            },
+            {
+              "id": "SYN-A-R05-H05",
+              "name": "Synthetic A 5-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R05-H06",
+              "name": "Synthetic A 5-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "id": "SYN-A-R06",
+          "trackRaceNumber": 6,
+          "postOffsetMinutes": 300,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R06-H01",
+              "name": "Synthetic A 6-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R06-H02",
+              "name": "Synthetic A 6-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-A-R06-H03",
+              "name": "Synthetic A 6-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R06-H04",
+              "name": "Synthetic A 6-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-A-R06-H05",
+              "name": "Synthetic A 6-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R06-H06",
+              "name": "Synthetic A 6-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 6",
+          "distanceMeters": 1800,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 46000
+        },
+        {
+          "id": "SYN-A-R07",
+          "trackRaceNumber": 7,
+          "postOffsetMinutes": 330,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R07-H01",
+              "name": "Synthetic A 7-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R07-H02",
+              "name": "Synthetic A 7-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-A-R07-H03",
+              "name": "Synthetic A 7-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R07-H04",
+              "name": "Synthetic A 7-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-A-R07-H05",
+              "name": "Synthetic A 7-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R07-H06",
+              "name": "Synthetic A 7-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 7",
+          "distanceMeters": 1900,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 47000
+        },
+        {
+          "id": "SYN-A-R08",
+          "trackRaceNumber": 8,
+          "postOffsetMinutes": 360,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R08-H01",
+              "name": "Synthetic A 8-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R08-H02",
+              "name": "Synthetic A 8-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-A-R08-H03",
+              "name": "Synthetic A 8-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R08-H04",
+              "name": "Synthetic A 8-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-A-R08-H05",
+              "name": "Synthetic A 8-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R08-H06",
+              "name": "Synthetic A 8-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 8",
+          "distanceMeters": 2000,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 48000
+        },
+        {
+          "id": "SYN-A-R09",
+          "trackRaceNumber": 9,
+          "postOffsetMinutes": 390,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-A-R09-H01",
+              "name": "Synthetic A 9-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-A-R09-H02",
+              "name": "Synthetic A 9-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-A-R09-H03",
+              "name": "Synthetic A 9-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-A-R09-H04",
+              "name": "Synthetic A 9-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-A-R09-H05",
+              "name": "Synthetic A 9-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-A-R09-H06",
+              "name": "Synthetic A 9-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 9",
+          "distanceMeters": 2100,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 49000
+        }
+      ]
+    },
+    {
+      "id": "SYN-MEET-B",
+      "trackName": "Synthetic Park",
+      "trackCode": "SYP",
+      "country": "USA",
+      "dayOffset": 0,
+      "timezone": "America/Chicago",
+      "status": "scheduled",
+      "complete": true,
+      "races": [
+        {
+          "id": "SYN-B-R01",
+          "trackRaceNumber": 1,
+          "postOffsetMinutes": 230,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-B-R01-H01",
+              "name": "Synthetic B 1-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-B-R01-H02",
+              "name": "Synthetic B 1-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-B-R01-H03",
+              "name": "Synthetic B 1-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-B-R01-H04",
+              "name": "Synthetic B 1-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-B-R01-H05",
+              "name": "Synthetic B 1-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-B-R01-H06",
+              "name": "Synthetic B 1-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 1",
+          "distanceMeters": 1300,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 41000
+        },
+        {
+          "id": "SYN-B-R02",
+          "trackRaceNumber": 2,
+          "postOffsetMinutes": 260,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-B-R02-H01",
+              "name": "Synthetic B 2-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-B-R02-H02",
+              "name": "Synthetic B 2-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-B-R02-H03",
+              "name": "Synthetic B 2-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-B-R02-H04",
+              "name": "Synthetic B 2-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-B-R02-H05",
+              "name": "Synthetic B 2-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-B-R02-H06",
+              "name": "Synthetic B 2-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 2",
+          "distanceMeters": 1400,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 42000
+        },
+        {
+          "id": "SYN-B-R03",
+          "trackRaceNumber": 3,
+          "postOffsetMinutes": 290,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-B-R03-H01",
+              "name": "Synthetic B 3-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-B-R03-H02",
+              "name": "Synthetic B 3-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-B-R03-H03",
+              "name": "Synthetic B 3-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-B-R03-H04",
+              "name": "Synthetic B 3-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-B-R03-H05",
+              "name": "Synthetic B 3-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-B-R03-H06",
+              "name": "Synthetic B 3-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 3",
+          "distanceMeters": 1500,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 43000
+        },
+        {
+          "id": "SYN-B-R04",
+          "trackRaceNumber": 4,
+          "postOffsetMinutes": 320,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-B-R04-H01",
+              "name": "Synthetic B 4-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-B-R04-H02",
+              "name": "Synthetic B 4-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-B-R04-H03",
+              "name": "Synthetic B 4-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-B-R04-H04",
+              "name": "Synthetic B 4-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-B-R04-H05",
+              "name": "Synthetic B 4-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-B-R04-H06",
+              "name": "Synthetic B 4-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 4",
+          "distanceMeters": 1600,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 44000
+        },
+        {
+          "id": "SYN-B-R05",
+          "trackRaceNumber": 5,
+          "postOffsetMinutes": 350,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-B-R05-H01",
+              "name": "Synthetic B 5-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-B-R05-H02",
+              "name": "Synthetic B 5-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-B-R05-H03",
+              "name": "Synthetic B 5-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-B-R05-H04",
+              "name": "Synthetic B 5-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-B-R05-H05",
+              "name": "Synthetic B 5-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-B-R05-H06",
+              "name": "Synthetic B 5-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 5",
+          "distanceMeters": 1700,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 45000
+        }
+      ]
+    },
+    {
+      "id": "SYN-MEET-C",
+      "trackName": "Synthetic Meadows",
+      "trackCode": "SYM",
+      "country": "USA",
+      "dayOffset": 3,
+      "timezone": "America/Los_Angeles",
+      "status": "scheduled",
+      "complete": true,
+      "races": [
+        {
+          "id": "SYN-C-R01",
+          "trackRaceNumber": 1,
+          "postOffsetMinutes": 4350,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-C-R01-H01",
+              "name": "Synthetic C 1-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-C-R01-H02",
+              "name": "Synthetic C 1-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-C-R01-H03",
+              "name": "Synthetic C 1-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-C-R01-H04",
+              "name": "Synthetic C 1-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-C-R01-H05",
+              "name": "Synthetic C 1-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-C-R01-H06",
+              "name": "Synthetic C 1-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 1",
+          "distanceMeters": 1300,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 41000
+        },
+        {
+          "id": "SYN-C-R02",
+          "trackRaceNumber": 2,
+          "postOffsetMinutes": 4380,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-C-R02-H01",
+              "name": "Synthetic C 2-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-C-R02-H02",
+              "name": "Synthetic C 2-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-C-R02-H03",
+              "name": "Synthetic C 2-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-C-R02-H04",
+              "name": "Synthetic C 2-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-C-R02-H05",
+              "name": "Synthetic C 2-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-C-R02-H06",
+              "name": "Synthetic C 2-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 2",
+          "distanceMeters": 1400,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 42000
+        },
+        {
+          "id": "SYN-C-R03",
+          "trackRaceNumber": 3,
+          "postOffsetMinutes": 4410,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-C-R03-H01",
+              "name": "Synthetic C 3-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-C-R03-H02",
+              "name": "Synthetic C 3-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-C-R03-H03",
+              "name": "Synthetic C 3-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-C-R03-H04",
+              "name": "Synthetic C 3-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-C-R03-H05",
+              "name": "Synthetic C 3-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-C-R03-H06",
+              "name": "Synthetic C 3-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 3",
+          "distanceMeters": 1500,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 43000
+        },
+        {
+          "id": "SYN-C-R04",
+          "trackRaceNumber": 4,
+          "postOffsetMinutes": 4440,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-C-R04-H01",
+              "name": "Synthetic C 4-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-C-R04-H02",
+              "name": "Synthetic C 4-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-C-R04-H03",
+              "name": "Synthetic C 4-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-C-R04-H04",
+              "name": "Synthetic C 4-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-C-R04-H05",
+              "name": "Synthetic C 4-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-C-R04-H06",
+              "name": "Synthetic C 4-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 4",
+          "distanceMeters": 1600,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 44000
+        },
+        {
+          "id": "SYN-C-R05",
+          "trackRaceNumber": 5,
+          "postOffsetMinutes": 4470,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-C-R05-H01",
+              "name": "Synthetic C 5-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-C-R05-H02",
+              "name": "Synthetic C 5-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-C-R05-H03",
+              "name": "Synthetic C 5-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-C-R05-H04",
+              "name": "Synthetic C 5-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-C-R05-H05",
+              "name": "Synthetic C 5-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-C-R05-H06",
+              "name": "Synthetic C 5-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 5",
+          "distanceMeters": 1700,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 45000
+        },
+        {
+          "id": "SYN-C-R06",
+          "trackRaceNumber": 6,
+          "postOffsetMinutes": 4500,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-C-R06-H01",
+              "name": "Synthetic C 6-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-C-R06-H02",
+              "name": "Synthetic C 6-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-C-R06-H03",
+              "name": "Synthetic C 6-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-C-R06-H04",
+              "name": "Synthetic C 6-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-C-R06-H05",
+              "name": "Synthetic C 6-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-C-R06-H06",
+              "name": "Synthetic C 6-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 6",
+          "distanceMeters": 1800,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 46000
+        },
+        {
+          "id": "SYN-C-R07",
+          "trackRaceNumber": 7,
+          "postOffsetMinutes": 4530,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-C-R07-H01",
+              "name": "Synthetic C 7-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-C-R07-H02",
+              "name": "Synthetic C 7-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-C-R07-H03",
+              "name": "Synthetic C 7-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-C-R07-H04",
+              "name": "Synthetic C 7-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-C-R07-H05",
+              "name": "Synthetic C 7-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-C-R07-H06",
+              "name": "Synthetic C 7-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 7",
+          "distanceMeters": 1900,
+          "surface": "Dirt",
+          "raceClass": "Allowance",
+          "purse": 47000
+        },
+        {
+          "id": "SYN-C-R08",
+          "trackRaceNumber": 8,
+          "postOffsetMinutes": 4560,
+          "status": "scheduled",
+          "runners": [
+            {
+              "id": "SYN-C-R08-H01",
+              "name": "Synthetic C 8-1",
+              "programNumber": "1",
+              "postPosition": 1,
+              "status": "active",
+              "jockey": "Test Jockey 1",
+              "trainer": "Test Trainer 1",
+              "morningLineOdds": 3.5,
+              "liveOdds": 3.2
+            },
+            {
+              "id": "SYN-C-R08-H02",
+              "name": "Synthetic C 8-2",
+              "programNumber": "2",
+              "postPosition": 2,
+              "status": "active",
+              "jockey": "Test Jockey 2",
+              "trainer": "Test Trainer 2",
+              "morningLineOdds": 5.0,
+              "liveOdds": 4.6
+            },
+            {
+              "id": "SYN-C-R08-H03",
+              "name": "Synthetic C 8-3",
+              "programNumber": "3",
+              "postPosition": 3,
+              "status": "active",
+              "jockey": "Test Jockey 3",
+              "trainer": "Test Trainer 3",
+              "morningLineOdds": 6.5,
+              "liveOdds": 6.0
+            },
+            {
+              "id": "SYN-C-R08-H04",
+              "name": "Synthetic C 8-4",
+              "programNumber": "4",
+              "postPosition": 4,
+              "status": "active",
+              "jockey": "Test Jockey 4",
+              "trainer": "Test Trainer 4",
+              "morningLineOdds": 8.0,
+              "liveOdds": 7.4
+            },
+            {
+              "id": "SYN-C-R08-H05",
+              "name": "Synthetic C 8-5",
+              "programNumber": "5",
+              "postPosition": 5,
+              "status": "active",
+              "jockey": "Test Jockey 5",
+              "trainer": "Test Trainer 5",
+              "morningLineOdds": 9.5,
+              "liveOdds": 8.8
+            },
+            {
+              "id": "SYN-C-R08-H06",
+              "name": "Synthetic C 8-6",
+              "programNumber": "6",
+              "postPosition": 6,
+              "status": "active",
+              "jockey": "Test Jockey 6",
+              "trainer": "Test Trainer 6",
+              "morningLineOdds": 11.0,
+              "liveOdds": 10.2
+            }
+          ],
+          "name": "Synthetic Stakes 8",
+          "distanceMeters": 2000,
+          "surface": "Turf",
+          "raceClass": "Allowance",
+          "purse": 48000
+        }
+      ]
+    }
+  ],
+  "results": {}
+}

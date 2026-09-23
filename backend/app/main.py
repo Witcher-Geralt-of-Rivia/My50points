@@ -1,5 +1,5 @@
-import asyncio
 import logging
+import os
 import traceback
 from contextlib import asynccontextmanager
 
@@ -25,9 +25,9 @@ from app.models import (  # noqa: F401
     UserStats,
     ChatMessage,
 )
-from app.routers import admin, auth, groups, leaderboard, profile, races, records, statistics, tickets, tournaments, chat
+from app.routers import admin, auth, groups, leaderboard, profile, racing_status, races, records, statistics, tickets, tournaments, chat
 from app.seed import ensure_seeded_if_empty
-from app.services.tournament_sync import run_sync_job, start_background_sync, stop_background_sync
+from app.racing.worker import RacingWorker
 
 logger = logging.getLogger(__name__)
 
@@ -117,47 +117,35 @@ def _ensure_user_role_column():
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # Schema: production schema changes ship as Alembic migrations
+    # (alembic upgrade head). create_all only creates MISSING tables on fresh
+    # dev/test databases; it never alters existing ones.
     Base.metadata.create_all(bind=engine)
     _ensure_leaderboard_columns()
     _ensure_horse_scratched_column()
     _ensure_user_role_column()
     db = SessionLocal()
     try:
-        ensure_seeded_if_empty(db)
-        # Un contenedor anterior pudo morir sosteniendo el candado del sync; a
-        # través del session pooler ese candado sobrevive y bloquea todo sync
-        # futuro. Se limpia al arrancar.
+        # Demo seeding is opt-in, development-only, and never runs from a
+        # request. seed_block_reason() refuses production-like environments.
+        if os.getenv("DEMO_SEED_ON_STARTUP", "").strip().lower() in ("1", "true", "yes", "on"):
+            ensure_seeded_if_empty(db)
+        # A container that died holding the OLD advisory sync lock can leave it
+        # held behind the session pooler; release it once at startup.
         from app.services.tournament_sync import release_leaked_sync_locks
 
         release_leaked_sync_locks(db)
     finally:
         db.close()
 
-    # Sync inicial NO bloqueante: el servidor queda listo de inmediato y el scrape corre
-    # en segundo plano. Antes se hacía `await ...run_sync_job` y bloqueaba el arranque
-    # (riesgo de timeout de health-check en Render con la API lenta/rate-limited).
-    sync_task = None
-    if settings.racing_background_sync:
-        async def _initial_sync():
-            try:
-                await asyncio.to_thread(run_sync_job)
-            except Exception:
-                logger.exception("Initial racing sync failed on startup; API will continue")
-
-        asyncio.create_task(_initial_sync())
-        sync_task = start_background_sync()
+    # The racing worker is the only place synchronization / maintenance run.
+    # Provider network sync additionally requires RACING_SYNC_ENABLED=true.
+    worker = RacingWorker()
+    worker.start()
 
     yield
 
-    stop_background_sync()
-    if sync_task and not sync_task.done():
-        sync_task.cancel()
-        try:
-            await sync_task
-        except (Exception, asyncio.CancelledError):
-            pass
-
-
+    await worker.stop()
 
 
 app = FastAPI(title="50points API", version="1.0.0", lifespan=lifespan)
@@ -212,7 +200,12 @@ def api_root():
                 "GET /api/profile": "User profile (auth)",
             },
             "admin": {
-                "POST /api/admin/seed": "Seed database (x-admin-secret)",
+                "POST /api/admin/seed": "Seed demo database (dev only, x-admin-secret)",
+                "POST /api/admin/sync-racing": "Run one racing sync tick (x-admin-secret)",
+                "GET /api/admin/racing/status": "Provider, quota and schedule state (x-admin-secret)",
+            },
+            "racing": {
+                "GET /api/racing/status": "Public racing data freshness (no secrets)",
             },
             "races": {
                 "POST /api/races/{race_id}/result": "Score race (x-admin-secret)",
@@ -232,6 +225,7 @@ app.include_router(statistics.router, prefix=api_prefix)
 app.include_router(records.router, prefix=api_prefix)
 app.include_router(groups.router, prefix=api_prefix)
 app.include_router(chat.router, prefix=api_prefix)
+app.include_router(racing_status.router, prefix=api_prefix)
 
 
 @app.get("/health")

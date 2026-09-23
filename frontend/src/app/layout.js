@@ -16,6 +16,7 @@ import "./styles/shell.css";
 import "./styles/home.css";
 import "./styles/tournament.css";
 import "./styles/pages.css";
+import "./styles/guide.css";
 import Providers from "@/frontend/components/layout/Providers";
 import ConditionalShell from "@/frontend/components/layout/ConditionalShell";
 import SiteJsonLd from "@/frontend/components/seo/SiteJsonLd";

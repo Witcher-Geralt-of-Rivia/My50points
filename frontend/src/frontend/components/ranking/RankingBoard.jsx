@@ -32,7 +32,7 @@ export function Podium({ rows, isEn }) {
   );
 }
 
-export default function RankingBoard({ rows = [], isEn = false, emptyTitle, emptyText, columns = {}, searchable = true }) {
+export default function RankingBoard({ rows = [], isEn = false, emptyTitle, emptyText, columns = {}, searchable = true, podium = true }) {
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -51,7 +51,7 @@ export default function RankingBoard({ rows = [], isEn = false, emptyTitle, empt
 
   return (
     <div className="rboard">
-      <Podium rows={rows.slice(0, 3)} isEn={isEn} />
+      {podium ? <Podium rows={rows.slice(0, 3)} isEn={isEn} /> : null}
       {searchable && rows.length > 8 ? (
         <label className="rboard__search field">
           <span className="ui-sr">{isEn ? 'Search player' : 'Buscar jugador'}</span>

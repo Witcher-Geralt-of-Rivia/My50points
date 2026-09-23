@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Trophy, MessageCircle, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Trophy, MessageCircle, ArrowRight, Hourglass } from 'lucide-react';
 import ModalityScope from '@/frontend/components/modalities/ModalityScope';
 import RankingBoard from '@/frontend/components/ranking/RankingBoard';
 import TournamentChat from '@/frontend/components/tournament/TournamentChat';
@@ -20,7 +20,8 @@ import { useAuth } from '@/frontend/contexts/AuthContext';
 import { useAchievementCards } from '@/frontend/contexts/AchievementCardsContext';
 import { useRankingUpdates } from '@/frontend/contexts/RankingUpdatesContext';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
-import { displayStatus, formatDateLong, ART } from '@/frontend/lib/redesign';
+import { displayStatus, formatDateLong } from '@/frontend/lib/redesign';
+import NeonTrack from '@/frontend/components/ui/NeonTrack';
 
 export default function RankingClient() {
   const params = useParams();
@@ -33,6 +34,7 @@ export default function RankingClient() {
   const { checkGlobalRank, checkTournamentRank } = useRankingUpdates();
   const [tournament, setTournament] = useState(null);
   const [rows, setRows] = useState([]);
+  const [registered, setRegistered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState('ranking');
@@ -48,6 +50,7 @@ export default function RankingClient() {
       const board = lbRes.leaderboard || [];
       setTournament(tRes.tournament);
       setRows(board);
+      setRegistered(Array.isArray(lbRes.registeredTickets) ? lbRes.registeredTickets : []);
       setFailed(false);
       if (user?.id) {
         const me = board.find((e) => e.userId === user.id);
@@ -108,6 +111,21 @@ export default function RankingClient() {
     extra: r.racesPlayed != null ? `${r.racesPlayed}/7` : null,
     isMe: user?.id != null && r.userId === user.id,
   }));
+  // Before the first race is scored: list the confirmed tickets (position "—",
+  // 0 points, 0/7 races). Honest pre-race state, nothing invented.
+  const preRace = !rows.length && registered.length > 0;
+  const entrantRows = registered.map((r, idx) => ({
+    key: `reg-${r.userId}-${r.ticketNumber}-${idx}`,
+    pos: '—',
+    name: r.username || '—',
+    color: r.avatarColor,
+    sub: `${isEn ? 'Ticket' : 'Boleto'} ${r.ticketNumber}`,
+    points: 0,
+    change: 0,
+    extra: '0/7',
+    isMe: user?.id != null && r.userId === user.id,
+  }));
+  const myEntries = entrantRows.filter((r) => r.isMe).length;
 
   return (
     <ModalityScope modalityId={modalityId}>
@@ -116,7 +134,7 @@ export default function RankingClient() {
           <Link href={tournamentHref}><ChevronLeft size={16} aria-hidden />{tournament.name}</Link>
         </nav>
         <header className="pg-band" data-accent={status.key === 'live' ? 'live' : 'gold'}>
-          <img className="pg-band__art" src={ART.rankingHero} alt="" aria-hidden decoding="async" />
+          <NeonTrack variant="hero" accent={status.key === 'live' ? 'live' : 'gold'} className="pg-band__art" />
           <div className="pg-band__veil" aria-hidden />
           <div className="pg-band__content">
             <div className="pg-band__chips"><StatusChip tone={status.key}>{isEn ? status.en : status.es}</StatusChip></div>
@@ -135,7 +153,19 @@ export default function RankingClient() {
           </button>
         </div>
 
-        {tab === 'ranking' ? (
+        {tab === 'ranking' && preRace ? (
+          <div className="rpre" data-state="pre-race">
+            <p className="trn-banner" data-accent="aqua" role="status">
+              <Hourglass size={17} aria-hidden />
+              <span>
+                {isEn
+                  ? `${registered.length} ${registered.length === 1 ? 'ticket' : 'tickets'} registered${myEntries ? ` · ${myEntries} ${myEntries === 1 ? 'is' : 'are'} yours` : ''}. Standings start with the first race.`
+                  : `${registered.length} ${registered.length === 1 ? 'boleto inscrito' : 'boletos inscritos'}${myEntries ? ` · ${myEntries} ${myEntries === 1 ? 'es tuyo' : 'son tuyos'}` : ''}. La clasificación arranca con la primera carrera.`}
+              </span>
+            </p>
+            <RankingBoard rows={entrantRows} isEn={isEn} podium={false} columns={{ extra: isEn ? 'Races' : 'Carreras' }} />
+          </div>
+        ) : tab === 'ranking' ? (
           <RankingBoard
             rows={boardRows}
             isEn={isEn}

@@ -60,14 +60,9 @@ export default function WorkspaceOnboardingTour({ modalityId, showFloatingTrigge
 
   const containerRef = useRef(null);
 
-  // Check if tour was already completed
-  useEffect(() => {
-    const completed = localStorage.getItem("50points-tour-completed");
-    if (!completed) {
-      // Auto-start onboarding intro
-      setShowIntro(true);
-    }
-  }, []);
+  // The tour no longer opens by itself: the guided light shows the next action
+  // on the page (client feedback: less reading). It stays available from the
+  // tournament's "Cómo jugar" button (OPEN_TOUR_EVENT).
 
   // Update rect position of highlighted element
   const updateRect = useCallback(() => {

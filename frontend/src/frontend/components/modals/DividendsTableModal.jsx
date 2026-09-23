@@ -76,8 +76,8 @@ export default function DividendsTableModal({ isOpen, onClose, tournamentSlug, r
         <ShieldAlert size={18} aria-hidden />
         <span>
           {isEn
-            ? "MY50 fixed dividends for this tournament are not published yet. Live odds are never shown as MY50 dividends."
-            : "Los dividendos fijos MY50 de este torneo aún no están publicados. Nunca mostramos cuotas en vivo como dividendo MY50."}
+            ? "MY50 fixed dividends for this tournament are not published yet."
+            : "Los dividendos fijos MY50 de este torneo aún no están publicados."}
         </span>
       </p>
 

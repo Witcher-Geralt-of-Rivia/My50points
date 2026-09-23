@@ -10,7 +10,7 @@ from app.models import (
     LeaderboardEntry, Race, RaceResult, Ticket, Tournament, UserStats,
     OfficialDividend, TournamentTicket, TicketSelection
 )
-from app.scoring import score_ticket
+from app.scoring import PENDING_CANCELLED_RACE, SCORED, UNSCORED, evaluate_ticket
 from app.services.leaderboard_snapshot import refresh_tournament_rank_changes
 
 router = APIRouter(prefix="/races", tags=["races"])
@@ -32,7 +32,171 @@ class RaceResultBody(BaseModel):
     dividends: list[ResultDividendItem] | None = None
 
 
+def _horse_rows(race: Race) -> list[dict]:
+    # `odds` is the legacy/demo column only; provider-synced runners carry None,
+    # so provider prices can never decide a scratch reassignment or a score.
+    return [
+        {"id": h.id, "odds": h.odds, "scratched": h.scratched, "postPosition": h.postPosition}
+        for h in race.horses
+    ]
+
+
+def _apply_leaderboard(db: Session, ticket: Ticket, tournament_id: int, points: int, point_delta: int,
+                       was_scored: bool, now_scored: bool) -> None:
+    entry = (
+        db.query(LeaderboardEntry)
+        .filter(
+            LeaderboardEntry.userId == ticket.userId,
+            LeaderboardEntry.tournamentId == tournament_id,
+            LeaderboardEntry.ticketNumber == ticket.ticketNumber,
+        )
+        .first()
+    )
+    if entry:
+        entry.totalPoints += point_delta
+        if now_scored and not was_scored:
+            entry.racesPlayed += 1
+        elif was_scored and not now_scored:
+            entry.racesPlayed = max(0, entry.racesPlayed - 1)
+        if ticket.strategy == "full_point":
+            entry.fullPoints += point_delta
+        elif ticket.strategy == "dual_point":
+            entry.dualPoints += point_delta
+        elif ticket.strategy == "smart_pick":
+            entry.smartPoints += point_delta
+        if now_scored:
+            entry.winStreak = entry.winStreak + 1 if points > 0 else 0
+            entry.bestStreak = max(entry.bestStreak, entry.winStreak)
+            entry.lastPointsChange = points
+    elif now_scored:
+        entry = LeaderboardEntry(
+            userId=ticket.userId,
+            tournamentId=tournament_id,
+            ticketNumber=ticket.ticketNumber,
+            totalPoints=points,
+            racesPlayed=1,
+            fullPoints=points if ticket.strategy == "full_point" else 0,
+            dualPoints=points if ticket.strategy == "dual_point" else 0,
+            smartPoints=points if ticket.strategy == "smart_pick" else 0,
+            winStreak=1 if points > 0 else 0,
+            bestStreak=1 if points > 0 else 0,
+        )
+        entry.lastPointsChange = points
+        db.add(entry)
+
+    stats = db.query(UserStats).filter(UserStats.userId == ticket.userId).first()
+    if stats:
+        if now_scored and not was_scored:
+            prev_races = stats.totalRaces
+            prev_wins = round((stats.winRate / 100) * prev_races) if prev_races else 0
+            new_races = prev_races + 1
+            new_wins = prev_wins + (1 if points > 0 else 0)
+            stats.totalRaces = new_races
+            stats.winRate = (new_wins / new_races) * 100
+        elif was_scored and not now_scored and stats.totalRaces > 0:
+            prev_points = points - point_delta
+            prev_wins = round((stats.winRate / 100) * stats.totalRaces) - (1 if prev_points > 0 else 0)
+            new_races = stats.totalRaces - 1
+            stats.totalRaces = new_races
+            stats.winRate = (max(0, prev_wins) / new_races * 100) if new_races else 0.0
+        elif was_scored and now_scored and stats.totalRaces > 0:
+            prev_points = points - point_delta
+            if (prev_points > 0) != (points > 0):
+                prev_wins = round((stats.winRate / 100) * stats.totalRaces)
+                new_wins = prev_wins + (1 if points > 0 else -1)
+                stats.winRate = max(0.0, min(100.0, (new_wins / stats.totalRaces) * 100))
+        stats.totalPoints += point_delta
+        stats.bestStreak = max(stats.bestStreak, entry.winStreak if entry else 0)
+    elif now_scored:
+        db.add(
+            UserStats(
+                userId=ticket.userId,
+                totalPoints=points,
+                totalRaces=1,
+                winRate=100.0 if points > 0 else 0.0,
+                bestStreak=1 if points > 0 else 0,
+            )
+        )
+
+
+def hold_cancelled_race_scores(db: Session, race: Race) -> int:
+    """A frozen race was cancelled/voided: mark its not-yet-scored per-race
+    tickets and aggregate selections PENDING_CANCELLED_RACE. Picks, strategy,
+    race and order are left exactly as confirmed; no points are invented and no
+    other race takes its place (the scoring rule awaits product confirmation).
+    Returns how many rows changed."""
+    changed = 0
+    for row in db.query(Ticket).filter(Ticket.raceId == race.id, Ticket.isScored.is_(False)).all():
+        if row.scoreStatus == UNSCORED:
+            row.scoreStatus = PENDING_CANCELLED_RACE
+            changed += 1
+    for row in db.query(TicketSelection).filter(TicketSelection.raceId == race.id, TicketSelection.isScored.is_(False)).all():
+        if row.scoreStatus == UNSCORED:
+            row.scoreStatus = PENDING_CANCELLED_RACE
+            changed += 1
+    return changed
+
+
+def score_race_entries(db: Session, race: Race, result_dicts: list[dict]) -> list[dict]:
+    """Score every per-race Ticket and aggregate TicketSelection of `race` from the
+    frozen MY50 dividend table ONLY. A winning pick without a published MY50
+    dividend (or an unresolvable scratch) is left honestly PENDING: 0 points,
+    isScored=False, not counted in leaderboards — never a fabricated score."""
+    official_divs = {
+        d.horseId: d.dividend
+        for d in db.query(OfficialDividend).filter(OfficialDividend.raceId == race.id).all()
+    }
+    horses = _horse_rows(race)
+    scored_tickets = []
+
+    for ticket in db.query(Ticket).filter(Ticket.raceId == race.id).all():
+        points, status = evaluate_ticket(ticket.strategy, ticket.picks, result_dicts, horses, official_divs)
+        now_scored = status == SCORED
+        was_scored = bool(ticket.isScored)
+        prev_points = ticket.pointsEarned if was_scored else 0
+        new_points = points if now_scored else 0
+        point_delta = new_points - prev_points
+
+        ticket.pointsEarned = new_points
+        ticket.isScored = now_scored
+        ticket.scoreStatus = status
+        if now_scored or was_scored:
+            _apply_leaderboard(db, ticket, race.tournamentId, new_points, point_delta, was_scored, now_scored)
+
+        scored_tickets.append(
+            {
+                "ticketId": ticket.id,
+                "userId": ticket.userId,
+                "ticketNumber": ticket.ticketNumber,
+                "strategy": ticket.strategy,
+                "points": new_points,
+                "scoreStatus": status,
+            }
+        )
+
+    selections = (
+        db.query(TicketSelection)
+        .options(joinedload(TicketSelection.tournamentTicket))
+        .filter(TicketSelection.raceId == race.id)
+        .all()
+    )
+    for sel in selections:
+        points, status = evaluate_ticket(sel.strategy, sel.picks, result_dicts, horses, official_divs)
+        now_scored = status == SCORED
+        prev = sel.pointsEarned if sel.isScored else 0
+        new_points = points if now_scored else 0
+        sel.pointsEarned = new_points
+        sel.isScored = now_scored
+        sel.scoreStatus = status
+        if sel.tournamentTicket:
+            sel.tournamentTicket.totalPoints += new_points - prev
+
+    return scored_tickets
+
+
 def post_race_result(race_id: int, results: list, db: Session, dividends: list | None = None):
+    """Admin official-result path: writes the finishing order (source=admin),
+    freezes any MY50 dividends SUPPLIED BY THE ADMIN, then scores."""
     if not results or len(results) < 3:
         raise HTTPException(status_code=400, detail="At least 3 finishing positions required")
 
@@ -41,27 +205,22 @@ def post_race_result(race_id: int, results: list, db: Session, dividends: list |
         raise HTTPException(status_code=404, detail="Race not found")
 
     result_dicts = [{"position": r["position"] if isinstance(r, dict) else r.position, "horseId": r["horseId"] if isinstance(r, dict) else r.horseId} for r in results]
+    winner_ids = {x["horseId"] for x in result_dicts if x["position"] == 1}
+    positions = [x["position"] for x in result_dicts]
+    dead_heat_positions = {p for p in positions if positions.count(p) > 1}
 
-    # Delete existing results first to avoid UNIQUE constraint conflicts during update
+    # Replace results (steward corrections replace rather than append).
     db.query(RaceResult).filter(RaceResult.raceId == race_id).delete()
     db.flush()
-
     for r in result_dicts:
-        db.add(RaceResult(raceId=race_id, horseId=r["horseId"], position=r["position"]))
+        db.add(RaceResult(raceId=race_id, horseId=r["horseId"], position=r["position"],
+                          source="admin", isDeadHeat=r["position"] in dead_heat_positions))
 
     race.status = "finished"
+    race.resultStatus = "official"
     db.flush()
 
-    # Freeze official dividends FIRST so scoring below can only read the table.
-    # Any dividend supplied with the result is written immutably (upsert =
-    # delete + insert, so steward corrections replace rather than append).
-    # Without frozen rows, scoring would fall back to mutable live odds —
-    # that fallback must never decide an already-scored result.
-    winner_ids = {
-        (x["horseId"] if isinstance(x, dict) else x.horseId)
-        for x in result_dicts
-        if (x["position"] if isinstance(x, dict) else x.position) == 1
-    }
+    # Freeze MY50 dividends supplied by the admin FIRST, so scoring reads only the table.
     if dividends:
         horse_ids = {h.id for h in race.horses}
         for d in dividends:
@@ -82,118 +241,7 @@ def post_race_result(race_id: int, results: list, db: Session, dividends: list |
             row.isDeadHeat = len(winner_ids) > 1 and hid in winner_ids
         db.flush()
 
-    official_div_records = db.query(OfficialDividend).filter(OfficialDividend.raceId == race_id).all()
-    official_divs = {d.horseId: d.dividend for d in official_div_records}
-
-    tickets = db.query(Ticket).filter(Ticket.raceId == race_id).all()
-    scored_tickets = []
-
-    for ticket in tickets:
-        horses = [{"id": h.id, "odds": h.odds, "scratched": h.scratched, "postPosition": h.postPosition} for h in race.horses]
-        points = score_ticket(ticket.strategy, ticket.picks, result_dicts, horses, official_divs)
-        prev_points = ticket.pointsEarned if ticket.isScored else 0
-        point_delta = points - prev_points
-
-        ticket.pointsEarned = points
-        was_already_scored = ticket.isScored
-        ticket.isScored = True
-
-        entry = (
-            db.query(LeaderboardEntry)
-            .filter(
-                LeaderboardEntry.userId == ticket.userId,
-                LeaderboardEntry.tournamentId == race.tournamentId,
-                LeaderboardEntry.ticketNumber == ticket.ticketNumber,
-            )
-            .first()
-        )
-        if entry:
-            entry.totalPoints += point_delta
-            if not was_already_scored:
-                entry.racesPlayed += 1
-            if ticket.strategy == "full_point":
-                entry.fullPoints += point_delta
-            elif ticket.strategy == "dual_point":
-                entry.dualPoints += point_delta
-            elif ticket.strategy == "smart_pick":
-                entry.smartPoints += point_delta
-            if points > 0:
-                entry.winStreak += 1
-            else:
-                entry.winStreak = 0
-            entry.bestStreak = max(entry.bestStreak, entry.winStreak)
-            entry.lastPointsChange = points
-        else:
-            entry = LeaderboardEntry(
-                userId=ticket.userId,
-                tournamentId=race.tournamentId,
-                ticketNumber=ticket.ticketNumber,
-                totalPoints=points,
-                racesPlayed=1,
-                fullPoints=points if ticket.strategy == "full_point" else 0,
-                dualPoints=points if ticket.strategy == "dual_point" else 0,
-                smartPoints=points if ticket.strategy == "smart_pick" else 0,
-                winStreak=1 if points > 0 else 0,
-                bestStreak=1 if points > 0 else 0,
-            )
-            entry.lastPointsChange = points
-            db.add(entry)
-
-        stats = db.query(UserStats).filter(UserStats.userId == ticket.userId).first()
-        if stats:
-            if not was_already_scored:
-                prev_races = stats.totalRaces
-                prev_wins = round((stats.winRate / 100) * prev_races) if prev_races else 0
-                new_races = prev_races + 1
-                new_wins = prev_wins + (1 if points > 0 else 0)
-                stats.totalRaces = new_races
-                stats.winRate = (new_wins / new_races) * 100
-            else:
-                prev_had_points = prev_points > 0
-                curr_has_points = points > 0
-                if prev_had_points != curr_has_points and stats.totalRaces > 0:
-                    prev_wins = round((stats.winRate / 100) * stats.totalRaces)
-                    new_wins = prev_wins + (1 if curr_has_points else -1)
-                    stats.winRate = max(0.0, min(100.0, (new_wins / stats.totalRaces) * 100))
-            stats.totalPoints += point_delta
-            stats.bestStreak = max(stats.bestStreak, entry.winStreak if entry else 0)
-        else:
-            db.add(
-                UserStats(
-                    userId=ticket.userId,
-                    totalPoints=points,
-                    totalRaces=1,
-                    winRate=100.0 if points > 0 else 0.0,
-                    bestStreak=1 if points > 0 else 0,
-                )
-            )
-
-        scored_tickets.append(
-            {
-                "ticketId": ticket.id,
-                "userId": ticket.userId,
-                "ticketNumber": ticket.ticketNumber,
-                "strategy": ticket.strategy,
-                "points": points,
-            }
-        )
-
-    # Score aggregate 7-race tournament tickets if present
-    selections = (
-        db.query(TicketSelection)
-        .options(joinedload(TicketSelection.tournamentTicket))
-        .filter(TicketSelection.raceId == race_id)
-        .all()
-    )
-    for sel in selections:
-        horses = [{"id": h.id, "odds": h.odds, "scratched": h.scratched, "postPosition": h.postPosition} for h in race.horses]
-        sel_points = score_ticket(sel.strategy, sel.picks, result_dicts, horses, official_divs)
-        sel_prev = sel.pointsEarned if sel.isScored else 0
-        sel_delta = sel_points - sel_prev
-        sel.pointsEarned = sel_points
-        sel.isScored = True
-        if sel.tournamentTicket:
-            sel.tournamentTicket.totalPoints += sel_delta
+    scored_tickets = score_race_entries(db, race, result_dicts)
 
     next_race = (
         db.query(Race)

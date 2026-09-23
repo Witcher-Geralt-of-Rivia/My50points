@@ -7,7 +7,7 @@
  * racetrack's own number, shown only as a secondary label when it differs.
  * Tabs are navigation/status only: selecting one NEVER writes to the server.
  */
-import { Check, Lock, Radio } from 'lucide-react';
+import { Check, Lock, Radio, Ban, CloudOff, Hourglass } from 'lucide-react';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
 import { formatTime } from '@/frontend/lib/redesign';
 
@@ -19,6 +19,9 @@ const STATE_TEXT = {
   result: { es: 'Resultado', en: 'Result' },
   closed: { es: 'Cerrada', en: 'Closed' },
   running: { es: 'En curso', en: 'Running' },
+  pending: { es: 'Resultado pendiente', en: 'Result pending' },
+  cancelled: { es: 'Cancelada', en: 'Cancelled' },
+  unavailable: { es: 'No disponible', en: 'Unavailable' },
 };
 const STRAT_SHORT = { full: 'FULL', dual: 'DUAL', smart: 'SMART' };
 
@@ -36,7 +39,13 @@ export default function RaceSummaryMatrix({ races = [], activeRaceId = null, rac
           const track = Number(race.raceNumber);
           const showTrack = Number.isFinite(track) && track !== idx + 1;
           const time = formatTime(race.scheduledTime, isEn);
-          const Icon = st.state === 'saved' || st.state === 'confirmed' ? Check : st.state === 'running' ? Radio : st.state === 'closed' ? Lock : null;
+          const Icon = st.state === 'saved' || st.state === 'confirmed' ? Check
+            : st.state === 'running' ? Radio
+            : st.state === 'closed' ? Lock
+            : st.state === 'cancelled' ? Ban
+            : st.state === 'unavailable' ? CloudOff
+            : st.state === 'pending' ? Hourglass
+            : null;
           const content = (
             <>
               <span className="rprog__top">
@@ -44,7 +53,7 @@ export default function RaceSummaryMatrix({ races = [], activeRaceId = null, rac
                 {Icon ? <Icon size={15} aria-hidden className="rprog__icon" /> : null}
               </span>
               <span className="rprog__label t-label">{isEn ? 'Race' : 'Carrera'}{showTrack ? ` · ${isEn ? 'T' : 'P'}${track}` : ''}</span>
-              <span className="rprog__state">{st.strategy ? STRAT_SHORT[st.strategy] : isEn ? STATE_TEXT[st.state]?.en : STATE_TEXT[st.state]?.es}</span>
+              <span className="rprog__state">{st.strategy && !['cancelled', 'unavailable', 'pending'].includes(st.state) ? STRAT_SHORT[st.strategy] : isEn ? STATE_TEXT[st.state]?.en : STATE_TEXT[st.state]?.es}</span>
               {time ? <span className="rprog__time t-num">{time}</span> : null}
             </>
           );

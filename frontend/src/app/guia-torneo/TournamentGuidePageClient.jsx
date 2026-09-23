@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SINGLE_GUEST_ENTRY, GUEST_ENTRY_HREF } from "@/frontend/lib/productFlags";
 import { Play } from "lucide-react";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import { ticketWorkflowAsset } from "@/frontend/lib/config/ticketWorkflowAssets";
@@ -93,9 +94,9 @@ export default function TournamentGuidePageClient() {
         </section>
 
         <footer className="tg-page__cta">
-          <Link href="/modalidades" className="tg-page__cta-btn">
+          <Link href={SINGLE_GUEST_ENTRY ? GUEST_ENTRY_HREF : "/modalidades"} className="tg-page__cta-btn">
             <Play className="w-5 h-5" strokeWidth={2.5} aria-hidden />
-            {t("tournamentGuide.beginSub")}
+            {SINGLE_GUEST_ENTRY ? t("tournamentGuide.guestCta") : t("tournamentGuide.beginSub")}
           </Link>
           <p className="tg-page__menu-hint">{t("tournamentGuide.menuHint")}</p>
         </footer>

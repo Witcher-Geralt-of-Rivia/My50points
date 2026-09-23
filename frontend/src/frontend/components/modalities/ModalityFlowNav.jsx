@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import { getModality, modalityPath, withModalityQuery } from "@/frontend/lib/gameModalities";
+import { SINGLE_GUEST_ENTRY } from "@/frontend/lib/productFlags";
 
 const STEPS = ["hub", "tracks", "tickets", "play"];
 
@@ -15,6 +16,9 @@ export default function ModalityFlowNav({
 }) {
   const { t } = useLanguage();
   const mod = getModality(modalityId);
+  // The "Modalidades → Hipódromos → …" trail starts at the modality chooser,
+  // which is not a public entry while M4 is the single public entry (productFlags).
+  if (SINGLE_GUEST_ENTRY) return null;
 
   const stepLinks = {
     hub: { href: "/modalidades", label: t("gameModalities.stepHub") },

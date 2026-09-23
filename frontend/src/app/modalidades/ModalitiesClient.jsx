@@ -14,23 +14,23 @@ import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
 export const MODALITY_CARDS = [
   {
     id: 'free', code: 'M2', accent: 'm2', icon: Trophy, live: true,
-    es: { name: 'Registrado', tag: 'Gratis con tu cuenta', points: ['3 boletos por torneo', 'Boleto 1 gratis · un anuncio desbloquea el 2 y el 3', 'Ranking global con tu nombre'] },
-    en: { name: 'Registered', tag: 'Free with your account', points: ['3 tickets per tournament', 'Ticket 1 free · one ad unlocks tickets 2 and 3', 'Global ranking under your name'] },
+    es: { name: 'Torneo gratis', tag: 'Con tu cuenta', points: ['3 boletos por torneo', 'Boleto 1 gratis · un anuncio desbloquea el 2 y el 3', 'Ranking global con tu nombre'] },
+    en: { name: 'Free tournament', tag: 'With your account', points: ['3 tickets per tournament', 'Ticket 1 free · one ad unlocks tickets 2 and 3', 'Global ranking under your name'] },
   },
   {
     id: 'guest', code: 'M4', accent: 'm4', icon: UserRound, live: true,
-    es: { name: 'Invitado', tag: 'Sin registro', points: ['Juega al instante con un alias', 'Boleto 1 gratis · un anuncio por boleto extra', 'Código para recuperar tu sesión'] },
-    en: { name: 'Guest', tag: 'No registration', points: ['Play instantly with an alias', 'Ticket 1 free · one ad per extra ticket', 'Recovery code to resume your session'] },
+    es: { name: 'Torneo gratis (sin registro)', tag: 'Invitado', points: ['Juega al instante con un alias', 'Boleto 1 gratis · un anuncio por boleto extra', 'Código para recuperar tu sesión'] },
+    en: { name: 'Free tournament (no sign-up)', tag: 'Guest', points: ['Play instantly with an alias', 'Ticket 1 free · one ad per extra ticket', 'Recovery code to resume your session'] },
   },
   {
     id: 'paid', code: 'M1', accent: 'm1', icon: Ticket, live: false,
-    es: { name: 'Pago', tag: 'Próximamente', points: ['Torneos con inscripción', 'Aún no disponible'] },
-    en: { name: 'Paid', tag: 'Coming soon', points: ['Entry-fee tournaments', 'Not available yet'] },
+    es: { name: 'Torneo', tag: 'Más adelante', points: ['Torneo oficial por puntos', 'Aún no disponible'] },
+    en: { name: 'Tournament', tag: 'Later', points: ['Official points tournament', 'Not available yet'] },
   },
   {
     id: 'special', code: 'M3', accent: 'm3', icon: Star, live: false,
-    es: { name: 'Especial', tag: 'Próximamente', points: ['Eventos de temporada', 'Aún no disponible'] },
-    en: { name: 'Special', tag: 'Coming soon', points: ['Seasonal events', 'Not available yet'] },
+    es: { name: 'Torneo especial', tag: 'Más adelante', points: ['Eventos especiales de temporada', 'Aún no disponible'] },
+    en: { name: 'Special tournament', tag: 'Later', points: ['Seasonal special events', 'Not available yet'] },
   },
 ];
 

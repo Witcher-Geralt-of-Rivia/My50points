@@ -16,6 +16,49 @@ function canonicalRoot(dir = __dirname) {
 
 const projectRoot = canonicalRoot();
 
+/**
+ * Modalities offered as public play entries right now. Mirrors
+ * src/frontend/lib/productFlags.js (same env var, same default: guest). M2 is
+ * part of the project and stays implemented (next to be exposed); M1/M3 keep
+ * their architecture. While a modality is not exposed its entry URLs redirect
+ * to the single guest entry.
+ */
+const KNOWN_MODALITIES = ['guest', 'free', 'paid', 'special'];
+const exposedModalities = (() => {
+  const ids = String(process.env.NEXT_PUBLIC_EXPOSED_MODALITIES || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => KNOWN_MODALITIES.includes(s));
+  return ids.length ? [...new Set(ids)] : ['guest'];
+})();
+const guestOnly = exposedModalities.length === 1 && exposedModalities[0] === 'guest';
+const hiddenModalityAliases = {
+  free: ['free', '2', 'modalidad-2', 'modalidad-free'],
+  paid: ['paid', '1', 'modalidad-1', 'modalidad-paid'],
+  special: ['special', '3', 'modalidad-3', 'modalidad-special'],
+};
+const hiddenModalityPattern = Object.entries(hiddenModalityAliases)
+  .filter(([id]) => !exposedModalities.includes(id))
+  .flatMap(([, aliases]) => aliases)
+  .join('|');
+
+/** Single public entry (M4): every modality-choice URL leads to the guest entry. */
+const exposureRedirects = [
+  ...(hiddenModalityPattern
+    ? [
+        { source: `/modalidades/:modalityId(${hiddenModalityPattern})/:trackSlug`, destination: '/modalidades/guest', permanent: false },
+        { source: `/modalidades/:modalityId(${hiddenModalityPattern})`, destination: '/modalidades/guest', permanent: false },
+      ]
+    : []),
+  ...(guestOnly
+    ? [
+        // No modality to choose, and the player hub is built around the four modalities.
+        { source: '/modalidades', destination: '/modalidades/guest', permanent: false },
+        { source: '/inicio', destination: '/', permanent: false },
+      ]
+    : []),
+];
+
 /** @type {import('next').NextConfig} */
 const apiUrl =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -79,6 +122,7 @@ const nextConfig = {
     // ("Rendered more hooks than during the previous render", React #310).
     // Query strings are forwarded automatically.
     return [
+      ...exposureRedirects,
       {
         source: '/tournament',
         destination: '/tournaments',

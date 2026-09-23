@@ -10,6 +10,7 @@
  */
 import { ChevronLeft, ChevronRight, Save, Check } from 'lucide-react';
 import { strategies } from './PickSelector';
+import GuideRing from '@/frontend/components/ui/GuideRing';
 
 export default function TicketSummary({
   index,
@@ -23,6 +24,7 @@ export default function TicketSummary({
   isLast = false,
   savedCount = 0,
   totalRaces = 7,
+  guide = null,
   isEn = false,
 }) {
   const strategy = strategies.find((s) => s.id === activeStrategy) || strategies[0];
@@ -65,6 +67,7 @@ export default function TicketSummary({
             <Check size={17} aria-hidden />
             {isLast ? (isEn ? 'Review ticket' : 'Revisar boleto') : isEn ? 'Next race' : 'Siguiente carrera'}
             <ChevronRight size={17} aria-hidden />
+            {guide === 'next' ? <GuideRing /> : null}
           </button>
         ) : (
           <button type="button" className="ui-btn ui-btn--primary wsbar__save" onClick={onSave} disabled={!complete || !onSave}>
@@ -72,6 +75,7 @@ export default function TicketSummary({
             {complete
               ? isEn ? 'Save race' : 'Guardar carrera'
               : isEn ? `Pick ${missing} more` : `Elige ${missing} más`}
+            {guide === 'save' && complete ? <GuideRing tone="gold" /> : null}
           </button>
         )}
       </div>

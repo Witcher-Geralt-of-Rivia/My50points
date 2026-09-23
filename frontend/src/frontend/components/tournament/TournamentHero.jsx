@@ -8,7 +8,9 @@
 import Link from 'next/link';
 import { MapPin, CalendarDays, Clock, Trophy, FileSpreadsheet, HelpCircle, ArrowRight, Flag } from 'lucide-react';
 import { StatusChip, Countdown } from '@/frontend/components/ui';
-import { trackArt, formatDateLong, formatTime } from '@/frontend/lib/redesign';
+import { formatDateLong, formatTime } from '@/frontend/lib/redesign';
+import NeonTrack from '@/frontend/components/ui/NeonTrack';
+import GuideRing from '@/frontend/components/ui/GuideRing';
 
 export default function TournamentHero({
   tournament,
@@ -21,6 +23,8 @@ export default function TournamentHero({
   onOpenDividends,
   onOpenGuide,
   showCountdown = false,
+  extraChips = null,
+  sideNote = null,
   isEn = false,
 }) {
   if (!tournament) return null;
@@ -30,13 +34,14 @@ export default function TournamentHero({
 
   return (
     <section className="trn-hero ui-glass" data-accent={accent} aria-labelledby="trn-title">
-      <img className="trn-hero__art" src={trackArt(tournament)} alt="" aria-hidden decoding="async" fetchPriority="high" />
+      <NeonTrack variant="hero" accent={accent === 'live' ? 'live' : accent === 'gold' ? 'gold' : 'aqua'} className="trn-hero__art" />
       <div className="trn-hero__veil" aria-hidden />
       <div className="trn-hero__grid">
         <div className="trn-hero__main">
           <div className="trn-hero__chips">
             {status ? <StatusChip tone={status.key}>{isEn ? status.en : status.es}</StatusChip> : null}
             <span className="ui-chip" data-tone="upcoming"><Flag size={13} aria-hidden />{totalRaces} {isEn ? 'races' : 'carreras'}</span>
+            {extraChips}
           </div>
           <p className="t-label trn-hero__track">{tournament.track}</p>
           <h1 id="trn-title" className="t-page trn-hero__title">{tournament.name}</h1>
@@ -50,10 +55,12 @@ export default function TournamentHero({
               primaryCta.href ? (
                 <Link href={primaryCta.href} className="ui-btn ui-btn--primary ui-btn--lg">
                   {primaryCta.label}<ArrowRight size={19} aria-hidden />
+                  {primaryCta.guide ? <GuideRing /> : null}
                 </Link>
               ) : (
                 <button type="button" className="ui-btn ui-btn--primary ui-btn--lg" onClick={primaryCta.onClick}>
                   {primaryCta.label}<ArrowRight size={19} aria-hidden />
+                  {primaryCta.guide ? <GuideRing /> : null}
                 </button>
               )
             ) : null}
@@ -81,6 +88,7 @@ export default function TournamentHero({
               <Countdown target={firstPost} isEn={isEn} />
             </div>
           ) : null}
+          {sideNote}
           <div className="trn-hero__fact trn-hero__fact--row">
             <span className="t-label">{isEn ? 'Races run' : 'Carreras corridas'}</span>
             <span className="t-data trn-hero__num">{racesRun}<span className="trn-hero__of"> / {totalRaces}</span></span>

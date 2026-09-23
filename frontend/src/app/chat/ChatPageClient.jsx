@@ -8,6 +8,7 @@ import GlobalLeaderboardChat from "@/frontend/components/leaderboard/GlobalLeade
 import ModalityPageShell from "@/frontend/components/modalities/ModalityPageShell";
 import ModalityFlowNav from "@/frontend/components/modalities/ModalityFlowNav";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
+import { SINGLE_GUEST_ENTRY } from "@/frontend/lib/productFlags";
 import {
   readPersistedModality,
   isValidModalityId,
@@ -81,7 +82,7 @@ export default function ChatPageClient() {
             <p className="chat-tournament-card__name">—</p>
             <p className="chat-tournament-card__timer">—</p>
             <Link
-              href={withModalityQuery("/modalidades", modalityId)}
+              href={SINGLE_GUEST_ENTRY ? "/tournaments" : withModalityQuery("/modalidades", modalityId)}
               className="chat-tournament-card__cta"
             >
               {t("chatPage.viewTournament")}
@@ -91,9 +92,11 @@ export default function ChatPageClient() {
       </div>
 
       <nav className="modality-cross-links" aria-label={t("gameModalities.flowAria")}>
-        <Link href={withModalityQuery(`/modalidades/${modalityId}`, modalityId)}>
-          {t("floatingMenu.gameModes")}
-        </Link>
+        {SINGLE_GUEST_ENTRY ? null : (
+          <Link href={withModalityQuery(`/modalidades/${modalityId}`, modalityId)}>
+            {t("floatingMenu.gameModes")}
+          </Link>
+        )}
         <Link href={withModalityQuery("/leaderboard", modalityId)}>
           {t("floatingMenu.ranking")}
         </Link>

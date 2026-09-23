@@ -12,6 +12,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Trophy, Plus } from 'lucide-react';
 import BrandMark from '@/frontend/components/nav/BrandMark';
+import GuideRing from '@/frontend/components/ui/GuideRing';
 import { buildSlipRows, SlipRows } from './TicketReviewPanel';
 import { formatDateLong } from '@/frontend/lib/redesign';
 
@@ -24,6 +25,7 @@ export default function GeneratedTicket({
   rankingHref = null,
   onPlayAnother = null,
   anotherLabel = null,
+  guide = null,
   isEn = false,
 }) {
   const rows = useMemo(() => buildSlipRows(races, selectionForRace), [races, selectionForRace]);
@@ -56,18 +58,20 @@ export default function GeneratedTicket({
       <SlipRows rows={rows} isEn={isEn} />
       <p className="receipt__note">
         {isEn
-          ? 'Each slot scores only if that horse wins. Points appear here and in the ranking as results are published.'
-          : 'Cada asignación puntúa solo si ese caballo gana. Los puntos aparecen aquí y en el ranking cuando se publican los resultados.'}
+          ? 'Points appear here and in the ranking with every result.'
+          : 'Los puntos aparecen aquí y en el ranking con cada resultado.'}
       </p>
       <div className="receipt__actions">
         {rankingHref ? (
           <Link href={rankingHref} className="ui-btn ui-btn--primary">
             <Trophy size={17} aria-hidden />{isEn ? 'View tournament ranking' : 'Ver ranking del torneo'}
+            {guide === 'ranking' ? <GuideRing tone="gold" /> : null}
           </Link>
         ) : null}
         {onPlayAnother ? (
           <button type="button" className="ui-btn ui-btn--on-light" onClick={onPlayAnother}>
             <Plus size={17} aria-hidden />{anotherLabel || (isEn ? 'Play another ticket' : 'Jugar otro boleto')}
+            {guide === 'another' ? <GuideRing /> : null}
           </button>
         ) : null}
       </div>

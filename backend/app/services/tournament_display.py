@@ -23,14 +23,19 @@ def track_key(slug: str, track_name: str) -> str:
     return track_name.lower().strip()
 
 
+_ORIGIN_RANK = {"real": 3, "fixture": 2, "legacy": 1, "demo": 0}
+
+
 def _pick_best_for_track(group: list[dict[str, Any]]) -> dict[str, Any]:
-    """One card per track: prefer today's synced card, then live, then fuller racecards."""
+    """One card per track/day: prefer real provider data, then synced cards,
+    then live, then fuller racecards. Demo data never hides a real card."""
 
     def score(t: dict[str, Any]) -> tuple:
         slug = t.get("slug") or ""
         is_synced = bool(_SYNC_SLUG_RE.match(slug))
         status = t.get("status") or ""
         return (
+            _ORIGIN_RANK.get(t.get("origin") or "legacy", 1),
             1 if is_synced else 0,
             1 if status == "live" else 0,
             1 if status == "upcoming" else 0,
@@ -53,7 +58,7 @@ def dedupe_tournaments_by_track(tournaments: list[dict[str, Any]]) -> list[dict[
 
 
 def sort_tournaments_for_display(tournaments: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    status_order = {"live": 0, "upcoming": 1, "completed": 2, "finished": 3}
+    status_order = {"live": 0, "upcoming": 1, "completed": 2, "finished": 3, "cancelled": 4}
 
     def sort_key(t: dict[str, Any]) -> tuple:
         return (
@@ -103,7 +108,7 @@ def prepare_home_tournaments(tournaments: list[dict[str, Any]]) -> list[dict[str
     history = [
         t
         for t in tournaments
-        if t.get("status") in ("completed", "finished") and _day_of(t) in allowed_history
+        if t.get("status") in ("completed", "finished", "cancelled") and _day_of(t) in allowed_history
     ]
 
     deduped_active = dedupe_tournaments_by_track(active)

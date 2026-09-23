@@ -62,6 +62,38 @@
     .home-hero__status { max-width: none; }
   }
 
+  /* ------------------------------------------------ compact hero (client) */
+  .home-hero--compact { min-height: 0; padding-bottom: clamp(28px, 3.5vw, 48px); }
+  .home-hero--compact .home-hero__art { z-index: -2; }
+  .home-hero--compact .home-hero__title { font-size: clamp(44px, 6.2vw, 92px); margin-top: 10px; }
+  .home-hero--compact .home-hero__ctas { margin-top: 20px; }
+  @media (min-width: 640px) { .home-hero--compact { padding-top: calc(var(--my50-nav-h) + 28px); } }
+  @media (max-width: 639px) {
+    .home-hero--compact { padding-top: 84px; }
+    .home-hero--compact .home-hero__copy { padding-top: 6vh; }
+    .home-hero--compact .home-hero__inner { grid-template-columns: minmax(0, 1fr); }
+    .home-hero--compact .home-hero__copy { min-width: 0; }
+    .home-hero--compact .home-hero__ctas { flex-wrap: nowrap; gap: 10px; }
+    .home-hero--compact .home-hero__ctas .ui-btn { flex: 1 1 0; min-width: 0; min-height: 50px; padding: 0 10px; font-size: 14px; letter-spacing: 0.05em; gap: 6px; white-space: normal; text-align: center; line-height: 1.15; }
+    .home-hero--compact .home-hero__ctas .ui-btn svg { display: none; }
+  }
+
+  /* ------------------------------------------------------------ modalities */
+  .home-modalities { padding-top: clamp(28px, 4vw, 52px); }
+  .home-entry__card[data-current] {
+    box-shadow: 0 0 0 1.5px rgba(168, 85, 247, 0.75), 0 0 0 4px rgba(61, 234, 255, 0.28), 0 0 42px rgba(168, 85, 247, 0.35), 0 24px 60px rgba(0, 0, 0, 0.55);
+  }
+  .home-modinfo-row { display: grid; gap: 14px; margin-top: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .home-modinfo { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px 20px; min-width: 0; }
+  .home-modinfo .home-mod__tag { color: var(--accent); }
+  .home-modinfo__name { margin: 0; font-size: 20px; color: var(--my50-text-primary); overflow-wrap: anywhere; }
+  .home-modinfo .t-meta { margin: 0; }
+  .home-modinfo .ui-chip { margin-top: auto; }
+  .home-modinfo:not([data-next]) { opacity: 0.8; }
+  .home-modinfo[data-next] { border-color: color-mix(in srgb, var(--my50-aqua-bright) 40%, transparent); }
+  @media (max-width: 767px) { .home-modinfo-row { grid-template-columns: minmax(0, 1fr); } }
+  .home-last { padding-bottom: clamp(40px, 5vw, 72px); }
+
   /* ------------------------------------------------------------ strategies */
   .home-strat { display: flex; flex-direction: column; }
   .home-strat__art { position: relative; height: 180px; overflow: hidden; }
@@ -79,6 +111,91 @@
   }
   .home-strat__pts .t-data { font-size: 30px; color: var(--my50-text-primary); }
   .home-strat__pts .t-label { color: var(--accent); font-size: 12px; }
+
+  /* Horse-free strategy cards: CSS-only neon stage (no photos). Smart Point
+     keeps its accepted gold treatment; Full / Dual use their own accent. */
+  .home-strat__stage {
+    position: relative; height: 180px; overflow: hidden;
+    background:
+      radial-gradient(90% 70% at 50% 58%, color-mix(in srgb, var(--accent-core) 34%, transparent) 0%, transparent 70%),
+      linear-gradient(118deg, transparent 0 58%, rgba(168, 85, 247, 0.32) 58.4%, transparent 59.2%),
+      linear-gradient(62deg, transparent 0 30%, rgba(61, 234, 255, 0.22) 30.3%, transparent 31%),
+      linear-gradient(180deg, #080A1C 0%, #120E2C 52%, #1A1030 100%);
+  }
+  .home-strat__stage::before { /* perspective grid floor, below the horizon */
+    content: ""; position: absolute; left: -30%; right: -30%; bottom: -6px; height: 36%;
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--accent) 50%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--accent) 50%, transparent) 1px, transparent 1px);
+    background-size: 30px 14px;
+    transform: perspective(160px) rotateX(52deg); transform-origin: 50% 0%;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+    opacity: 0.75;
+  }
+  .home-strat__stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 74%, rgba(14, 18, 41, 0.92)); }
+  .home-strat__horizon {
+    position: absolute; left: 0; right: 0; top: 64%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent) 30%, var(--my50-gold-core) 70%, transparent);
+    box-shadow: 0 0 18px var(--accent), 0 0 42px var(--accent-glow);
+  }
+  .home-strat__bars { /* sits on the horizon, with headroom for the value labels */
+    position: absolute; z-index: 1; left: 50%; bottom: 36%; transform: translateX(-50%);
+    display: flex; align-items: flex-end; gap: 16px; height: 76px;
+  }
+  .home-strat__bar {
+    position: relative; width: 34px; height: max(var(--h), 18%);
+    border-radius: 7px 7px 2px 2px;
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--accent) 24%, var(--accent-core) 66%, color-mix(in srgb, var(--accent-core) 62%, #000) 100%);
+    box-shadow: 0 0 22px var(--accent-glow), 0 0 4px var(--accent), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  .home-strat__bar-val { position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%); font-size: 15px; line-height: 1; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+  .home-strat--neon .home-strat__name {
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--accent) 48%, var(--accent-core) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none;
+    filter: drop-shadow(0 0 14px var(--accent-glow));
+  }
+  .home-strat--neon .home-strat__pts .t-data { font-size: 32px; }
+  /* Smart Point — gold identity (client-approved) */
+  .home-strat[data-strategy="smart"] .home-strat__bar {
+    background: linear-gradient(180deg, #FFF1A8 0%, var(--my50-gold-highlight) 22%, var(--my50-gold-core) 62%, var(--my50-gold-deep) 100%);
+    box-shadow: 0 0 22px var(--accent-glow), 0 0 4px rgba(255, 213, 74, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  .home-strat[data-strategy="smart"] .home-strat__bar-val { color: var(--my50-gold-highlight); }
+  .home-strat[data-strategy="smart"] .home-strat__name {
+    background: linear-gradient(180deg, #FFF6C8 0%, var(--my50-gold-highlight) 38%, var(--my50-gold-core) 72%, var(--my50-gold-deep) 100%);
+    -webkit-background-clip: text; background-clip: text;
+  }
+  .home-strat[data-strategy="smart"] .home-strat__pts {
+    padding: 8px 14px;
+    background: linear-gradient(180deg, rgba(255, 213, 74, 0.16), rgba(245, 168, 36, 0.04));
+    border-color: color-mix(in srgb, var(--my50-gold-highlight) 70%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 241, 168, 0.35), 0 0 16px rgba(255, 200, 74, 0.18);
+  }
+  .home-strat[data-strategy="smart"] .home-strat__pts .t-data { font-size: 34px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .home-strat--neon:hover .home-strat__bar { filter: brightness(1.12); }
+  }
+
+  /* ------------------------------------------------ single game entry (M4) */
+  .home-entry { padding-top: clamp(28px, 4vw, 48px); }
+  .home-entry__card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; padding: clamp(20px, 4vw, 40px); align-items: center; }
+  .home-entry__copy { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .home-entry__card .home-mod__tag { display: inline-flex; align-items: center; gap: 8px; color: var(--my50-purple-core); }
+  .home-entry__card .t-section { margin: 0; color: var(--my50-ink-primary); }
+  .home-entry__card .t-body-lg { margin: 0; color: var(--my50-ink-secondary); }
+  .home-entry__facts { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; color: var(--my50-ink-secondary); font-weight: 600; }
+  .home-entry__facts li { display: flex; align-items: flex-start; gap: 10px; }
+  .home-entry__facts svg { flex: none; margin-top: 3px; color: var(--my50-purple-core); }
+  .home-entry__action { display: flex; flex-direction: column; align-items: stretch; gap: 10px; min-width: 0; }
+  .home-entry__action .ui-btn { justify-content: center; max-width: 100%; white-space: normal; text-align: center; }
+  @media (max-width: 479px) {
+    .home-entry__action .ui-btn--lg { gap: 8px; padding: 0 14px; font-size: 17px; letter-spacing: 0.05em; }
+  }
+  .home-entry__session { margin: 0; text-align: center; color: var(--my50-ink-secondary); overflow-wrap: anywhere; }
+  @media (min-width: 900px) {
+    .home-entry__card { grid-template-columns: minmax(0, 1fr) minmax(300px, 400px); gap: 40px; }
+    .home-entry__action .ui-btn { white-space: nowrap; }
+  }
 
   /* ---------------------------------------------------------------- steps */
   .home-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
@@ -119,8 +236,8 @@
   .tcard__media img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--my50-t-slow) var(--my50-ease); }
   .tcard:hover .tcard__media img { transform: scale(1.05); }
   .tcard__scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4, 5, 12, 0.25) 0%, rgba(4, 5, 12, 0.1) 35%, rgba(12, 16, 38, 0.97) 100%); }
-  .tcard__badges { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 8px; }
-  .tcard__races { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(4, 5, 12, 0.7); border: 1px solid var(--my50-border-mid); font-size: 13px; font-weight: 600; color: var(--my50-text-secondary); }
+  .tcard__badges { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  .tcard__races { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(4, 5, 12, 0.7); border: 1px solid var(--my50-border-mid); font-size: 13px; font-weight: 600; color: var(--my50-text-secondary); }
   .tcard__title-wrap { position: absolute; left: 16px; right: 16px; bottom: 12px; }
   .tcard__track { color: var(--accent); }
   .tcard__name { margin-top: 6px; font-size: 25px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); }

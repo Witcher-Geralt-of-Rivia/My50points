@@ -2,6 +2,7 @@
  * Single navigation map for the whole app (desktop bar, mobile tab bar and
  * menu sheet). Navigation is read-only: links only, never API calls.
  */
+import { SINGLE_GUEST_ENTRY } from '@/frontend/lib/productFlags';
 
 export const PRIMARY_NAV = [
   { id: 'home', href: '/', es: 'Inicio', en: 'Home', icon: 'home' },
@@ -11,9 +12,11 @@ export const PRIMARY_NAV = [
   { id: 'profile', href: '/profile', es: 'Perfil', en: 'Profile', icon: 'user' },
 ];
 
-export const MORE_NAV = [
-  { id: 'modalities', href: '/modalidades', es: 'Modalidades', en: 'Game modes', icon: 'layers' },
-  { id: 'hub', href: '/inicio', es: 'Centro del jugador', en: 'Player hub', icon: 'grid' },
+// `multiModality` items are the modality chooser and the multi-modality player
+// hub: hidden while M4 is the single public play entry (productFlags).
+const MORE_NAV_ALL = [
+  { id: 'modalities', href: '/modalidades', es: 'Modalidades', en: 'Game modes', icon: 'layers', multiModality: true },
+  { id: 'hub', href: '/inicio', es: 'Centro del jugador', en: 'Player hub', icon: 'grid', multiModality: true },
   { id: 'howto', href: '/how-to-play', es: 'Cómo jugar', en: 'How to play', icon: 'help' },
   { id: 'guide', href: '/guia-torneo', es: 'Guía del torneo', en: 'Tournament guide', icon: 'book' },
   { id: 'hof', href: '/hall-of-fame', es: 'Hall of Fame', en: 'Hall of Fame', icon: 'crown' },
@@ -22,6 +25,8 @@ export const MORE_NAV = [
   { id: 'chat', href: '/chat', es: 'Chat', en: 'Chat', icon: 'chat' },
   { id: 'groups', href: '/groups', es: 'Grupos', en: 'Groups', icon: 'users' },
 ];
+
+export const MORE_NAV = MORE_NAV_ALL.filter((item) => !(SINGLE_GUEST_ENTRY && item.multiModality));
 
 /** Mobile bottom bar: four destinations + the menu sheet. */
 export const TABBAR_IDS = ['home', 'tournaments', 'tickets', 'ranking'];

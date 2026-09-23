@@ -143,3 +143,89 @@ def score_ticket(
 
     return int(total)
 
+
+
+# ---------------------------------------------------------------------------
+# Production scoring (real results). No fallbacks: provider odds, morning
+# line, starting price or payoff NEVER become a MY50 scoring value.
+# ---------------------------------------------------------------------------
+SCORED = "scored"
+UNSCORED = "unscored"
+PENDING_DIVIDEND = "pending_dividend"          # a winning pick has no published MY50 dividend
+PENDING_SCRATCH_RULE = "pending_scratch_rule"  # a scratched pick cannot be reassigned honestly
+# A frozen tournament race was cancelled/voided after tickets were confirmed.
+# FINAL CANCELLED-RACE SCORING POLICY: AWAITING PRODUCT CONFIRMATION — no
+# points, no replacement race, no re-indexing; the selection stays as confirmed.
+PENDING_CANCELLED_RACE = "pending_cancelled_race"
+
+
+def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, official_dividends: dict) -> tuple[int, str]:
+    """Return (points, status). `official_dividends` must be the frozen MY50
+    dividend table for the race (possibly empty) — it is REQUIRED here.
+
+    * A winning pick whose MY50 dividend is not published -> PENDING_DIVIDEND
+      (0 points, not scored), instead of silently scoring 0 or using odds.
+    * A scratched pick is reassigned to the race favourite only when real,
+      non-null odds identify one (same deterministic tie-break as before);
+      otherwise -> PENDING_SCRATCH_RULE. Invented/preset odds are never used:
+      provider-synced runners carry odds=None.
+    """
+    if official_dividends is None:
+        raise ValueError("evaluate_ticket requires the official MY50 dividend table")
+    picks_arr = _normalize_picks(picks)
+    if not picks_arr or strategy not in ALLOCATIONS:
+        return 0, SCORED
+    by_position = _normalize_results(results)
+    if not by_position:
+        return 0, UNSCORED  # no official result yet: nothing to score
+
+    scratched_ids: set[int] = set()
+    favorite_horse_id = None
+    favorite_pp = 999
+    min_odds = float("inf")
+    for h in horses or []:
+        h_id = h.get("id") if isinstance(h, dict) else getattr(h, "id", None)
+        if h_id is None:
+            continue
+        is_scratched = h.get("scratched") if isinstance(h, dict) else getattr(h, "scratched", False)
+        if is_scratched:
+            scratched_ids.add(int(h_id))
+            continue
+        odds_val = h.get("odds") if isinstance(h, dict) else getattr(h, "odds", None)
+        if odds_val is None:
+            continue
+        try:
+            odds_float = float(odds_val)
+        except (TypeError, ValueError):
+            continue
+        if odds_float <= 0:
+            continue
+        pp_val = h.get("postPosition") if isinstance(h, dict) else getattr(h, "postPosition", 999)
+        try:
+            pp_int = int(pp_val)
+        except (TypeError, ValueError):
+            pp_int = 999
+        if odds_float < min_odds or (odds_float == min_odds and pp_int < favorite_pp):
+            min_odds, favorite_pp, favorite_horse_id = odds_float, pp_int, int(h_id)
+
+    allocation = ALLOCATIONS[strategy]
+    winners = set(by_position.get(_WINNER_POSITION, []))
+    total = 0
+    for i, pick_id in enumerate(picks_arr):
+        if i >= len(allocation):
+            break
+        effective = int(pick_id)
+        if effective in scratched_ids:
+            if favorite_horse_id is None:
+                return 0, PENDING_SCRATCH_RULE
+            effective = favorite_horse_id
+        if effective in winners:
+            raw = official_dividends.get(effective)
+            try:
+                dividend = float(raw)
+            except (TypeError, ValueError):
+                dividend = 0.0
+            if dividend <= 0:
+                return 0, PENDING_DIVIDEND
+            total += round(allocation[i] * dividend)
+    return int(total), SCORED

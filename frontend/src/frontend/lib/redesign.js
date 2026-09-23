@@ -5,6 +5,12 @@
 import { staticFile } from '@/frontend/lib/config/paths';
 import { getTournamentPhase, PHASE } from '@/frontend/lib/tournamentState';
 
+/**
+ * Legacy photographic art converted from images already in the repository
+ * (public/Img, public/images, public/figma). Their original author / licence is
+ * not documented, so they are NOT rendered on public surfaces any more; the UI
+ * uses CSS-only artwork (NeonTrack, strategy stages). Kept only for reference.
+ */
 export const ART = {
   hero1920: staticFile('/redesign/hero-jockey-1920.webp'),
   hero1280: staticFile('/redesign/hero-jockey-1280.webp'),
@@ -56,6 +62,7 @@ export function displayStatus(tournament, now = new Date()) {
   if (phase === PHASE.LIVE) return { key: 'live', es: 'En vivo', en: 'Live' };
   if (phase === PHASE.COMPLETED) return { key: 'finished', es: 'Finalizado', en: 'Finished' };
   if (phase === PHASE.ARCHIVED) return { key: 'archived', es: 'Archivado', en: 'Archived' };
+  if (phase === PHASE.CANCELLED) return { key: 'cancelled', es: 'Cancelado', en: 'Cancelled' };
   const first = firstPostTime(tournament) || (tournament?.date ? new Date(tournament.date) : null);
   if (first && sameLocalDay(first, now)) return { key: 'today', es: 'Hoy', en: 'Today' };
   return { key: 'upcoming', es: 'Próximo', en: 'Upcoming' };

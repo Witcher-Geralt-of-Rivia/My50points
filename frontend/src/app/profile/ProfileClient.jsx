@@ -17,6 +17,7 @@ import { useAuth } from '@/frontend/contexts/AuthContext';
 import { fetchAuthJson } from '@/frontend/lib/api/client';
 import { listDrafts } from '@/frontend/lib/ticketDraft';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
+import { SINGLE_GUEST_ENTRY, GUEST_ENTRY_HREF } from '@/frontend/lib/productFlags';
 import { formatDateLong } from '@/frontend/lib/redesign';
 
 const SECTIONS = ['summary', 'tickets', 'achievements'];
@@ -95,14 +96,20 @@ export default function ProfileClient() {
           <p className="t-eyebrow" data-accent="aqua">MY 50 POINTS</p>
           <h1 className="t-page">{isEn ? 'Profile' : 'Perfil'}</h1>
         </header>
-        <StateBlock icon={UserRound} title={isEn ? 'Your tickets and points' : 'Tus boletos y puntos'} accent="m2"
+        <StateBlock icon={UserRound} title={isEn ? 'Your tickets and points' : 'Tus boletos y puntos'} accent={SINGLE_GUEST_ENTRY ? 'm4' : 'm2'}
           actions={
-            <>
-              <Link href={`/login?next=${encodeURIComponent(`/profile${raw ? `?section=${raw}` : ''}`)}`} className="ui-btn ui-btn--primary"><LogIn size={17} aria-hidden />{isEn ? 'Sign in' : 'Iniciar sesión'}</Link>
-              <Link href="/modalidades/guest?next=%2Fprofile" className="ui-btn ui-btn--secondary">{isEn ? 'Play as guest' : 'Jugar como invitado'}</Link>
-            </>
+            SINGLE_GUEST_ENTRY ? (
+              <Link href={`${GUEST_ENTRY_HREF}?next=${encodeURIComponent(`/profile${raw ? `?section=${raw}` : ''}`)}`} className="ui-btn ui-btn--primary">{isEn ? 'Play as guest' : 'Jugar como invitado'}</Link>
+            ) : (
+              <>
+                <Link href={`/login?next=${encodeURIComponent(`/profile${raw ? `?section=${raw}` : ''}`)}`} className="ui-btn ui-btn--primary"><LogIn size={17} aria-hidden />{isEn ? 'Sign in' : 'Iniciar sesión'}</Link>
+                <Link href="/modalidades/guest?next=%2Fprofile" className="ui-btn ui-btn--secondary">{isEn ? 'Play as guest' : 'Jugar como invitado'}</Link>
+              </>
+            )
           }>
-          {isEn ? 'Sign in or play as a guest to see your tickets, points and achievements.' : 'Inicia sesión o juega como invitado para ver tus boletos, puntos y logros.'}
+          {SINGLE_GUEST_ENTRY
+            ? (isEn ? 'Play as a guest to see your tickets, points and achievements here.' : 'Juega como invitado para ver aquí tus boletos, puntos y logros.')
+            : isEn ? 'Sign in or play as a guest to see your tickets, points and achievements.' : 'Inicia sesión o juega como invitado para ver tus boletos, puntos y logros.'}
         </StateBlock>
       </div>
     );

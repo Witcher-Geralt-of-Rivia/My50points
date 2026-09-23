@@ -49,6 +49,10 @@
   .trn-hero__fact .t-label { color: var(--my50-text-muted); }
   .trn-hero__num { font-size: var(--my50-fs-data-lg); line-height: 1; }
   .trn-hero__of { color: var(--my50-text-muted); font-size: 0.6em; }
+  .trn-fresh { display: inline-flex; align-items: center; gap: 6px; color: var(--my50-text-muted); }
+  .trn-fresh svg { color: var(--my50-aqua-bright); }
+  .trn-banner--data { font-weight: 500; }
+  .trn-banner--data svg { flex: none; color: var(--accent); }
   @media (max-width: 899px) {
     .trn-hero__grid { grid-template-columns: 1fr; padding: var(--my50-sp-6) var(--my50-sp-5); gap: var(--my50-sp-5); }
     .trn-hero { min-height: 0; }
@@ -126,6 +130,13 @@
   .rprog__tab[data-state="running"] { --tab-accent: var(--my50-live); }
   .rprog__tab[data-state="closed"] { color: var(--my50-text-secondary); }
   .rprog__tab[data-state="result"] { --tab-accent: var(--my50-gold-core); }
+  .rprog__tab[data-state="pending"] { --tab-accent: var(--my50-gold-highlight); }
+  .rprog__tab[data-state="cancelled"] { --tab-accent: var(--my50-live-bright); }
+  .rprog__tab[data-state="cancelled"] .rprog__state { text-decoration: line-through; text-decoration-thickness: 1px; }
+  @media (max-width: 639px) { /* one long word in a 112px tab */
+    .rprog__tab[data-state="cancelled"] .rprog__state { font-size: 13px; letter-spacing: 0.02em; }
+  }
+  .rprog__tab[data-state="unavailable"] { --tab-accent: var(--my50-text-muted); color: var(--my50-text-secondary); }
   .rprog__tab.is-active { border-color: var(--my50-aqua-bright); background: var(--my50-surface-metal-hi); box-shadow: 0 0 0 1px var(--my50-aqua-bright), 0 0 24px var(--my50-aqua-glow); }
   .rprog__top { display: flex; align-items: center; justify-content: space-between; }
   .rprog__idx { font-size: 34px; line-height: 1; }
@@ -234,6 +245,8 @@
   }
   .runner.is-on { border-color: var(--accent); background: color-mix(in srgb, var(--accent-core) 16%, var(--my50-bg-elevated)); box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 22%, transparent); }
   .runner.is-scratched { opacity: 0.5; }
+  .rws__notice { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 16px; border-radius: var(--my50-r-md); background: color-mix(in srgb, var(--my50-gold-core) 12%, var(--my50-bg-elevated)); border: 1px solid color-mix(in srgb, var(--my50-gold-highlight) 40%, transparent); }
+  .rws__notice svg { flex: none; color: var(--my50-gold-highlight); }
   .runner__horse { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
   .runner__name { font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
   .runner__pts { padding: 3px 9px; border-radius: var(--my50-r-pill); background: var(--accent); color: var(--my50-bg-deep); font-size: 13px; font-weight: 800; }
@@ -333,6 +346,16 @@
   .slip__distcell .t-data { font-size: 30px; color: var(--my50-ink-primary); }
   .slip__distunit { color: var(--my50-ink-secondary); font-size: 13px; }
   .slip__note, .receipt__note { display: flex; align-items: flex-start; gap: 8px; margin: 0; color: var(--my50-ink-secondary); font-size: var(--my50-fs-meta); }
+  /* frozen race cancelled / unavailable: selection kept, tagged */
+  .slip__stratcell { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+  .slip__blocked {
+    display: inline-flex; align-items: center; max-width: 100%; padding: 3px 8px; border-radius: 8px;
+    font-family: var(--my50-font-ui); font-size: 11px; font-weight: 700; line-height: 1.25; letter-spacing: 0.04em; text-transform: uppercase;
+    color: #8A5A00; background: rgba(245, 168, 36, 0.16); border: 1px solid rgba(185, 122, 8, 0.45);
+  }
+  .slip__row[data-blocked] .slip__picks { opacity: 0.7; }
+  .trn-banner--paused { font-weight: 600; }
+  .trn-banner--paused svg { flex: none; color: var(--accent); }
   .slip__error { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px; border-radius: 12px; background: rgba(255, 45, 70, 0.1); border: 1px solid rgba(255, 45, 70, 0.4); color: #9A0F22; font-weight: 600; }
   .slip__actions, .receipt__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
   .slip__confirm { min-width: 260px; }
@@ -340,7 +363,7 @@
     .slip, .receipt { padding: var(--my50-sp-5) var(--my50-sp-4); border-radius: var(--my50-r-lg); }
     .slip__row { grid-template-columns: 52px minmax(0, 1fr) auto; grid-template-areas: "race strat edit" "race picks picks"; row-gap: 8px; }
     .slip__race { grid-area: race; align-self: start; }
-    .slip__strat { grid-area: strat; }
+    .slip__stratcell { grid-area: strat; }
     .slip__picks { grid-area: picks; }
     .slip__edit { grid-area: edit; }
     .receipt .slip__row { grid-template-areas: "race strat" "race picks"; grid-template-columns: 52px minmax(0, 1fr); }

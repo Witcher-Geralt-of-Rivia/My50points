@@ -16,8 +16,8 @@ const MODALITY_SEO = {
       "Registered players get 3 free tickets per track. Pick a racetrack and compete in live tournaments.",
   },
   paid: {
-    title: "Paid Racetracks",
-    description: "Premium paid tournament racetracks on 50points.",
+    title: "Tournament Racetracks",
+    description: "Points tournament racetracks on 50points.",
   },
   special: {
     title: "Special Event Racetracks",

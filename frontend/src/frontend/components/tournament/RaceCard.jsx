@@ -12,21 +12,38 @@
  *   shown under the MY50 label. No weight, no invented fields.
  * - Selecting changes the LOCAL draft only (the caller owns the draft).
  */
-import { Check, Clock, Ruler, Users, Lock } from 'lucide-react';
+import { Check, Clock, Ruler, Users, Lock, Ban, CloudOff } from 'lucide-react';
 import { strategies } from './PickSelector';
 import { saddleColor } from '@/frontend/lib/saddleColors';
 import { formatTime } from '@/frontend/lib/redesign';
 import { publishedMy50Dividend, MY50_PENDING } from '@/frontend/lib/my50Dividend';
+import GuideRing from '@/frontend/components/ui/GuideRing';
 
 const STRAT_ACCENT = { full: 'm1', dual: 'm2', smart: 'm3' };
 
-function SaddleNumber({ number, size = 'md' }) {
+function SaddleNumber({ number, label = null, size = 'md' }) {
   const c = saddleColor(number);
+  const shown = label || number;
   return (
-    <span className={`saddle saddle--${size}`} style={{ '--sb': c.bg, '--sf': c.text }} aria-label={`N.º ${number}`}>
-      {number}
+    <span className={`saddle saddle--${size}`} style={{ '--sb': c.bg, '--sf': c.text }} aria-label={`N.º ${shown}`}>
+      {shown}
     </span>
   );
+}
+
+/** Runner is not pickable: scratched, or no longer on the provider's card. */
+function runnerOut(h) {
+  return Boolean(h.scratched) || h.runnerStatus === 'scratched' || h.runnerStatus === 'unavailable';
+}
+
+function RunnerStatusChip({ runner, isEn }) {
+  if (runner.scratched || runner.runnerStatus === 'scratched') {
+    return <span className="ui-chip" data-tone="locked">{isEn ? 'Scratched' : 'Retirado'}</span>;
+  }
+  if (runner.runnerStatus === 'unavailable') {
+    return <span className="ui-chip" data-tone="unavailable">{isEn ? 'Unavailable' : 'No disponible'}</span>;
+  }
+  return null;
 }
 
 function DividendValue({ runner, isEn, withLabel = false }) {
@@ -45,9 +62,9 @@ function strategyAlloc(id) {
   return strategies.find((s) => s.id === id)?.allocation || [50];
 }
 
-export function StrategySelector({ activeStrategy, onChange, disabled = false, isEn = false }) {
+export function StrategySelector({ activeStrategy, onChange, disabled = false, isEn = false, guided = false }) {
   return (
-    <div className="strat" role="radiogroup" aria-label={isEn ? 'Points strategy' : 'Estrategia de puntos'}>
+    <div className={`strat${guided ? ' ui-guided' : ''}`} role="radiogroup" aria-label={isEn ? 'Points strategy' : 'Estrategia de puntos'} data-guide-step={guided ? 'strategy' : undefined}>
       {strategies.map((s) => {
         const on = activeStrategy === s.id;
         return (
@@ -73,6 +90,7 @@ export function StrategySelector({ activeStrategy, onChange, disabled = false, i
           </button>
         );
       })}
+      {guided ? <GuideRing outset /> : null}
     </div>
   );
 }
@@ -85,6 +103,7 @@ export default function RaceCard({
   onPickHorse,
   onStrategyChange,
   lockedReason = null,
+  guideStep = null,
   isEn = false,
 }) {
   if (!race) return null;
@@ -93,10 +112,16 @@ export default function RaceCard({
   const locked = !onPickHorse;
   const full = selectedHorses.length >= strat.maxPicks;
   const time = formatTime(race.scheduledTime, isEn);
-  const track = Number(race.raceNumber);
+  const track = Number(race.trackRaceNumber ?? race.raceNumber);
   const showTrack = Number.isFinite(track) && track !== index;
   const horses = (race.horses || []).slice().sort((a, b) => (a.postPosition || 0) - (b.postPosition || 0));
   const distanceM = Number(race.distance);
+  const raceStatus = String(race.status || '').toLowerCase();
+  const raceNotice = raceStatus === 'cancelled'
+    ? { icon: Ban, es: 'Carrera cancelada por el hipódromo. No se pueden añadir ni cambiar selecciones; tus elecciones se conservan y su puntuación queda pendiente de confirmación.', en: 'Race cancelled by the track. Picks cannot be added or changed; your choices are kept and how it scores is pending confirmation.' }
+    : race.availability === 'unavailable'
+      ? { icon: CloudOff, es: 'Esta carrera no está disponible temporalmente en el programa del hipódromo. No se pueden añadir ni cambiar selecciones; tus elecciones se conservan.', en: 'This race is temporarily unavailable on the track card. Picks cannot be added or changed; your choices are kept.' }
+      : null;
 
   return (
     <section className="rws" aria-labelledby={`rws-title-${race.id}`} data-accent={STRAT_ACCENT[strat.id]}>
@@ -120,10 +145,13 @@ export default function RaceCard({
       {lockedReason ? (
         <p className="rws__locked"><Lock size={16} aria-hidden />{lockedReason}</p>
       ) : null}
+      {raceNotice ? (
+        <p className="rws__notice" role="status"><raceNotice.icon size={16} aria-hidden />{isEn ? raceNotice.en : raceNotice.es}</p>
+      ) : null}
 
       <div className="rws__step">
         <p className="t-label rws__steplabel"><span className="rws__stepnum">A</span>{isEn ? 'Split your 50 points' : 'Reparte tus 50 puntos'}</p>
-        <StrategySelector activeStrategy={strat.id} onChange={onStrategyChange} disabled={locked || !onStrategyChange} isEn={isEn} />
+        <StrategySelector activeStrategy={strat.id} onChange={onStrategyChange} disabled={locked || !onStrategyChange} isEn={isEn} guided={guideStep === 'strategy'} />
       </div>
 
       <div className="rws__step">
@@ -134,7 +162,7 @@ export default function RaceCard({
           </span>
         </div>
 
-        <div className="runners" role="table" aria-label={isEn ? 'Runners' : 'Participantes'}>
+        <div className={`runners${guideStep === 'runners' ? ' ui-guided' : ''}`} role="table" aria-label={isEn ? 'Runners' : 'Participantes'} data-guide-step={guideStep === 'runners' ? 'runners' : undefined}>
           <div className="runners__head" role="row">
             <span role="columnheader">#</span>
             <span role="columnheader">{isEn ? 'Horse' : 'Caballo'}</span>
@@ -147,13 +175,14 @@ export default function RaceCard({
             const pos = selectedHorses.indexOf(h.id);
             const on = pos !== -1;
             const pts = on ? alloc[pos] : null;
-            const disabled = locked || h.scratched || (!on && full);
+            const out = runnerOut(h);
+            const disabled = locked || out || (!on && full);
             return (
-              <div key={h.id} role="row" className={`runner${on ? ' is-on' : ''}${h.scratched ? ' is-scratched' : ''}`}>
-                <span role="cell" className="runner__num"><SaddleNumber number={h.postPosition} /></span>
+              <div key={h.id} role="row" className={`runner${on ? ' is-on' : ''}${out ? ' is-scratched' : ''}`}>
+                <span role="cell" className="runner__num"><SaddleNumber number={h.postPosition} label={h.programNumber} /></span>
                 <span role="cell" className="runner__horse">
                   <span className="runner__name">{h.name}</span>
-                  {h.scratched ? <span className="ui-chip" data-tone="locked">{isEn ? 'Scratched' : 'Retirado'}</span> : null}
+                  <RunnerStatusChip runner={h} isEn={isEn} />
                   {on ? <span className="runner__pts t-num">{pts} pts</span> : null}
                 </span>
                 <span role="cell" className="runner__muted">{h.jockey || '—'}</span>
@@ -180,7 +209,7 @@ export default function RaceCard({
                   onClick={() => onPickHorse?.(h.id)}
                 >
                   <span className="runner__cardl1">
-                    <SaddleNumber number={h.postPosition} size="lg" />
+                    <SaddleNumber number={h.postPosition} label={h.programNumber} size="lg" />
                     <span className="runner__cardname">
                       <span className="runner__name">{h.name}</span>
                       <span className="runner__cardsub">{[h.jockey, h.trainer].filter(Boolean).join(' · ') || '—'}</span>
@@ -191,17 +220,18 @@ export default function RaceCard({
                     <span className="t-label">{isEn ? 'MY50 dividend' : 'Dividendo MY50'}</span>
                     <DividendValue runner={h} isEn={isEn} withLabel />
                     {on ? <span className="runner__pts t-num">{pts} pts</span> : null}
-                    {h.scratched ? <span className="ui-chip" data-tone="locked">{isEn ? 'Scratched' : 'Retirado'}</span> : null}
+                    <RunnerStatusChip runner={h} isEn={isEn} />
                   </span>
                 </button>
               </div>
             );
           })}
+          {guideStep === 'runners' ? <GuideRing outset /> : null}
         </div>
         <p className="t-meta rws__foot">
           {isEn
-            ? 'Every slot scores only if that horse wins the race. MY50 fixed dividends: pending publication ("—"). Live odds are never shown as MY50 dividends.'
-            : 'Cada asignación puntúa solo si ese caballo gana la carrera. Dividendos fijos MY50: pendientes de publicación ("—"). Las cuotas en vivo nunca se muestran como dividendo MY50.'}
+            ? 'A slot scores only if its horse wins. MY50 dividend: "—" until published.'
+            : 'Cada asignación puntúa solo si su caballo gana. Dividendo MY50: "—" hasta su publicación.'}
         </p>
       </div>
     </section>

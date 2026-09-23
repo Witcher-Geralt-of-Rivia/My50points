@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { SINGLE_GUEST_ENTRY, GUEST_ENTRY_HREF } from "@/frontend/lib/productFlags";
 import { useSearchParams } from "next/navigation";
 import {
   Trophy,
@@ -195,9 +196,9 @@ export default function HowToPlayPageClient() {
               <h2 className="how-to-play__cta-title">{t("howToPlay.ctaTitle")}</h2>
               <p className="how-to-play__cta-desc">{t("howToPlay.ctaDesc")}</p>
             </div>
-            <Link href="/register" className="how-to-play__cta-btn">
+            <Link href={SINGLE_GUEST_ENTRY ? GUEST_ENTRY_HREF : "/register"} className="how-to-play__cta-btn">
               <span className="how-to-play__cta-btn-shine" aria-hidden />
-              {t("howToPlay.ctaButton")}
+              {SINGLE_GUEST_ENTRY ? t("howToPlay.ctaGuestButton") : t("howToPlay.ctaButton")}
               <ChevronRight className="how-to-play__cta-btn-icon" aria-hidden />
             </Link>
           </section>

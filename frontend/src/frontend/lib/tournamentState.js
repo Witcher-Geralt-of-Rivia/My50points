@@ -18,6 +18,7 @@ export const PHASE = {
   LIVE: 'live',
   COMPLETED: 'completed',
   ARCHIVED: 'archived',
+  CANCELLED: 'cancelled',
 };
 
 /** Map the raw backend status string onto a display phase. */
@@ -25,6 +26,7 @@ export function getTournamentPhase(tournament) {
   const raw = String(tournament?.status || '').toLowerCase();
 
   if (raw === 'archived') return PHASE.ARCHIVED;
+  if (raw === 'cancelled') return PHASE.CANCELLED;
   if (raw === 'completed' || raw === 'finished') return PHASE.COMPLETED;
   if (raw === 'live' || raw === 'running') return PHASE.LIVE;
   if (raw === 'open') return PHASE.OPEN;
@@ -85,6 +87,7 @@ export function getPhaseVisibility(phase) {
         showFinalRanking: true,
         readOnly: true,
       };
+    case PHASE.CANCELLED:
     case PHASE.ARCHIVED:
       return {
         showTicketWorkflow: false,
@@ -124,6 +127,21 @@ const PHASE_LABEL = {
   [PHASE.COMPLETED]: { es: 'FINALIZADO', en: 'COMPLETED', tone: 'completed' },
   [PHASE.ARCHIVED]: { es: 'ARCHIVADO', en: 'ARCHIVED', tone: 'completed' },
 };
+
+/**
+ * A frozen tournament race that can no longer take picks: cancelled by the
+ * track, or gone from the provider card. The scoring rule for such races is
+ * not defined yet (awaiting product confirmation), so picks and confirmation
+ * pause — drafts are kept, nothing is replaced or re-indexed.
+ * Returns 'cancelled' | 'unavailable' | null.
+ */
+export function raceBlockReason(race) {
+  if (!race) return null;
+  const st = String(race.status || '').toLowerCase();
+  if (st === 'cancelled' || race.resultStatus === 'void') return 'cancelled';
+  if (race.availability === 'unavailable') return 'unavailable';
+  return null;
+}
 
 export function getPhaseLabel(phase, isEn = false) {
   const entry = PHASE_LABEL[phase] || PHASE_LABEL[PHASE.UPCOMING];

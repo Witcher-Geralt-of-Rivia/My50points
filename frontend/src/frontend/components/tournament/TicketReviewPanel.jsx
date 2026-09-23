@@ -12,6 +12,8 @@ import { useMemo } from 'react';
 import { ArrowLeft, Check, Pencil, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { strategies } from '@/frontend/components/tournament/PickSelector';
 import { formatDateLong } from '@/frontend/lib/redesign';
+import { raceBlockReason } from '@/frontend/lib/tournamentState';
+import GuideRing from '@/frontend/components/ui/GuideRing';
 
 const NAME = { full: 'Full Point', dual: 'Dual Point', smart: 'Smart Point' };
 
@@ -24,6 +26,7 @@ export function buildSlipRows(races, selectionForRace) {
     return {
       raceId: race.id,
       index: idx + 1,
+      blocked: raceBlockReason(race),
       strategyId: id,
       picks: picks.map((horseId, i) => {
         const horse = (race.horses || []).find((h) => h.id === horseId);
@@ -37,13 +40,22 @@ export function SlipRows({ rows, isEn, onEditRace }) {
   return (
     <ol className="slip__rows">
       {rows.map((row) => (
-        <li className="slip__row" key={row.raceId}>
+        <li className="slip__row" key={row.raceId} data-blocked={row.blocked || undefined}>
           <span className="slip__race">
             <span className="t-label">{isEn ? 'Race' : 'Carrera'}</span>
             <span className="t-data slip__raceidx">{row.index}</span>
           </span>
-          <span className="slip__strat" data-strategy={row.strategyId || 'none'}>
-            {row.strategyId ? NAME[row.strategyId] : isEn ? 'No picks' : 'Sin selección'}
+          <span className="slip__stratcell">
+            <span className="slip__strat" data-strategy={row.strategyId || 'none'}>
+              {row.strategyId ? NAME[row.strategyId] : isEn ? 'No picks' : 'Sin selección'}
+            </span>
+            {row.blocked ? (
+              <span className="slip__blocked">
+                {row.blocked === 'cancelled'
+                  ? (isEn ? 'Cancelled · score pending' : 'Cancelada · puntuación pendiente')
+                  : isEn ? 'Unavailable' : 'No disponible'}
+              </span>
+            ) : null}
           </span>
           <span className="slip__picks">
             {row.picks.length ? (
@@ -81,6 +93,7 @@ export default function TicketReviewPanel({
   onConfirm,
   confirming = false,
   errorMessage = null,
+  guideConfirm = false,
   isEn = false,
 }) {
   const rows = useMemo(() => buildSlipRows(races, selectionForRace), [races, selectionForRace]);
@@ -140,6 +153,7 @@ export default function TicketReviewPanel({
         >
           {confirming ? <span className="ui-spin" aria-hidden /> : <Check size={19} aria-hidden />}
           {confirming ? (isEn ? 'Confirming…' : 'Confirmando…') : isEn ? 'CONFIRM TICKET' : 'CONFIRMAR TICKET'}
+          {guideConfirm && !confirming && onConfirm ? <GuideRing tone="gold" /> : null}
         </button>
       </div>
     </section>

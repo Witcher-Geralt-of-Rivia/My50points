@@ -1,0 +1,140 @@
+/* ==========================================================================
+ * Guided light (GuideRing) + MY50 neon racetrack artwork (NeonTrack).
+ * Both are pure CSS: no images, no external assets.
+ * ========================================================================== */
+@property --my50-guide-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@layer primitives {
+  /* ------------------------------------------------------------ guided light */
+  .ui-guided { position: relative; }
+  .ui-guide {
+    --g1: var(--my50-purple-bright);
+    --g2: var(--my50-aqua-bright);
+    --g3: var(--my50-gold-highlight);
+    position: absolute; inset: 0; z-index: 4; border-radius: inherit; pointer-events: none;
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--g1) 80%, transparent));
+  }
+  .ui-guide--outset { inset: -6px; border-radius: calc(var(--guide-radius, 18px) + 6px); }
+  .strat.ui-guided, .runners.ui-guided { --guide-radius: 16px; }
+  .ui-guide[data-tone="gold"] { --g1: var(--my50-gold-highlight); --g2: var(--my50-gold-core); --g3: #FFF1A8; }
+  .ui-guide[data-tone="aqua"] { --g1: var(--my50-aqua-bright); --g2: var(--my50-purple-bright); --g3: var(--my50-gold-highlight); }
+  .ui-guide__ring {
+    position: absolute; inset: 0; border-radius: inherit; padding: 2.5px;
+    background:
+      conic-gradient(from var(--my50-guide-angle), transparent 0deg 180deg, var(--g1) 245deg, var(--g2) 300deg, var(--g3) 338deg, transparent 360deg),
+      linear-gradient(90deg, color-mix(in srgb, var(--g1) 48%, transparent), color-mix(in srgb, var(--g2) 48%, transparent));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    animation: my50-guide-orbit 3.6s linear infinite;
+  }
+
+  /* ----------------------------------------------------- neon racetrack art */
+  .neon-track {
+    --nt-a: var(--my50-aqua-bright);
+    --nt-b: var(--my50-purple-bright);
+    --nt-c: var(--my50-gold-highlight);
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    background: #060716;
+  }
+  .neon-track[data-accent="live"] { --nt-a: var(--my50-live-bright); }
+  .neon-track[data-accent="gold"] { --nt-a: var(--my50-gold-highlight); --nt-c: var(--my50-aqua-bright); }
+  .neon-track[data-accent="m1"], .neon-track[data-accent="purple"] { --nt-a: var(--my50-purple-bright); --nt-b: var(--my50-aqua-bright); }
+  .neon-track > span, .neon-track__lights > i { position: absolute; display: block; }
+  .neon-track__sky {
+    inset: 0;
+    background:
+      radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.75), transparent 60%),
+      radial-gradient(1px 1px at 27% 9%, rgba(255, 255, 255, 0.6), transparent 60%),
+      radial-gradient(1.5px 1.5px at 64% 14%, rgba(255, 255, 255, 0.7), transparent 60%),
+      radial-gradient(1px 1px at 83% 22%, rgba(255, 255, 255, 0.55), transparent 60%),
+      radial-gradient(1px 1px at 46% 26%, rgba(255, 255, 255, 0.45), transparent 60%),
+      radial-gradient(60% 45% at 82% 8%, color-mix(in srgb, var(--nt-b) 34%, transparent), transparent 70%),
+      radial-gradient(50% 40% at 12% 12%, color-mix(in srgb, var(--nt-a) 22%, transparent), transparent 70%),
+      radial-gradient(120% 60% at 50% 105%, color-mix(in srgb, var(--nt-b) 30%, transparent), transparent 65%),
+      linear-gradient(180deg, #04050e 0%, #0b0a24 42%, #170c30 66%, #0a0d22 100%);
+  }
+  /* grandstand silhouette with window lights */
+  .neon-track__stand {
+    left: -4%; right: -4%; top: 30%; height: 17%;
+    clip-path: polygon(0 70%, 16% 34%, 50% 16%, 84% 34%, 100% 70%, 100% 100%, 0 100%);
+    background:
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--nt-c) 42%, transparent) 0 2px, transparent 2px 13px),
+      linear-gradient(180deg, rgba(34, 30, 72, 0.96), rgba(10, 11, 28, 0.98));
+    background-size: 100% 22%, 100% 100%;
+    background-position: 0 62%, 0 0;
+    background-repeat: no-repeat;
+  }
+  /* floodlight pylons */
+  .neon-track__lights { inset: 0; }
+  .neon-track__lights > i {
+    top: 6%; width: 2px; height: 30%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.05));
+  }
+  .neon-track__lights > i::before {
+    content: ""; position: absolute; top: -7px; left: 50%; width: 18px; height: 8px; transform: translateX(-50%);
+    border-radius: 3px; background: #fff;
+    box-shadow: 0 0 10px #fff, 0 0 26px color-mix(in srgb, var(--nt-a) 80%, transparent), 0 0 60px color-mix(in srgb, var(--nt-a) 45%, transparent);
+  }
+  .neon-track__lights > i:nth-child(1) { left: 7%; }
+  .neon-track__lights > i:nth-child(2) { left: 29%; height: 26%; top: 9%; }
+  .neon-track__lights > i:nth-child(3) { left: 71%; height: 26%; top: 9%; }
+  .neon-track__lights > i:nth-child(4) { left: 93%; }
+  /* the oval: three neon lanes, seen flat in perspective */
+  .neon-track__oval { left: 50%; top: 47%; width: 138%; height: 74%; transform: translateX(-50%); }
+  .neon-track__lane { position: absolute; border-radius: 50%; }
+  .neon-track__lane--1 {
+    inset: 0; border: 2px solid var(--nt-a);
+    background: radial-gradient(closest-side, transparent 80%, color-mix(in srgb, var(--nt-a) 10%, transparent) 94%, transparent 100%);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--nt-a) 70%, transparent), inset 0 0 18px color-mix(in srgb, var(--nt-a) 45%, transparent);
+  }
+  .neon-track__lane--2 {
+    inset: 9% 6%; border: 2px solid var(--nt-b);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--nt-b) 65%, transparent);
+  }
+  .neon-track__lane--3 {
+    inset: 18% 12%; border: 1.5px dashed color-mix(in srgb, var(--nt-c) 85%, transparent);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--nt-c) 45%, transparent);
+  }
+  /* perspective grid in the infield */
+  .neon-track__floor {
+    left: -30%; right: -30%; bottom: -4%; height: 40%;
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--nt-b) 40%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--nt-b) 40%, transparent) 1px, transparent 1px);
+    background-size: 44px 18px;
+    transform: perspective(260px) rotateX(58deg); transform-origin: 50% 100%;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 95%); mask-image: linear-gradient(to top, #000 0%, transparent 95%);
+    opacity: 0.55;
+  }
+  .neon-track__haze { inset: 0; background: linear-gradient(180deg, transparent 38%, rgba(6, 7, 16, 0.72) 100%); }
+
+  /* variants */
+  .neon-track--card .neon-track__lights { display: none; }
+  .neon-track--card .neon-track__oval { top: 40%; }
+  .neon-track--hero .neon-track__oval { top: 52%; width: 120%; height: 80%; }
+  .neon-track--hero .neon-track__stand { top: 34%; }
+  .neon-track--home .neon-track__oval { top: 40%; width: 96%; height: 92%; left: 66%; }
+  .neon-track--home .neon-track__stand { top: 24%; left: 26%; right: -8%; height: 20%; }
+  .neon-track--home .neon-track__floor { left: 20%; opacity: 0.7; }
+  .neon-track--home .neon-track__haze { background: linear-gradient(90deg, rgba(4, 5, 12, 0.88) 0%, rgba(4, 5, 12, 0.5) 40%, rgba(4, 5, 12, 0.05) 100%), linear-gradient(180deg, transparent 60%, rgba(6, 7, 16, 0.75) 100%); }
+  @media (max-width: 639px) {
+    .neon-track--home .neon-track__oval { left: 50%; width: 170%; top: 60%; }
+    .neon-track--home .neon-track__stand { left: -10%; top: 44%; }
+    .neon-track--home .neon-track__haze { background: linear-gradient(180deg, rgba(4, 5, 12, 0.35) 0%, rgba(4, 5, 12, 0.8) 60%, rgba(4, 5, 12, 0.95) 100%); }
+  }
+}
+
+@keyframes my50-guide-orbit { to { --my50-guide-angle: 360deg; } }
+
+/* Reduced motion: a steady gradient border, no orbit and no breathing. Unlayered
+   and more specific than the global `*` reduced-motion rule so it always wins. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-guide, .ui-guide .ui-guide__ring { animation: none !important; }
+  .ui-guide { opacity: 1 !important; }
+  .ui-guide .ui-guide__ring { background: linear-gradient(90deg, var(--g1), var(--g2), var(--g3)) !important; }
+}

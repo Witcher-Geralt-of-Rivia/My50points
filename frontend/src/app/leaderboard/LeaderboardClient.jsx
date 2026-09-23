@@ -14,7 +14,8 @@ import { fetchJson } from '@/frontend/lib/api/client';
 import { fetchTournamentsList } from '@/frontend/lib/api/tournaments';
 import { useAuth } from '@/frontend/contexts/AuthContext';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
-import { displayStatus, formatDateLong, ART } from '@/frontend/lib/redesign';
+import { displayStatus, formatDateLong } from '@/frontend/lib/redesign';
+import NeonTrack from '@/frontend/components/ui/NeonTrack';
 
 export default function LeaderboardClient() {
   const { language } = useLanguage();
@@ -82,7 +83,7 @@ export default function LeaderboardClient() {
   return (
     <div className="ui-container ui-page">
       <header className="pg-band" data-accent="gold">
-        <img className="pg-band__art" src={ART.rankingHero} alt="" aria-hidden decoding="async" />
+        <NeonTrack variant="hero" accent="gold" className="pg-band__art" />
         <div className="pg-band__veil" aria-hidden />
         <div className="pg-band__content">
           <p className="t-eyebrow">MY 50 POINTS</p>

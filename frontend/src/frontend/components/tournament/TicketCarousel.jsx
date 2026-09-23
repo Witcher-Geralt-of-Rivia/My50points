@@ -13,6 +13,7 @@
 import { CheckCircle2, Lock, PlayCircle, PenLine } from 'lucide-react';
 import { HelpPopover } from '@/frontend/components/ui';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
+import GuideRing from '@/frontend/components/ui/GuideRing';
 
 const LABEL = {
   available: { es: 'Disponible', en: 'Available' },
@@ -22,12 +23,12 @@ const LABEL = {
 };
 const ICON = { available: PlayCircle, progress: PenLine, confirmed: CheckCircle2, locked: Lock };
 
-export default function TicketCarousel({ tickets = [], activeTicketId = 1, onSelectTicket, onUnlockRequest, isGuest = false, totalRaces = 7 }) {
+export default function TicketCarousel({ tickets = [], activeTicketId = 1, onSelectTicket, onUnlockRequest, isGuest = false, totalRaces = 7, guide = false }) {
   const { language } = useLanguage();
   const isEn = language === 'en';
 
   return (
-    <section className="trn-tickets" aria-labelledby="trn-tickets-title">
+    <section className="trn-tickets" aria-labelledby="trn-tickets-title" data-guide-step={guide ? 'ticket' : undefined}>
       <div className="trn-tickets__head">
         <div>
           <p className="t-eyebrow" data-accent="aqua">{isEn ? 'Step 1' : 'Paso 1'}</p>
@@ -82,6 +83,8 @@ export default function TicketCarousel({ tickets = [], activeTicketId = 1, onSel
                     ? isEn ? `${totalRaces} races · registered` : `${totalRaces} carreras · registrado`
                     : `${tk.saved || 0} / ${totalRaces} ${isEn ? 'races saved' : 'carreras guardadas'}`}
               </span>
+              {/* Guided light: the three ticket choices are the next step. */}
+              {guide && tk.state !== 'confirmed' ? <GuideRing tone={tk.state === 'locked' ? 'aqua' : 'my50'} /> : null}
             </button>
           );
         })}

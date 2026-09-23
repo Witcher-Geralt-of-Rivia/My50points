@@ -9,6 +9,7 @@ import {
   brandCssCustomProperties,
   ticketPaletteToModality,
 } from "@/frontend/lib/brandColors";
+import { EXPOSED_MODALITIES, isModalityExposed } from "@/frontend/lib/productFlags";
 
 export const MODALITY_IDS = ["guest", "free", "paid", "special"];
 
@@ -86,14 +87,19 @@ export function resolveActiveModality({
   user = null,
   persisted = null,
 } = {}) {
-  if (isValidModalityId(override)) return override;
-  if (isValidModalityId(searchModality)) return searchModality;
+  // A modality that is not exposed as a public entry (see productFlags) is never
+  // activated from a URL or stale storage for guests/anonymous visitors. An
+  // existing registered account keeps its own (internal) modality.
+  const registered = Boolean(user && !user.isGuest);
+  const usable = (id) => isValidModalityId(id) && (registered || isModalityExposed(normalizeModalityId(id)));
+  if (usable(override)) return override;
+  if (usable(searchModality)) return searchModality;
   const pathMatch = pathname.match(/\/modalidades\/([^/]+)/);
-  if (pathMatch && isValidModalityId(pathMatch[1])) return pathMatch[1];
-  if (isValidModalityId(persisted)) return persisted;
+  if (pathMatch && usable(pathMatch[1])) return pathMatch[1];
+  if (usable(persisted)) return persisted;
   const fromUser = defaultModalityForUser(user);
   if (fromUser) return fromUser;
-  return "free";
+  return isModalityExposed("free") ? "free" : EXPOSED_MODALITIES[0];
 }
 
 /** Tailwind badge classes for leaderboard / ranking rows */

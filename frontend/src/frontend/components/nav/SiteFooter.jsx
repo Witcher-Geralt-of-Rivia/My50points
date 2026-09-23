@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import BrandMark from '@/frontend/components/nav/BrandMark';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
+import { SINGLE_GUEST_ENTRY } from '@/frontend/lib/productFlags';
 
 export default function SiteFooter() {
   const { language } = useLanguage();
@@ -19,7 +20,7 @@ export default function SiteFooter() {
         </div>
         <nav className="site-footer__links" aria-label={isEn ? 'Footer' : 'Pie de página'}>
           <Link href="/tournaments">{isEn ? 'Tournaments' : 'Torneos'}</Link>
-          <Link href="/modalidades">{isEn ? 'Game modes' : 'Modalidades'}</Link>
+          {SINGLE_GUEST_ENTRY ? null : <Link href="/modalidades">{isEn ? 'Game modes' : 'Modalidades'}</Link>}
           <Link href="/how-to-play">{isEn ? 'How to play' : 'Cómo jugar'}</Link>
           <Link href="/guia-torneo">{isEn ? 'Tournament guide' : 'Guía del torneo'}</Link>
           <Link href="/leaderboard">Ranking</Link>

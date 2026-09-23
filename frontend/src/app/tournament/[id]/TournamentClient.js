@@ -18,7 +18,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Trophy, Lock, ListChecks, Radio, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Trophy, Lock, ListChecks, Radio, ArrowRight, PauseCircle } from 'lucide-react';
 import RaceCard from '@/frontend/components/tournament/RaceCard';
 import TicketSummary from '@/frontend/components/tournament/TicketSummary';
 import RaceProgress from '@/frontend/components/tournament/RaceSummaryMatrix';
@@ -27,6 +27,7 @@ import TicketUnlockModal from '@/frontend/components/tournament/TicketUnlockModa
 import TicketReviewPanel from '@/frontend/components/tournament/TicketReviewPanel';
 import GeneratedTicket from '@/frontend/components/tournament/GeneratedTicket';
 import TournamentHero from '@/frontend/components/tournament/TournamentHero';
+import { DataStatusBanner, DataStatusNote, OriginChip } from '@/frontend/components/tournament/DataStatus';
 import DividendsTableModal from '@/frontend/components/modals/DividendsTableModal';
 import WorkspaceOnboardingTour, { OPEN_TOUR_EVENT } from '@/frontend/components/onboarding/WorkspaceOnboardingTour';
 import ModalityScope from '@/frontend/components/modalities/ModalityScope';
@@ -37,7 +38,7 @@ import { fetchAuthJson, fetchJson } from '@/frontend/lib/api/client';
 import { fetchTournamentDetail } from '@/frontend/lib/api/tournaments';
 import { isValidModalityId, readPersistedModality, withModalityQuery } from '@/frontend/lib/gameModalities';
 import { markTrackTicketUsed } from '@/frontend/lib/trackTicketUsage';
-import { getTournamentPhase, getPhaseVisibility, PHASE } from '@/frontend/lib/tournamentState';
+import { getTournamentPhase, getPhaseVisibility, PHASE, raceBlockReason } from '@/frontend/lib/tournamentState';
 import { displayStatus, firstPostTime } from '@/frontend/lib/redesign';
 import {
   draftKey, emptyDraft, loadDraft, saveDraft, clearDraft, requiredPicks, isRaceComplete, hasDraftContent,
@@ -48,6 +49,9 @@ const TO_API = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
 const FROM_API = { full_point: 'full', dual_point: 'dual', smart_pick: 'smart' };
 const RACES_PER_TOURNAMENT = 7;
 const TICKETS = [1, 2, 3];
+// Active-page refresh of OUR API (never the racing provider): GET-only, no
+// ticket writes, no synchronization. Configurable, minimum 10 s.
+const LIVE_POLL_MS = Math.max(10, Number(process.env.NEXT_PUBLIC_LIVE_POLL_SECONDS) || 20) * 1000;
 
 function normalizeTournament(t) {
   const sorted = (t.races || []).slice().sort((a, b) => (a.raceNumber || 0) - (b.raceNumber || 0));
@@ -143,6 +147,23 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
       .finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
   }, [tournamentSlug]);
+
+  // Near-real-time: while the tournament is not over and the tab is visible,
+  // re-read GET /tournaments/{slug}. Statuses, post times, scratches and results
+  // update in place; drafts and the open workspace are untouched.
+  const pollable = Boolean(tournamentRaw) && !['completed', 'finished', 'archived', 'cancelled'].includes(String(tournamentRaw?.status || '').toLowerCase());
+  useEffect(() => {
+    if (!tournamentSlug || !pollable) return undefined;
+    let live = true;
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      fetchTournamentDetail(tournamentSlug, { refresh: false })
+        .then((data) => { if (live && data?.tournament) setTournamentRaw(data.tournament); })
+        .catch(() => { /* keep showing the last good data */ });
+    };
+    const id = setInterval(tick, LIVE_POLL_MS);
+    return () => { live = false; clearInterval(id); };
+  }, [tournamentSlug, pollable]);
 
   const tournament = useMemo(() => (tournamentRaw ? normalizeTournament(tournamentRaw) : null), [tournamentRaw]);
   const races = useMemo(() => tournament?.races || [], [tournament]);
@@ -268,6 +289,10 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
 
   const raceState = useCallback((race) => {
     const st = String(race.status || '').toLowerCase();
+    if (st === 'cancelled') return { state: 'cancelled' };
+    if (race.availability === 'unavailable') return { state: 'unavailable' };
+    if ((st === 'running' || st === 'live') && race.resultStatus === 'pending') return { state: 'pending' };
+    if (race.resultStatus === 'overdue') return { state: 'pending' };
     if (isConfirmed) {
       const row = serverRows[`${race.id}-${activeTicket}`];
       if (['finished', 'completed'].includes(st)) return { state: 'result', strategy: row?.strategy };
@@ -324,23 +349,52 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playFirst, token, entriesOpen, races.length, isConfirmed]);
 
-  const handleSelectTicket = (n) => {
-    if (isTicketLocked(n)) {
-      if (requireIdentity()) setUnlockModalFor(n);
+  // Choosing a ticket goes straight to its next step (guided flow): the first
+  // race not saved yet, or the review when all seven are saved.
+  const openTicket = (n) => {
+    setActiveTicket(n);
+    setReviewOpen(false);
+    const canPlay = token && entriesOpen && !confirmed[n] && races.length === RACES_PER_TOURNAMENT
+      && !races.some((race) => raceBlockReason(race));
+    if (!canPlay) {
+      setActiveRaceId(null);
       return;
     }
-    setActiveTicket(n);
-    setActiveRaceId(null);
-    setReviewOpen(false);
+    const d = drafts[n];
+    const idx = races.findIndex((race) => !d?.races?.[race.id]?.saved);
+    if (idx === -1) {
+      setActiveRaceId(null);
+      setReviewOpen(true);
+      scrollTo('#ticket-review');
+      return;
+    }
+    setActiveRaceId(races[idx].id);
+    scrollTo('#trn-workspace');
+  };
+
+  const handleSelectTicket = (n) => {
+    if (!requireIdentity()) return;
+    if (isTicketLocked(n)) {
+      setUnlockModalFor(n);
+      return;
+    }
+    openTicket(n);
   };
 
   const activeRace = races.find((r) => r.id === activeRaceId) || null;
   const activeIndex = activeRace ? races.indexOf(activeRace) : -1;
+  // Cancelled / unavailable frozen races: no pick changes and no confirmation
+  // until the product rule exists. The local draft is never modified here.
+  const blockedRaces = races
+    .map((race, idx) => ({ index: idx + 1, reason: raceBlockReason(race) }))
+    .filter((r) => r.reason);
+  const tournamentBlocked = blockedRaces.length > 0;
+  const activeRaceBlocked = Boolean(raceBlockReason(activeRace));
   const activeEntry = activeRace ? draft.races[activeRace.id] : null;
   const activeStrategy = activeEntry?.strategy || 'full';
 
   const handleStrategyChange = (strategyId) => {
-    if (!activeRace) return;
+    if (!activeRace || activeRaceBlocked) return;
     updateDraft(activeTicket, (r) => {
       const prev = r[activeRace.id];
       if (prev?.strategy === strategyId) return;
@@ -349,7 +403,7 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
   };
 
   const handlePickHorse = (horseId) => {
-    if (!activeRace) return;
+    if (!activeRace || activeRaceBlocked) return;
     updateDraft(activeTicket, (r) => {
       const prev = r[activeRace.id] || { strategy: activeStrategy, picks: [], saved: false };
       const picks = prev.picks.includes(horseId)
@@ -365,7 +419,7 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
   };
 
   const handleSaveRace = () => {
-    if (!activeRace || !isRaceComplete(activeEntry)) return;
+    if (!activeRace || activeRaceBlocked || !isRaceComplete(activeEntry)) return;
     updateDraft(activeTicket, (r) => { r[activeRace.id] = { ...r[activeRace.id], saved: true }; });
     const remaining = races.filter((r) => r.id !== activeRace.id && !draft.races[r.id]?.saved);
     if (remaining.length === 0) {
@@ -395,6 +449,7 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
   const submitAggregate = useCallback(async () => {
     const n = activeTicket;
     if (!token || !tournamentRaw?.id || !entriesOpen || confirmed[n] || !allSaved) return;
+    if (races.some((race) => raceBlockReason(race))) return;
     if (aggregateInFlight.current[n]) return;
     aggregateInFlight.current[n] = true;
     setConfirming((p) => ({ ...p, [n]: true }));
@@ -505,10 +560,32 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
   const showWorkspace = token && entriesOpen && !isConfirmed && activeRace && !reviewOpen;
   const showReview = token && entriesOpen && !isConfirmed && reviewOpen && allSaved;
 
+  // Guided light: exactly ONE next action is lit at a time —
+  // ticket → strategy → runners → save → (next race …) → review → confirm → next ticket / ranking.
+  let guideStep = null;
+  if (unlockModalFor || authGate) {
+    guideStep = null; // an open dialog carries its own light
+  } else if (entriesOpen && races.length === RACES_PER_TOURNAMENT && !tournamentBlocked) {
+    if (!token) guideStep = 'ticket';
+    else if (isConfirmed) guideStep = nextAvailableTicket || nextLockedTicket ? 'another' : 'ranking';
+    else if (showReview) guideStep = 'confirm';
+    else if (showWorkspace) {
+      if (activeRaceBlocked) guideStep = null;
+      else if (!activeEntry?.strategy) guideStep = 'strategy';
+      else if (!isRaceComplete(activeEntry)) guideStep = 'runners';
+      else guideStep = activeEntry.saved ? 'next' : 'save';
+    } else if (allSaved) guideStep = 'review';
+    else if (hasDraftContent(draft)) guideStep = 'continue';
+    else guideStep = 'ticket';
+  } else if (token && isConfirmed) {
+    guideStep = 'ranking';
+  }
+  if (heroCta && (guideStep === 'review' || guideStep === 'continue')) heroCta = { ...heroCta, guide: true };
+
   return (
     <ModalityScope modalityId={modalityId}>
       <WorkspaceOnboardingTour modalityId={modalityId} showFloatingTrigger={false} />
-      <div className="ui-container ui-page trn">
+      <div className="ui-container ui-page trn" data-guide-step={guideStep || 'none'}>
         <nav className="ui-crumb" aria-label={isEn ? 'Breadcrumb' : 'Migas de pan'}>
           <Link href={backHref}><ChevronLeft size={16} aria-hidden />{returnPath ? (isEn ? 'Back to tracks' : 'Volver a hipódromos') : isEn ? 'Tournaments' : 'Torneos'}</Link>
         </nav>
@@ -524,8 +601,12 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
           onOpenDividends={() => setShowDividends(true)}
           onOpenGuide={() => window.dispatchEvent(new CustomEvent(OPEN_TOUR_EVENT))}
           showCountdown={entriesOpen}
+          extraChips={<OriginChip origin={tournament.origin} isEn={isEn} />}
+          sideNote={<DataStatusNote dataStatus={tournament.dataStatus} isEn={isEn} />}
           isEn={isEn}
         />
+
+        <DataStatusBanner dataStatus={tournament.dataStatus} isEn={isEn} />
 
         {races.length !== RACES_PER_TOURNAMENT ? (
           <StateBlock title={isEn ? 'Race card incomplete' : 'Programa incompleto'} accent="gold">
@@ -543,7 +624,19 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
             onUnlockRequest={(n) => { if (requireIdentity()) setUnlockModalFor(n); }}
             isGuest={isGuestUser}
             totalRaces={RACES_PER_TOURNAMENT}
+            guide={guideStep === 'ticket'}
           />
+        ) : null}
+
+        {entriesOpen && !isConfirmed && tournamentBlocked ? (
+          <p className="trn-banner trn-banner--paused" data-accent="gold" role="status">
+            <PauseCircle size={17} aria-hidden />
+            <span>
+              {isEn
+                ? `Tournament temporarily unavailable: race ${blockedRaces.map((r) => r.index).join(', ')} ${blockedRaces.length > 1 ? 'are' : 'is'} ${blockedRaces.every((r) => r.reason === 'cancelled') ? 'cancelled' : 'unavailable'}. Your selections are kept; confirming tickets is paused.`
+                : `Torneo temporalmente no disponible: ${blockedRaces.length > 1 ? 'las carreras' : 'la carrera'} ${blockedRaces.map((r) => r.index).join(', ')} ${blockedRaces.every((r) => r.reason === 'cancelled') ? (blockedRaces.length > 1 ? 'fueron canceladas' : 'fue cancelada') : blockedRaces.length > 1 ? 'no están disponibles' : 'no está disponible'}. Tus selecciones se conservan; la confirmación de boletos está en pausa.`}
+            </span>
+          </p>
         ) : null}
 
         {!entriesOpen && !finished && !isConfirmed && races.length ? (
@@ -584,8 +677,9 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
               index={activeIndex + 1}
               activeStrategy={activeStrategy}
               selectedHorses={activeEntry?.picks || []}
-              onPickHorse={handlePickHorse}
-              onStrategyChange={handleStrategyChange}
+              onPickHorse={activeRaceBlocked ? undefined : handlePickHorse}
+              onStrategyChange={activeRaceBlocked ? undefined : handleStrategyChange}
+              guideStep={guideStep === 'strategy' || guideStep === 'runners' ? guideStep : null}
               isEn={isEn}
             />
             <TicketSummary
@@ -594,11 +688,12 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
               selectedHorses={activeEntry?.picks || []}
               horses={activeRace.horses}
               saved={Boolean(activeEntry?.saved)}
-              onSave={handleSaveRace}
+              onSave={activeRaceBlocked ? undefined : handleSaveRace}
               onPrev={activeIndex > 0 ? () => goToIndex(activeIndex - 1) : undefined}
               onNext={handleNext}
               isLast={allSaved || activeIndex === races.length - 1}
               savedCount={savedCount}
+              guide={guideStep === 'save' || guideStep === 'next' ? guideStep : null}
               isEn={isEn}
             />
           </section>
@@ -612,9 +707,16 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
             selectionForRace={selectionForRace}
             onEditRace={(id) => openRace(id)}
             onBack={() => openRace(races[0].id)}
-            onConfirm={submitAggregate}
+            onConfirm={tournamentBlocked ? undefined : submitAggregate}
+            guideConfirm={guideStep === 'confirm'}
             confirming={Boolean(confirming[activeTicket])}
-            errorMessage={confirmError[activeTicket]}
+            errorMessage={
+              tournamentBlocked
+                ? isEn
+                  ? 'Confirmation is paused: a race of this tournament is cancelled or unavailable. Your selections are kept.'
+                  : 'Confirmación en pausa: una carrera del torneo está cancelada o no disponible. Tus selecciones se conservan.'
+                : confirmError[activeTicket]
+            }
             isEn={isEn}
           />
         ) : null}
@@ -627,6 +729,7 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
             ticketNumber={activeTicket}
             backendTicket={backendTickets[activeTicket] || null}
             rankingHref={rankingHref}
+            guide={guideStep === 'another' || guideStep === 'ranking' ? guideStep : null}
             onPlayAnother={
               entriesOpen && nextAvailableTicket
                 ? () => handleSelectTicket(nextAvailableTicket)
@@ -689,9 +792,7 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
               return next;
             });
             loadServerState();
-            setActiveTicket(n);
-            setActiveRaceId(null);
-            setReviewOpen(false);
+            openTicket(n);
           }}
         />
       ) : null}

@@ -11,6 +11,11 @@ os.environ["ENVIRONMENT"] = "development"
 os.environ["JWT_SECRET"] = "test-jwt-secret-key-very-secure-32chars"
 os.environ["ADMIN_SECRET"] = "test-admin-secret"
 os.environ["RACING_BACKGROUND_SYNC"] = "false"
+os.environ["BACKGROUND_WORKER_ENABLED"] = "false"   # no background worker in tests
+os.environ["ALLOW_DEMO_SEED"] = "true"              # tests use the demo seed explicitly
+os.environ["DEMO_SEED_ON_STARTUP"] = "true"         # lifespan seeds the in-memory DB
+os.environ.pop("RACING_PROVIDER", None)
+os.environ.pop("RACING_SYNC_ENABLED", None)
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 import app.database

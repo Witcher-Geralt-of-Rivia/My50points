@@ -17,6 +17,7 @@ import { useAuth } from '@/frontend/contexts/AuthContext';
 import { useModality } from '@/frontend/contexts/ModalityContext';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
 import { MODALITY_CARDS } from './ModalitiesClient';
+import { SINGLE_GUEST_ENTRY } from '@/frontend/lib/productFlags';
 
 export function safeNext(raw, fallback) {
   if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return fallback;
@@ -49,7 +50,11 @@ export default function ModalityDetailClient({ modalityId }) {
   const head = (
     <header className="ui-pagehead" data-accent={card.accent}>
       <nav className="ui-crumb" aria-label={isEn ? 'Breadcrumb' : 'Migas de pan'}>
-        <Link href="/modalidades"><ChevronLeft size={16} aria-hidden />{isEn ? 'Game modes' : 'Modalidades'}</Link>
+        {SINGLE_GUEST_ENTRY ? (
+          <Link href="/"><ChevronLeft size={16} aria-hidden />{isEn ? 'Home' : 'Inicio'}</Link>
+        ) : (
+          <Link href="/modalidades"><ChevronLeft size={16} aria-hidden />{isEn ? 'Game modes' : 'Modalidades'}</Link>
+        )}
       </nav>
       <p className="t-eyebrow">{card.code} · {copy.tag}</p>
       <h1 className="t-page">{copy.name}</h1>

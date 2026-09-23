@@ -11,9 +11,11 @@ import { Flag, CalendarDays } from "lucide-react";
 import TournamentCard from "@/frontend/components/tournaments/TournamentCard";
 import { StateBlock, StatusChip } from "@/frontend/components/ui";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
+import { SINGLE_GUEST_ENTRY } from "@/frontend/lib/productFlags";
 import { useLiveTournamentsPoll } from "@/frontend/lib/hooks/useLiveTournamentsPoll";
 import { isValidModalityId, readPersistedModality } from "@/frontend/lib/gameModalities";
-import { displayStatus, ART } from "@/frontend/lib/redesign";
+import { displayStatus } from "@/frontend/lib/redesign";
+import NeonTrack from "@/frontend/components/ui/NeonTrack";
 import { MODALITY_CHIP } from "@/frontend/lib/navConfig";
 
 const identity = (t) => t;
@@ -79,17 +81,17 @@ export default function TournamentsPageClient() {
   return (
     <div className="pg-tournaments">
       <section className="pg-band" aria-labelledby="t-title">
-        <img className="pg-band__art" src={ART.tournamentHero} alt="" aria-hidden decoding="async" />
+        <NeonTrack variant="hero" accent="aqua" className="pg-band__art" />
         <div className="pg-band__veil" aria-hidden />
         <div className="ui-container ui-container--wide pg-band__inner">
           <p className="t-eyebrow" data-accent="aqua">{isEn ? "Racing calendar" : "Calendario de carreras"}</p>
           <h1 id="t-title" className="t-page">{isEn ? "Tournaments" : "Torneos"}</h1>
           <p className="t-body-lg">
             {isEn
-              ? "Every tournament is the last seven races of a racetrack. Choose one and build your ticket."
-              : "Cada torneo son las siete últimas carreras de un hipódromo. Elige uno y construye tu boleto."}
+              ? "Every tournament is seven races of a racetrack. Choose one and build your ticket."
+              : "Cada torneo reúne siete carreras de un hipódromo. Elige uno y construye tu boleto."}
           </p>
-          {modMeta ? (
+          {modMeta && !SINGLE_GUEST_ENTRY ? (
             <p className="pg-band__mod">
               <StatusChip tone={modMeta.tone} icon={false}>{isEn ? modMeta.en : modMeta.es}</StatusChip>
               <Link href="/modalidades" className="ui-btn ui-btn--link">{isEn ? "Change mode" : "Cambiar modalidad"}</Link>

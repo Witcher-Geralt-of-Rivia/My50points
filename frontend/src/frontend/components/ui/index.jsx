@@ -6,10 +6,10 @@
  * ranking, profile and auth pages.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { X, Info, Radio, CalendarClock, Flag, Archive, Clock3, CheckCircle2, Lock, Loader2, AlertTriangle } from 'lucide-react';
+import { X, Info, Radio, CalendarClock, Flag, Archive, Clock3, CheckCircle2, Lock, Loader2, AlertTriangle, Ban, CloudOff, History, FlaskConical } from 'lucide-react';
 
 /* ------------------------------------------------------------ StatusChip */
-const STATUS_ICON = { live: Radio, today: Clock3, upcoming: CalendarClock, finished: Flag, archived: Archive, available: CheckCircle2, progress: Loader2, confirmed: CheckCircle2, locked: Lock, pending: AlertTriangle };
+const STATUS_ICON = { live: Radio, today: Clock3, upcoming: CalendarClock, finished: Flag, archived: Archive, available: CheckCircle2, progress: Loader2, confirmed: CheckCircle2, locked: Lock, pending: AlertTriangle, cancelled: Ban, unavailable: CloudOff, stale: History, demo: FlaskConical, fixture: FlaskConical };
 
 export function StatusChip({ tone = 'upcoming', children, solid = false, icon = true }) {
   const Icon = STATUS_ICON[tone];

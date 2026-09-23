@@ -1,73 +1,84 @@
 'use client';
 
 /**
- * Flagship home (/). Canonical experience — /landing and /comenzar redirect
- * here. Real data only: tournaments from /tournaments?for_home=1 (server) and
- * the public leaderboard; examples are labelled as examples.
+ * Flagship home (/). Canonical experience — /landing and /comenzar redirect here.
+ *
+ * Order (client direction): compact hero → MODALITIES (first actionable
+ * section) → strategies → how it works → fixed dividend → ranking preview.
+ *
+ * Single play entry (client requirement): the ONLY control on this page that
+ * starts the game is the Modalidad 4 card's "Jugar como invitado"
+ * (data-game-entry="m4"), highlighted with the guided light. The other
+ * modalities are shown as information only: M2 is part of the project and is
+ * next (productFlags), M1 / M3 are not a current priority. Tournament discovery
+ * lives under "Torneos" in the navigation, not on the home page.
+ * Artwork is CSS only (NeonTrack / strategy stages): no photos of unverified origin.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  ArrowRight, PlayCircle, Layers, Ticket, Flag, ClipboardCheck, Trophy, Sparkles,
-  Crown, UserRound, Lock, Gem, ChevronRight,
-} from 'lucide-react';
+import { ArrowRight, PlayCircle, Ticket, Flag, ClipboardCheck, Trophy, UserRound, Gem, BookOpen, Check, Clock3 } from 'lucide-react';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
 import { useAuth } from '@/frontend/contexts/AuthContext';
-import { useModality } from '@/frontend/contexts/ModalityContext';
 import { fetchJson } from '@/frontend/lib/api/client';
 import { strategies } from '@/frontend/components/tournament/PickSelector';
-import TournamentCard from '@/frontend/components/tournaments/TournamentCard';
-import { StatusChip, StateBlock, Countdown, SectionHeader } from '@/frontend/components/ui';
-import { ART, displayStatus, firstPostTime, formatDateLong, formatTime } from '@/frontend/lib/redesign';
-import { withModalityQuery } from '@/frontend/lib/gameModalities';
+import { SectionHeader } from '@/frontend/components/ui';
+import GuideRing from '@/frontend/components/ui/GuideRing';
+import NeonTrack from '@/frontend/components/ui/NeonTrack';
+import { GUEST_ENTRY_HREF, NEXT_MODALITY } from '@/frontend/lib/productFlags';
+import { MODALITY_NAMES } from '@/frontend/lib/modalityNames';
 
-const STRATEGY_ART = { full: ART.jockeyPurple, dual: ART.jockeyCyan, smart: ART.jockeyGold };
 const STRATEGY_ACCENT = { full: 'm1', dual: 'm2', smart: 'm3' };
 const STRATEGY_COPY = {
-  full: { es: 'Todo a un caballo. Máximo riesgo, máxima recompensa.', en: 'Everything on one horse. Maximum risk, maximum reward.' },
-  dual: { es: 'Dos caballos, dos oportunidades de ganar la carrera.', en: 'Two horses, two chances to win the race.' },
+  full: { es: 'Todos tus puntos a un solo caballo.', en: 'All your points on one horse.' },
+  dual: { es: 'Dos caballos, dos oportunidades.', en: 'Two horses, two chances.' },
   smart: { es: 'Reparte con criterio entre tres caballos.', en: 'Spread your conviction across three horses.' },
 };
 
-const TABS = [
-  { id: 'today', es: 'Hoy', en: 'Today' },
-  { id: 'live', es: 'En vivo', en: 'Live' },
-  { id: 'upcoming', es: 'Próximos', en: 'Upcoming' },
-  { id: 'finished', es: 'Finalizados', en: 'Finished' },
-];
-
-function useEnterHref(modalityId) {
-  const { isAuthenticated, user } = useAuth();
-  // Entering a tournament does not require an account; the gated action
-  // (building a ticket) asks for sign-in / guest at that moment.
-  return (slug) => withModalityQuery(`/tournament/${encodeURIComponent(slug)}`, user?.isGuest ? 'guest' : isAuthenticated ? modalityId || 'free' : modalityId);
+/** CSS-only stage for a strategy card: grid floor, horizon and one glowing bar
+ *  per allocation, sized by its points (50 · 25/25 · 30/15/5). */
+function StrategyStage({ allocation }) {
+  const max = Math.max(...allocation);
+  return (
+    <div className="home-strat__stage" aria-hidden>
+      <span className="home-strat__horizon" />
+      <span className="home-strat__bars">
+        {allocation.map((pts, i) => (
+          <span key={i} className="home-strat__bar" style={{ '--h': `${Math.round((pts / max) * 100)}%` }}>
+            <span className="home-strat__bar-val t-data">{pts}</span>
+          </span>
+        ))}
+      </span>
+    </div>
+  );
 }
 
-export default function HomeExperience({ initialTournaments = [] }) {
+function ModalityInfoCard({ id, isEn }) {
+  const m = MODALITY_NAMES[id];
+  const next = id === NEXT_MODALITY;
+  const desc = {
+    paid: { es: 'Torneo oficial por puntos.', en: 'Official points tournament.' },
+    free: { es: 'Con tu cuenta: historial, estadísticas y logros.', en: 'With your account: history, stats and achievements.' },
+    special: { es: 'Eventos especiales de temporada.', en: 'Seasonal special events.' },
+  }[id];
+  return (
+    <article className="home-modinfo ui-metal" data-accent={`m${m.code}`} data-modality={id} data-next={next || undefined}>
+      <span className="home-mod__tag t-label">{isEn ? `Mode ${m.code}` : `Modalidad ${m.code}`}</span>
+      <h3 className="t-card home-modinfo__name">{isEn ? m.en : m.es}</h3>
+      <p className="t-meta">{isEn ? desc.en : desc.es}</p>
+      <span className="ui-chip" data-tone={next ? 'upcoming' : 'archived'}>
+        <Clock3 size={13} aria-hidden />
+        {next ? (isEn ? 'Coming next' : 'Próximamente') : isEn ? 'Later' : 'Más adelante'}
+      </span>
+    </article>
+  );
+}
+
+export default function HomeExperience() {
   const { language } = useLanguage();
   const isEn = language === 'en';
-  const { isAuthenticated, user } = useAuth();
-  const { activeModalityId } = useModality();
-  const enterHref = useEnterHref(activeModalityId);
-  const [tab, setTab] = useState(null);
+  const { user } = useAuth();
   const [leaders, setLeaders] = useState([]);
-
-  const tournaments = useMemo(() => (Array.isArray(initialTournaments) ? initialTournaments : []), [initialTournaments]);
-  const buckets = useMemo(() => {
-    const b = { today: [], live: [], upcoming: [], finished: [] };
-    for (const t of tournaments) {
-      const k = displayStatus(t).key;
-      if (k === 'archived') b.finished.push(t);
-      else if (b[k]) b[k].push(t);
-    }
-    return b;
-  }, [tournaments]);
-  const activeTab = tab || TABS.find((t) => buckets[t.id].length)?.id || 'today';
-
-  // Featured: live first, then today, then the next upcoming.
-  const featured = buckets.live[0] || buckets.today[0] || buckets.upcoming[0] || null;
-  const featuredStatus = featured ? displayStatus(featured) : null;
-  const featuredFirst = featured ? firstPostTime(featured) : null;
+  const guest = MODALITY_NAMES.guest;
 
   useEffect(() => {
     let live = true;
@@ -77,22 +88,15 @@ export default function HomeExperience({ initialTournaments = [] }) {
     return () => { live = false; };
   }, []);
 
-  const primaryHref = featured?.slug ? enterHref(featured.slug) : '/tournaments';
-  const m2Href = isAuthenticated && !user?.isGuest ? '/modalidades/free' : '/login?modality=free&next=%2Fmodalidades%2Ffree';
-
   return (
     <div className="home">
-      {/* =============================================================== HERO */}
-      <section className="home-hero" aria-labelledby="home-title">
-        <picture className="home-hero__art" aria-hidden>
-          <source media="(max-width: 639px)" srcSet={ART.heroPortrait} />
-          <source media="(max-width: 1279px)" srcSet={ART.hero1280} />
-          <img src={ART.hero1920} alt="" fetchPriority="high" decoding="async" />
-        </picture>
+      {/* ======================================================== HERO (compact) */}
+      <section className="home-hero home-hero--compact" aria-labelledby="home-title">
+        <NeonTrack variant="home" accent="aqua" className="home-hero__art" />
         <div className="home-hero__veil" aria-hidden />
         <div className="ui-container ui-container--wide home-hero__inner">
           <div className="home-hero__copy">
-            <p className="t-eyebrow" data-accent="aqua">{isEn ? 'Official tournament · 7 races' : 'Torneo oficial · 7 carreras'}</p>
+            <p className="t-eyebrow" data-accent="aqua">{isEn ? 'Points tournament · 7 races' : 'Torneo por puntos · 7 carreras'}</p>
             <h1 id="home-title" className="t-display home-hero__title">
               <span className="home-hero__my">MY</span>
               <span className="home-hero__50">50</span>
@@ -104,54 +108,51 @@ export default function HomeExperience({ initialTournaments = [] }) {
               <span data-c="aqua">{isEn ? 'Your game.' : 'Tu juego.'}</span>
             </p>
             <p className="t-body-lg home-hero__lead">
-              {isEn
-                ? 'Split 50 points on every one of the tournament’s 7 races. When your horse wins, its fixed dividend multiplies your points — climb the live ranking race by race.'
-                : 'Reparte 50 puntos en cada una de las 7 carreras del torneo. Si tu caballo gana, su dividendo fijo multiplica tus puntos: escala el ranking en vivo carrera a carrera.'}
+              {isEn ? 'Split 50 points in each of the 7 races and climb the live ranking.' : 'Reparte 50 puntos en cada una de las 7 carreras y escala el ranking en vivo.'}
             </p>
             <div className="home-hero__ctas">
-              <Link href={primaryHref} className="ui-btn ui-btn--primary ui-btn--lg">
-                {isEn ? 'Play now' : 'Jugar ahora'}
-                <ArrowRight size={20} aria-hidden />
-              </Link>
               <a href="#como-funciona" className="ui-btn ui-btn--secondary ui-btn--lg">
                 <PlayCircle size={20} aria-hidden />
                 {isEn ? 'How it works' : 'Cómo funciona'}
               </a>
+              <Link href="/how-to-play" className="ui-btn ui-btn--ghost ui-btn--lg">
+                <BookOpen size={20} aria-hidden />
+                {isEn ? 'Read the rules' : 'Ver las reglas'}
+              </Link>
             </div>
           </div>
-
-          <aside className="home-hero__status ui-glass ui-edge" data-accent={featuredStatus?.key === 'live' ? 'live' : 'aqua'} aria-label={isEn ? 'Next tournament' : 'Próximo torneo'}>
-            {featured ? (
-              <>
-                <div className="home-hero__status-top">
-                  <StatusChip tone={featuredStatus.key}>{isEn ? featuredStatus.en : featuredStatus.es}</StatusChip>
-                  <span className="t-meta">{formatDateLong(featuredFirst || featured.date, isEn)}</span>
-                </div>
-                <p className="t-label home-hero__status-track">{featured.track}</p>
-                <p className="t-card home-hero__status-name">{featured.name}</p>
-                {featuredStatus.key !== 'live' && featuredFirst ? (
-                  <>
-                    <p className="t-meta">{isEn ? 'First post' : 'Primera salida'} · {formatTime(featuredFirst, isEn)}</p>
-                    <Countdown target={featuredFirst} isEn={isEn} compact />
-                  </>
-                ) : (
-                  <p className="t-meta">{isEn ? 'Races are running now.' : 'Las carreras están en curso.'}</p>
-                )}
-                <Link href={enterHref(featured.slug)} className="ui-btn ui-btn--aqua ui-btn--block">
-                  {isEn ? 'Open tournament' : 'Abrir torneo'} <ChevronRight size={18} aria-hidden />
-                </Link>
-              </>
-            ) : (
-              <>
-                <p className="t-label home-hero__status-track">{isEn ? 'Tournaments' : 'Torneos'}</p>
-                <p className="t-card home-hero__status-name">{isEn ? 'No tournament scheduled right now' : 'Ahora no hay torneos programados'}</p>
-                <p className="t-meta">{isEn ? 'New racecards are published every racing day.' : 'Cada jornada de carreras se publican nuevos torneos.'}</p>
-                <Link href="/tournaments" className="ui-btn ui-btn--secondary ui-btn--block">{isEn ? 'See all tournaments' : 'Ver todos los torneos'}</Link>
-              </>
-            )}
-          </aside>
         </div>
         <div className="home-hero__rail" aria-hidden><span /><span /><span /></div>
+      </section>
+
+      {/* ============================================================ MODALITIES */}
+      <section className="home-section home-modalities" id="jugar" aria-labelledby="home-mod">
+        <div className="ui-container ui-container--wide">
+          <SectionHeader eyebrow={isEn ? 'Start here' : 'Empieza aquí'} title={<span id="home-mod">{isEn ? 'Game modes' : 'Modalidades'}</span>} accent="m4" />
+          <article className="home-entry__card ui-pearl" data-accent="m4" data-modality="guest" data-current="true">
+            <div className="home-entry__copy">
+              <span className="home-mod__tag t-label"><UserRound size={16} aria-hidden />{isEn ? 'Mode 4' : 'Modalidad 4'}</span>
+              <h2 className="t-section home-entry__name">{isEn ? guest.en : guest.es}</h2>
+              <p className="t-body-lg">{isEn ? 'Play with a temporary alias for 12 hours.' : 'Juega con un alias temporal durante 12 horas.'}</p>
+              <ul className="home-entry__facts">
+                <li><Check size={16} aria-hidden />{isEn ? '3 tickets per tournament' : '3 boletos por torneo'}</li>
+                <li><Check size={16} aria-hidden />{isEn ? 'Ticket 1 free · tickets 2 and 3 with one ad each' : 'Boleto 1 gratis · el 2 y el 3 con un anuncio cada uno'}</li>
+              </ul>
+            </div>
+            <div className="home-entry__action">
+              <Link href={GUEST_ENTRY_HREF} className="ui-btn ui-btn--primary ui-btn--lg ui-guided" data-game-entry="m4">
+                {isEn ? 'Play as guest' : 'Jugar como invitado'} <ArrowRight size={20} aria-hidden />
+                <GuideRing tone="my50" />
+              </Link>
+              {user?.isGuest ? (
+                <p className="t-meta home-entry__session">{isEn ? 'Active session:' : 'Sesión activa:'} <strong>{user.username}</strong></p>
+              ) : null}
+            </div>
+          </article>
+          <div className="home-modinfo-row">
+            {['paid', 'free', 'special'].map((id) => <ModalityInfoCard key={id} id={id} isEn={isEn} />)}
+          </div>
+        </div>
       </section>
 
       {/* ============================================================ STRATEGY */}
@@ -162,14 +163,12 @@ export default function HomeExperience({ initialTournaments = [] }) {
             title={<span id="home-strategy">{isEn ? 'Choose your strategy' : 'Elige tu estrategia'}</span>}
             accent="m1"
           >
-            {isEn
-              ? 'In each race you distribute exactly 50 points. Every slot scores only if that horse wins.'
-              : 'En cada carrera repartes exactamente 50 puntos. Cada asignación puntúa solo si ese caballo gana.'}
+            {isEn ? '50 points per race. A slot scores only if its horse wins.' : '50 puntos por carrera. Cada asignación puntúa solo si su caballo gana.'}
           </SectionHeader>
           <div className="ui-grid ui-grid--3 home-strats">
             {strategies.map((s) => (
-              <article key={s.id} className="home-strat ui-metal ui-edge ui-hover-lift" data-accent={STRATEGY_ACCENT[s.id]}>
-                <div className="home-strat__art" aria-hidden><img src={STRATEGY_ART[s.id]} alt="" loading="lazy" decoding="async" /></div>
+              <article key={s.id} className="home-strat home-strat--neon ui-metal ui-edge ui-hover-lift" data-accent={STRATEGY_ACCENT[s.id]} data-strategy={s.id}>
+                <StrategyStage allocation={s.allocation} />
                 <div className="home-strat__body">
                   <h3 className="t-card home-strat__name">{s.name}</h3>
                   <div className="home-strat__alloc" aria-label={`${s.allocation.join(' + ')} ${isEn ? 'points' : 'puntos'}`}>
@@ -192,11 +191,11 @@ export default function HomeExperience({ initialTournaments = [] }) {
           <SectionHeader eyebrow={isEn ? 'Your path' : 'Tu camino'} title={<span id="home-how">{isEn ? 'How it works' : 'Cómo funciona'}</span>} accent="aqua" />
           <ol className="home-steps">
             {[
-              { icon: Layers, es: ['Modalidad', 'Regístrate gratis o juega como invitado.'], en: ['Game mode', 'Sign up free or play as a guest.'] },
-              { icon: Ticket, es: ['Boleto', '3 boletos gratis por torneo; cada uno compite por separado.'], en: ['Ticket', '3 free tickets per tournament, each competing separately.'] },
-              { icon: Flag, es: ['7 carreras', 'Elige estrategia y caballos en cada carrera.'], en: ['7 races', 'Pick a strategy and horses in every race.'] },
-              { icon: ClipboardCheck, es: ['Revisión', 'Revisa las 7 carreras y confirma tu boleto.'], en: ['Review', 'Check all 7 races and confirm your ticket.'] },
-              { icon: Trophy, es: ['Ranking', 'Suma puntos con cada ganador y sube en vivo.'], en: ['Ranking', 'Score with every winner and climb live.'] },
+              { icon: UserRound, es: ['Alias', 'Entra como invitado, sin registro.'], en: ['Alias', 'Join as a guest, no sign-up.'] },
+              { icon: Ticket, es: ['Boleto', 'Elige uno de tus 3 boletos.'], en: ['Ticket', 'Pick one of your 3 tickets.'] },
+              { icon: Flag, es: ['7 carreras', 'Estrategia y caballos en cada carrera.'], en: ['7 races', 'Strategy and horses in every race.'] },
+              { icon: ClipboardCheck, es: ['Confirma', 'Revisa y confirma tu boleto.'], en: ['Confirm', 'Review and confirm your ticket.'] },
+              { icon: Trophy, es: ['Ranking', 'Suma puntos con cada ganador.'], en: ['Ranking', 'Score with every winner.'] },
             ].map((s, i) => {
               const [title, text] = isEn ? s.en : s.es;
               const Icon = s.icon;
@@ -213,91 +212,17 @@ export default function HomeExperience({ initialTournaments = [] }) {
         </div>
       </section>
 
-      {/* ======================================================= DISCOVERY */}
-      <section className="home-section" aria-labelledby="home-tournaments">
-        <div className="ui-container ui-container--wide">
-          <SectionHeader
-            eyebrow={isEn ? 'Racing calendar' : 'Calendario de carreras'}
-            title={<span id="home-tournaments">{isEn ? 'Tournaments' : 'Torneos'}</span>}
-            accent="aqua"
-            actions={<Link href="/tournaments" className="ui-btn ui-btn--secondary ui-btn--sm">{isEn ? 'All tournaments' : 'Todos los torneos'} <ArrowRight size={16} aria-hidden /></Link>}
-          />
-          <div className="ui-tabs" role="tablist" aria-label={isEn ? 'Tournament status' : 'Estado del torneo'}>
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === t.id}
-                className={`ui-tab${activeTab === t.id ? ' is-on' : ''}`}
-                onClick={() => setTab(t.id)}
-              >
-                {isEn ? t.en : t.es}
-                <span className="ui-tab__count t-num">{buckets[t.id].length}</span>
-              </button>
-            ))}
-          </div>
-          <div role="tabpanel" className="home-tgrid">
-            {buckets[activeTab].length ? (
-              buckets[activeTab].map((t, i) => <TournamentCard key={t.slug || t.id} tournament={t} isEn={isEn} modalityId={activeModalityId} priority={i < 2} />)
-            ) : (
-              <StateBlock
-                icon={Flag}
-                accent="aqua"
-                title={isEn ? 'Nothing here right now' : 'Nada por aquí ahora mismo'}
-                actions={<Link href="/tournaments" className="ui-btn ui-btn--secondary ui-btn--sm">{isEn ? 'Browse the calendar' : 'Ver el calendario'}</Link>}
-              >
-                {isEn ? 'Tournaments appear here as soon as the racecards are published.' : 'Los torneos aparecen aquí en cuanto se publican los programas de carreras.'}
-              </StateBlock>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================= 7-RACE PREVIEW */}
-      <section className="home-section" aria-labelledby="home-ticket">
-        <div className="ui-container home-split">
-          <div className="home-split__copy">
-            <SectionHeader eyebrow={isEn ? 'One ticket · one tournament' : 'Un boleto · un torneo'} title={<span id="home-ticket">{isEn ? 'Seven races, one racing slip' : 'Siete carreras, un boleto'}</span>} accent="m1">
-              {isEn
-                ? 'Your ticket travels through the tournament’s last seven races. Build it race by race, review it, then confirm it once — that is the moment it enters the competition.'
-                : 'Tu boleto recorre las siete últimas carreras del torneo. Constrúyelo carrera a carrera, revísalo y confírmalo una vez: ese es el momento en que entra en la competición.'}
-            </SectionHeader>
-            <ul className="home-bullets">
-              <li><Sparkles size={18} aria-hidden />{isEn ? 'Drafts are saved on your device until you confirm.' : 'Tu borrador se guarda en tu dispositivo hasta que confirmes.'}</li>
-              <li><Ticket size={18} aria-hidden />{isEn ? '3 free tickets per tournament, scored independently.' : '3 boletos gratis por torneo, cada uno con su propia puntuación.'}</li>
-            </ul>
-          </div>
-          <div className="home-slip ui-pearl" aria-label={isEn ? 'Example ticket' : 'Boleto de ejemplo'}>
-            <div className="home-slip__head">
-              <span className="t-label">{isEn ? 'Example' : 'Ejemplo'}</span>
-              <span className="home-slip__brand">MY 50 <b>POINTS</b></span>
-            </div>
-            {['full', 'dual', 'smart', 'full', 'dual', 'smart', 'full'].map((id, i) => {
-              const s = strategies.find((x) => x.id === id);
-              return (
-                <div key={i} className="home-slip__row" data-strategy={id}>
-                  <span className="t-label">{isEn ? 'Race' : 'Carrera'} {i + 1}</span>
-                  <span className="home-slip__strat">{s.name}</span>
-                  <span className="home-slip__alloc t-num">{s.allocation.join(' · ')}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================= DIVIDENDS */}
+      {/* ======================================================= FIXED DIVIDEND */}
       <section className="home-section" aria-labelledby="home-div">
         <div className="ui-container">
           <div className="home-div ui-emerald" data-accent="green">
             <div className="home-div__copy">
-              <p className="t-eyebrow">{isEn ? 'Fixed dividends' : 'Dividendos fijos'}</p>
+              <p className="t-eyebrow">{isEn ? 'Fixed dividend' : 'Dividendo fijo'}</p>
               <h2 id="home-div" className="t-section">{isEn ? 'Know the value before you pick' : 'Conoce el valor antes de elegir'}</h2>
               <p className="t-body">
                 {isEn
-                  ? 'Each runner carries a MY50 fixed dividend for the tournament. When a horse you picked wins, the points you gave it are multiplied by that dividend. Values are shown on each race once published for the tournament.'
-                  : 'Cada caballo tiene un dividendo fijo MY50 para el torneo. Cuando gana un caballo que elegiste, los puntos que le asignaste se multiplican por ese dividendo. Los valores se muestran en cada carrera cuando se publican para el torneo.'}
+                  ? 'Every runner has a MY50 fixed dividend for the tournament. If your horse wins, its points are multiplied by it.'
+                  : 'Cada caballo tiene un dividendo fijo MY50 para el torneo. Si tu caballo gana, sus puntos se multiplican por él.'}
               </p>
             </div>
             <div className="home-div__formula" aria-label={isEn ? 'points times fixed dividend' : 'puntos por dividendo fijo'}>
@@ -313,7 +238,7 @@ export default function HomeExperience({ initialTournaments = [] }) {
 
       {/* ======================================================= RANKING PREVIEW */}
       {leaders.length ? (
-        <section className="home-section" aria-labelledby="home-rank">
+        <section className="home-section home-last" aria-labelledby="home-rank">
           <div className="ui-container">
             <SectionHeader
               eyebrow={isEn ? 'All-time' : 'Histórico'}
@@ -333,61 +258,7 @@ export default function HomeExperience({ initialTournaments = [] }) {
             </ol>
           </div>
         </section>
-      ) : null}
-
-      {/* ======================================================= MODALITIES */}
-      <section className="home-section" aria-labelledby="home-mod">
-        <div className="ui-container ui-container--wide">
-          <SectionHeader eyebrow={isEn ? 'Game modes' : 'Modalidades'} title={<span id="home-mod">{isEn ? 'Pick how you compete' : 'Elige cómo competir'}</span>} accent="m1" />
-          <div className="ui-grid ui-grid--4 home-mods">
-            <article className="home-mod ui-metal" data-accent="m1" data-soon="true">
-              <span className="home-mod__tag t-label">{isEn ? 'Mode 1' : 'Modalidad 1'}</span>
-              <Crown size={30} aria-hidden className="home-mod__icon" />
-              <h3 className="t-card">{isEn ? 'Prize tournament' : 'Torneo con premio'}</h3>
-              <p className="t-meta">{isEn ? 'Paid entry with prizes.' : 'Entrada de pago con premios.'}</p>
-              <span className="ui-chip" data-tone="locked"><Lock size={13} aria-hidden />{isEn ? 'Coming soon' : 'Próximamente'}</span>
-            </article>
-            <article className="home-mod ui-metal ui-edge ui-hover-lift" data-accent="m2">
-              <span className="home-mod__tag t-label">{isEn ? 'Mode 2' : 'Modalidad 2'}</span>
-              <Trophy size={30} aria-hidden className="home-mod__icon" />
-              <h3 className="t-card">{isEn ? 'Free tournament' : 'Torneo gratis'}</h3>
-              <p className="t-meta">{isEn ? 'Registered players. History, stats and achievements.' : 'Jugadores registrados. Historial, estadísticas y logros.'}</p>
-              <Link href={m2Href} className="ui-btn ui-btn--aqua ui-btn--sm">{isAuthenticated && !user?.isGuest ? (isEn ? 'Play' : 'Jugar') : isEn ? 'Sign in' : 'Iniciar sesión'}</Link>
-            </article>
-            <article className="home-mod ui-metal" data-accent="m3" data-soon="true">
-              <span className="home-mod__tag t-label">{isEn ? 'Mode 3' : 'Modalidad 3'}</span>
-              <Gem size={30} aria-hidden className="home-mod__icon" />
-              <h3 className="t-card">{isEn ? 'Special tournament' : 'Torneo especial'}</h3>
-              <p className="t-meta">{isEn ? 'Special events with prizes.' : 'Eventos especiales con premio.'}</p>
-              <span className="ui-chip" data-tone="locked"><Lock size={13} aria-hidden />{isEn ? 'Coming soon' : 'Próximamente'}</span>
-            </article>
-            <article className="home-mod home-mod--m4 ui-pearl ui-hover-lift" data-accent="m4">
-              <span className="home-mod__tag t-label">{isEn ? 'Mode 4' : 'Modalidad 4'}</span>
-              <UserRound size={30} aria-hidden className="home-mod__icon" />
-              <h3 className="t-card">{isEn ? 'Free · no sign-up' : 'Gratis · sin registro'}</h3>
-              <p className="t-meta">{isEn ? 'Play with a temporary alias for 12 hours.' : 'Juega con un alias temporal durante 12 horas.'}</p>
-              <Link href="/modalidades/guest" className="ui-btn ui-btn--primary ui-btn--sm">{isEn ? 'Play as guest' : 'Jugar como invitado'}</Link>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================= FINAL CTA */}
-      <section className="home-section home-final" aria-labelledby="home-final">
-        <div className="ui-container">
-          <div className="home-final__card ui-glass ui-edge" data-accent="m1">
-            <img className="home-final__art" src={ART.liveStrip} alt="" loading="lazy" decoding="async" aria-hidden />
-            <div className="home-final__copy">
-              <h2 id="home-final" className="t-page">{isEn ? 'The next race is yours' : 'La próxima carrera es tuya'}</h2>
-              <p className="t-body-lg">{isEn ? 'Three free tickets are waiting in every tournament.' : 'En cada torneo te esperan tres boletos gratis.'}</p>
-              <div className="home-hero__ctas">
-                <Link href={primaryHref} className="ui-btn ui-btn--primary ui-btn--lg">{isEn ? 'Play now' : 'Jugar ahora'} <ArrowRight size={20} aria-hidden /></Link>
-                <Link href="/how-to-play" className="ui-btn ui-btn--ghost ui-btn--lg">{isEn ? 'Read the rules' : 'Ver las reglas'}</Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      ) : <div className="home-last" aria-hidden />}
     </div>
   );
 }

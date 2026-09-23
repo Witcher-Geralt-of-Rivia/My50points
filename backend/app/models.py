@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -31,6 +31,10 @@ class User(Base):
 
 class Tournament(Base):
     __tablename__ = "Tournament"
+    __table_args__ = (
+        # Provider identity: one MY50 tournament per provider meeting.
+        UniqueConstraint("provider", "providerMeetingId", name="uq_tournament_provider_meeting"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     slug: Mapped[str] = mapped_column(String, unique=True)
@@ -43,7 +47,16 @@ class Tournament(Base):
     date: Mapped[datetime] = mapped_column(PrismaDateTime)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     imageUrl: Mapped[str | None] = mapped_column(String, nullable=True)
-    vendorMeetId: Mapped[str | None] = mapped_column(String, nullable=True)
+    vendorMeetId: Mapped[str | None] = mapped_column(String, nullable=True)  # legacy, unused
+    # Data origin: real (provider pipeline) | demo (seed) | fixture (synthetic
+    # provider fixtures, dev/tests only) | legacy (pre-provider scraped data).
+    origin: Mapped[str] = mapped_column(String, default="legacy", server_default="legacy")
+    provider: Mapped[str | None] = mapped_column(String, nullable=True)
+    providerMeetingId: Mapped[str | None] = mapped_column(String, nullable=True)
+    meetingId: Mapped[int | None] = mapped_column(ForeignKey("RacingMeeting.id"), nullable=True)
+    # Race-selection policy used to freeze the 7 tournament races (e.g. "last7").
+    selectionPolicy: Mapped[str | None] = mapped_column(String, nullable=True)
+    racesFrozenAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
 
     races: Mapped[list["Race"]] = relationship(back_populates="tournament")
@@ -52,8 +65,18 @@ class Tournament(Base):
 
 
 class Race(Base):
+    """A tournament race.
+
+    `raceNumber` IS the tournament race index (always 1..7 for a tournament).
+    `trackRaceNumber` is the racetrack's own race number from the provider
+    (track race 9 can be tournament race 7). Provider identity is
+    (`provider`, `providerRaceId`), never the name or the number.
+    """
     __tablename__ = "Race"
-    __table_args__ = (UniqueConstraint("tournamentId", "raceNumber"),)
+    __table_args__ = (
+        UniqueConstraint("tournamentId", "raceNumber"),
+        UniqueConstraint("provider", "providerRaceId", name="uq_race_provider_race"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tournamentId: Mapped[int] = mapped_column(ForeignKey("Tournament.id"))
@@ -65,7 +88,17 @@ class Race(Base):
     surface: Mapped[str | None] = mapped_column(String, nullable=True)
     raceClass: Mapped[str | None] = mapped_column(String, nullable=True)
     purse: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    vendorRaceId: Mapped[str | None] = mapped_column(String, nullable=True)
+    vendorRaceId: Mapped[str | None] = mapped_column(String, nullable=True)  # legacy, unused
+    provider: Mapped[str | None] = mapped_column(String, nullable=True)
+    providerRaceId: Mapped[str | None] = mapped_column(String, nullable=True)
+    trackRaceNumber: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    postTime: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)  # canonical UTC post time
+    # none | pending | official | void | overdue
+    resultStatus: Mapped[str] = mapped_column(String, default="none", server_default="none")
+    # active | unavailable (missing from a complete provider card; row retained)
+    availability: Mapped[str] = mapped_column(String, default="active", server_default="active")
+    providerStatus: Mapped[str | None] = mapped_column(String, nullable=True)
+    lastSyncedAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
 
     tournament: Mapped["Tournament"] = relationship(back_populates="races")
@@ -77,6 +110,9 @@ class Race(Base):
 
 class Horse(Base):
     __tablename__ = "Horse"
+    __table_args__ = (
+        UniqueConstraint("raceId", "providerRunnerId", name="uq_horse_race_provider_runner"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     raceId: Mapped[int] = mapped_column(ForeignKey("Race.id"))
@@ -84,12 +120,21 @@ class Horse(Base):
     name: Mapped[str] = mapped_column(String)
     jockey: Mapped[str | None] = mapped_column(String, nullable=True)
     trainer: Mapped[str | None] = mapped_column(String, nullable=True)
-    odds: Mapped[float] = mapped_column(Float)
+    # Legacy/demo odds only. Provider-synced runners leave this NULL; provider
+    # prices live in morningLineOdds / liveOdds and are NEVER MY50 dividends.
+    odds: Mapped[float | None] = mapped_column(Float, nullable=True)
     scratched: Mapped[bool] = mapped_column(Boolean, default=False)
     silkPrimary: Mapped[str | None] = mapped_column(String, nullable=True)
     silkSecondary: Mapped[str | None] = mapped_column(String, nullable=True)
     vendorRunnerId: Mapped[str | None] = mapped_column(String, nullable=True)
     programNumber: Mapped[str | None] = mapped_column(String, nullable=True)
+    provider: Mapped[str | None] = mapped_column(String, nullable=True)
+    providerRunnerId: Mapped[str | None] = mapped_column(String, nullable=True)
+    # active | scratched | unavailable (missing from a complete card; row retained)
+    runnerStatus: Mapped[str] = mapped_column(String, default="active", server_default="active")
+    morningLineOdds: Mapped[float | None] = mapped_column(Float, nullable=True)  # provider information only
+    liveOdds: Mapped[float | None] = mapped_column(Float, nullable=True)         # provider information only
+    oddsUpdatedAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
 
     race: Mapped["Race"] = relationship(back_populates="horses")
 
@@ -106,6 +151,8 @@ class RaceResult(Base):
     raceId: Mapped[int] = mapped_column(ForeignKey("Race.id"))
     horseId: Mapped[int] = mapped_column(ForeignKey("Horse.id"))
     position: Mapped[int] = mapped_column(Integer)
+    source: Mapped[str] = mapped_column(String, default="admin", server_default="admin")  # admin | provider | demo
+    isDeadHeat: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     race: Mapped["Race"] = relationship(back_populates="results")
     horse: Mapped["Horse"] = relationship()
@@ -142,6 +189,8 @@ class Ticket(Base):
     picks: Mapped[str] = mapped_column(String)
     pointsEarned: Mapped[int] = mapped_column(Integer, default=0)
     isScored: Mapped[bool] = mapped_column(Boolean, default=False)
+    # unscored | scored | pending_dividend | pending_scratch_rule
+    scoreStatus: Mapped[str] = mapped_column(String, default="unscored", server_default="unscored")
     originalCreatorAlias: Mapped[str | None] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
 
@@ -185,6 +234,7 @@ class TicketSelection(Base):
     picks: Mapped[str] = mapped_column(String)       # JSON string list of horse IDs
     pointsEarned: Mapped[int] = mapped_column(Integer, default=0)
     isScored: Mapped[bool] = mapped_column(Boolean, default=False)
+    scoreStatus: Mapped[str] = mapped_column(String, default="unscored", server_default="unscored")
 
     tournamentTicket: Mapped["TournamentTicket"] = relationship(back_populates="selections")
     race: Mapped["Race"] = relationship()
@@ -322,3 +372,87 @@ class ChatMessage(Base):
     text: Mapped[str] = mapped_column(String)
     avatarColor: Mapped[str] = mapped_column(String)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
+
+
+class RacingMeeting(Base):
+    """A provider race meeting (track + day). May hold MORE than 7 races; the
+    MY50 tournament freezes exactly 7 of them (see Tournament.selectionPolicy)."""
+    __tablename__ = "RacingMeeting"
+    __table_args__ = (
+        UniqueConstraint("provider", "providerMeetingId", name="uq_meeting_provider_meeting"),
+        Index("ix_meeting_date", "meetingDate"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    provider: Mapped[str] = mapped_column(String)
+    providerMeetingId: Mapped[str] = mapped_column(String)
+    origin: Mapped[str] = mapped_column(String, default="real")
+    trackName: Mapped[str] = mapped_column(String)
+    trackCode: Mapped[str | None] = mapped_column(String, nullable=True)
+    country: Mapped[str | None] = mapped_column(String, nullable=True)
+    meetingDate: Mapped[str] = mapped_column(String)  # YYYY-MM-DD, local track date
+    timezone: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="scheduled")  # scheduled | cancelled | completed
+    raceCount: Mapped[int] = mapped_column(Integer, default=0)
+    eligibleRaceCount: Mapped[int] = mapped_column(Integer, default=0)
+    # pending | created | insufficient_races
+    tournamentDecision: Mapped[str] = mapped_column(String, default="pending")
+    providerStatus: Mapped[str | None] = mapped_column(String, nullable=True)  # ok | partial | error | ...
+    lastErrorCode: Mapped[str | None] = mapped_column(String, nullable=True)
+    lastSyncedAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    lastSuccessfulSyncAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ProviderSyncState(Base):
+    """Per-provider health + daily quota counters (shared by every worker)."""
+    __tablename__ = "ProviderSyncState"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    provider: Mapped[str] = mapped_column(String, unique=True)
+    quotaDate: Mapped[str | None] = mapped_column(String, nullable=True)  # UTC YYYY-MM-DD of the counter
+    requestsToday: Mapped[int] = mapped_column(Integer, default=0)
+    dailyLimit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # ok | credentials_unavailable | auth_error | rate_limited | unavailable
+    # | adapter_pending_validation | disabled | unknown
+    status: Mapped[str] = mapped_column(String, default="unknown")
+    lastRequestAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    lastSuccessAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    lastErrorAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    lastErrorCode: Mapped[str | None] = mapped_column(String, nullable=True)
+    consecutiveFailures: Mapped[int] = mapped_column(Integer, default=0)
+    blockedUntil: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    updatedAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SyncTask(Base):
+    """Schedule state of one synchronization unit (discovery day, meeting card,
+    meeting results, reconciliation). Persisted so every worker shares one schedule."""
+    __tablename__ = "SyncTask"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String, unique=True)
+    kind: Mapped[str] = mapped_column(String)  # discover | entries | results | reconcile
+    provider: Mapped[str] = mapped_column(String)
+    refId: Mapped[str | None] = mapped_column(String, nullable=True)
+    priority: Mapped[int] = mapped_column(Integer, default=4)  # 0 (highest) .. 5
+    intervalSeconds: Mapped[int] = mapped_column(Integer, default=900)
+    nextDueAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    lastRunAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    lastSuccessAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
+    lastStatus: Mapped[str | None] = mapped_column(String, nullable=True)
+    lastErrorCode: Mapped[str | None] = mapped_column(String, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    updatedAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SyncLease(Base):
+    """Cross-process lease lock (works on SQLite and Postgres behind a pooler).
+    A lease expires on its own, so a crashed worker can never block syncing forever."""
+    __tablename__ = "SyncLease"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    owner: Mapped[str] = mapped_column(String)
+    acquiredAt: Mapped[datetime] = mapped_column(PrismaDateTime)
+    expiresAt: Mapped[datetime] = mapped_column(PrismaDateTime)
