@@ -265,7 +265,9 @@ export function AuthProvider({ children }) {
     return () => clearInterval(interval);
   }, [token, user?.isGuest, user?.expiresAt, endSession, pauseGuestSession]);
 
-  const login = async (identifier, password) => {
+  // `modality` comes from the login URL (?modality=). Registered players
+  // default to Mode 2 (free); login no longer forces the future Mode 1.
+  const login = async (identifier, password, { modality = null } = {}) => {
     const data = await fetchJson('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ login: identifier, password }),
@@ -275,7 +277,7 @@ export function AuthProvider({ children }) {
     updateActivity();
     setToken(data.token);
     setUser(data.user);
-    persistModality('paid');
+    persistModality(modality === 'paid' || modality === 'special' ? modality : 'free');
     return data.user;
   };
 

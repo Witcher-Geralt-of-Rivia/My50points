@@ -1,0 +1,149 @@
+/* ==========================================================================
+ * MY50 design tokens — "night-race stadium rendered in light".
+ * Canonical families (see probe/design-plan/MASTER-FRONTEND-PLAN.md §3–4).
+ * Redesigned components use ONLY these variables; no new hex literals.
+ * ========================================================================== */
+@layer tokens {
+  :root {
+    /* ---- Families ------------------------------------------------------ */
+    --my50-purple-core: #7B2DBE;
+    --my50-purple-bright: #A855F7;
+    --my50-purple-deep: #3A1266;
+    --my50-purple-glow: rgba(168, 85, 247, 0.45);
+
+    --my50-aqua-core: #00C4DC;
+    --my50-aqua-bright: #3DEAFF;
+    --my50-aqua-deep: #006B7A;
+    --my50-aqua-glow: rgba(61, 234, 255, 0.4);
+
+    --my50-gold-core: #F5A824;
+    --my50-gold-highlight: #FFD54A;
+    --my50-gold-deep: #B97A08;
+    --my50-gold-glow: rgba(255, 200, 74, 0.4);
+
+    --my50-green-core: #16A34A;
+    --my50-green-bright: #38E07B;
+    --my50-green-deep: #0B4F24;
+    --my50-green-glow: rgba(56, 224, 123, 0.35);
+
+    --my50-live: #FF2D46;
+    --my50-live-bright: #FF6B7C;
+    --my50-live-glow: rgba(255, 45, 70, 0.4);
+
+    --my50-silver: #E9E6F2;
+    --my50-silver-bright: #FFFFFF;
+    --my50-silver-deep: #A7A9BA;
+
+    /* ---- Night canvas ---------------------------------------------------- */
+    --my50-bg-deep: #04050C;
+    --my50-bg: #0A0D1C;
+    --my50-bg-elevated: #111633;
+    --my50-bg-raised: #171E40;
+    --my50-bg-line: #1E2650;
+
+    /* ---- Text ------------------------------------------------------------- */
+    --my50-text-primary: #F5F6FB;
+    --my50-text-secondary: rgba(245, 246, 251, 0.8);
+    --my50-text-muted: rgba(245, 246, 251, 0.62);
+    --my50-ink-primary: #14121F;
+    --my50-ink-secondary: #4A4760;
+    --my50-ink-muted: #6D6A82;
+
+    /* ---- Lines -------------------------------------------------------------- */
+    --my50-border-dim: rgba(255, 255, 255, 0.08);
+    --my50-border-mid: rgba(255, 255, 255, 0.14);
+    --my50-border-strong: rgba(255, 255, 255, 0.24);
+    --my50-highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    --my50-hairline-inner: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+
+    /* ---- Materials --------------------------------------------------------- */
+    --my50-canvas:
+      radial-gradient(1200px 620px at 12% -8%, rgba(123, 45, 190, 0.3), transparent 62%),
+      radial-gradient(900px 520px at 92% 6%, rgba(0, 196, 220, 0.16), transparent 60%),
+      radial-gradient(1100px 700px at 50% 108%, rgba(58, 18, 102, 0.35), transparent 65%),
+      linear-gradient(180deg, #0A0D1C 0%, #080A17 55%, #04050C 100%);
+    --my50-surface-glass: linear-gradient(180deg, rgba(38, 46, 92, 0.62) 0%, rgba(15, 19, 42, 0.8) 100%);
+    --my50-surface-metal: linear-gradient(162deg, #1C2346 0%, #121733 44%, #0E1229 70%, #171D3C 100%);
+    --my50-surface-metal-hi: linear-gradient(162deg, #252D58 0%, #161C3E 48%, #11163A 100%);
+    --my50-surface-pearl: linear-gradient(168deg, #FFFFFF 0%, #F2F0F8 42%, #E6E3F0 78%, #DAD6E8 100%);
+    --my50-surface-emerald: linear-gradient(165deg, #10432A 0%, #0A2E1C 56%, #0C3822 100%);
+    --my50-surface-gold: linear-gradient(158deg, #FFE7A1 0%, #FFD54A 18%, #F5A824 52%, #B97A08 100%);
+    --my50-surface-silver: linear-gradient(158deg, #FFFFFF 0%, #E9E6F2 40%, #C9C8D8 100%);
+    --my50-surface-bronze: linear-gradient(158deg, #F2C39A 0%, #C8804A 45%, #7A4420 100%);
+    --my50-sheen: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.07) 46%, transparent 62%);
+    --my50-iridescent: conic-gradient(from 140deg, #A855F7, #3DEAFF, #FFD54A, #A855F7);
+
+    /* ---- Shadows / glows ---------------------------------------------------- */
+    --my50-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --my50-shadow-elevated: 0 18px 48px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --my50-shadow-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 -14px 26px rgba(0, 0, 0, 0.28);
+
+    --accent: var(--my50-purple-bright);
+    --accent-core: var(--my50-purple-core);
+    --accent-glow: var(--my50-purple-glow);
+    --my50-glow-1: 0 0 14px var(--accent-glow);
+    --my50-glow-2: 0 0 0 1px var(--accent), 0 0 26px var(--accent-glow);
+    --my50-glow-3: 0 0 0 1px var(--accent), 0 0 48px var(--accent-glow), 0 0 110px var(--accent-glow);
+    --my50-glow-purple: 0 0 26px rgba(168, 85, 247, 0.4);
+    --my50-glow-aqua: 0 0 26px rgba(61, 234, 255, 0.35);
+    --my50-glow-gold: 0 0 30px rgba(255, 200, 74, 0.42);
+
+    /* ---- Typography -------------------------------------------------------- */
+    --my50-font-display: var(--font-display), "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --my50-font-ui: var(--font-inter), "Inter", system-ui, sans-serif;
+    --my50-fs-hero: clamp(46px, 7.4vw, 104px);
+    --my50-fs-page: clamp(34px, 4.2vw, 56px);
+    --my50-fs-section: clamp(26px, 2.8vw, 36px);
+    --my50-fs-card: clamp(20px, 1.6vw, 23px);
+    --my50-fs-body-lg: 17px;
+    --my50-fs-body: 16px;
+    --my50-fs-meta: 14px;
+    --my50-fs-label: 13px;
+    --my50-fs-data-xl: clamp(38px, 5vw, 66px);
+    --my50-fs-data-lg: clamp(24px, 2.2vw, 30px);
+    --my50-fs-data-md: 22px;
+    --my50-tracking-label: 0.14em;
+
+    /* ---- Space / radius / layout ------------------------------------------ */
+    --my50-sp-1: 4px;
+    --my50-sp-2: 8px;
+    --my50-sp-3: 12px;
+    --my50-sp-4: 16px;
+    --my50-sp-5: 20px;
+    --my50-sp-6: 24px;
+    --my50-sp-7: 32px;
+    --my50-sp-8: 40px;
+    --my50-sp-9: 56px;
+    --my50-sp-10: 72px;
+    --my50-sp-11: 96px;
+    --my50-r-xs: 6px;
+    --my50-r-sm: 10px;
+    --my50-r-md: 14px;
+    --my50-r-lg: 20px;
+    --my50-r-xl: 28px;
+    --my50-r-pill: 999px;
+    --my50-container: 1200px;
+    --my50-container-wide: 1320px;
+    --my50-container-narrow: 760px;
+    --my50-gutter: clamp(16px, 3vw, 32px);
+    --my50-nav-h: 68px;
+    --my50-tabbar-h: 66px;
+    --my50-mobile-head-h: 56px;
+
+    /* ---- Motion -------------------------------------------------------------- */
+    --my50-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --my50-ease-emph: cubic-bezier(0.16, 1, 0.3, 1);
+    --my50-t-instant: 120ms;
+    --my50-t-quick: 200ms;
+    --my50-t-base: 320ms;
+    --my50-t-slow: 600ms;
+  }
+
+  /* Accent contexts. Set on a component, never on the whole page. */
+  [data-accent="m1"], [data-accent="purple"] { --accent: var(--my50-purple-bright); --accent-core: var(--my50-purple-core); --accent-glow: var(--my50-purple-glow); }
+  [data-accent="m2"], [data-accent="aqua"] { --accent: var(--my50-aqua-bright); --accent-core: var(--my50-aqua-core); --accent-glow: var(--my50-aqua-glow); }
+  [data-accent="m3"], [data-accent="gold"], [data-accent="win"] { --accent: var(--my50-gold-highlight); --accent-core: var(--my50-gold-core); --accent-glow: var(--my50-gold-glow); }
+  [data-accent="m4"] { --accent: var(--my50-purple-bright); --accent-core: var(--my50-purple-core); --accent-glow: var(--my50-purple-glow); }
+  [data-accent="green"], [data-accent="available"] { --accent: var(--my50-green-bright); --accent-core: var(--my50-green-core); --accent-glow: var(--my50-green-glow); }
+  [data-accent="live"] { --accent: var(--my50-live-bright); --accent-core: var(--my50-live); --accent-glow: var(--my50-live-glow); }
+}

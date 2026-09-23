@@ -1,3 +1,7 @@
+/* Legacy styles. Wrapped in the `legacy` cascade layer so the redesign
+ * layers (primitives, pages) take precedence without !important.
+ * See app/styles/layers.css for the layer order. */
+@layer legacy {
 /* —— Modality workspace (modalidad 2+ tracks page mockup) —— */
 .tracks-workflow__inner--workspace {
   gap: clamp(0.85rem, 2vw, 1.15rem);
@@ -864,4 +868,5 @@ button.mw-nav-rail__item:disabled {
 
 .mw-modality-change__btn--accept {
   background: rgba(61, 234, 255, 0.16);
+}
 }

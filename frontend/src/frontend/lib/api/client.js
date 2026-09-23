@@ -88,6 +88,10 @@ export async function fetchJson(path, options = {}) {
       }
       return data;
     } catch (err) {
+      // The server answered (4xx/5xx): that answer is final. Falling through
+      // to the next base would repeat the request — e.g. a second
+      // POST /tickets/aggregate. Only network failures try the next base.
+      if (err?.status) throw err;
       lastError = err;
     }
   }

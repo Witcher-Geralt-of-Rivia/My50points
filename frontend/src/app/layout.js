@@ -1,10 +1,21 @@
-import { Inter } from "next/font/google";
+import { Inter, Barlow_Condensed } from "next/font/google";
+// Layer order must be declared first (see styles/layers.css).
+import "./styles/layers.css";
+import "./styles/tokens.css";
+// Legacy stylesheets — each wrapped in @layer legacy.
 import "./brand-colors.css";
 import "./globals.css";
 import "./tournament-guide.css";
 import "./tournament-page.css";
 import "./modality-workspace.css";
 import "./profile-hub.css";
+// Redesign system.
+import "./styles/primitives.css";
+import "./styles/nav.css";
+import "./styles/shell.css";
+import "./styles/home.css";
+import "./styles/tournament.css";
+import "./styles/pages.css";
 import Providers from "@/frontend/components/layout/Providers";
 import ConditionalShell from "@/frontend/components/layout/ConditionalShell";
 import SiteJsonLd from "@/frontend/components/seo/SiteJsonLd";
@@ -12,10 +23,19 @@ import { staticFile } from "@/frontend/lib/config/paths";
 import { getSiteUrl } from "@/frontend/lib/seo/site";
 
 const inter = Inter({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   variable: "--font-inter",
   display: "swap",
   preload: true,
+});
+
+// Display face: headings, labels and big racing numerals.
+const display = Barlow_Condensed({
+  subsets: ["latin", "latin-ext"],
+  weight: ["600", "700", "800"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+  display: "swap",
 });
 
 const siteUrl = getSiteUrl();
@@ -81,10 +101,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" className="dark" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} font-sans antialiased bg-[#0b0e1b] text-zinc-100 min-h-screen`}
-      >
+    <html lang="es" className={`dark ${inter.variable} ${display.variable}`} suppressHydrationWarning>
+      <body className="my50-app">
         <SiteJsonLd />
         <Providers>
           <ConditionalShell>{children}</ConditionalShell>

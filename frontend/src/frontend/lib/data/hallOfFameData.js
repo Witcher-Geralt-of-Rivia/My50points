@@ -1,3 +1,4 @@
+import { localAvatarSrc } from "@/frontend/lib/localAvatar";
 import { Crown, Star, Flame, Trophy, Target, TrendingUp, Shield } from "lucide-react";
 
 /** 1st-place winner avatar fill — magenta per podium mockup. */
@@ -164,7 +165,8 @@ export function buildHallOfFameNewsFeed(isEn = false) {
   return items.sort((a, b) => (b.dateISO || "").localeCompare(a.dateISO || ""));
 }
 
+// Local initials avatar (inline SVG). Formerly a ui-avatars.com URL, which sent
+// every player name to a third-party host.
 export function avatarForPlayer(name, color) {
-  const hex = (color || "#7c3aed").replace("#", "");
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${hex}&color=fff&size=80&bold=true`;
+  return localAvatarSrc(name, color, 80);
 }

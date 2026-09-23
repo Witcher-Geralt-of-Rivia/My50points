@@ -18,6 +18,7 @@ export default function HallOfFamePage() {
 
   return (
     <>
+      <h1 className="ui-sr">Salón de la Fama</h1>
       <HallOfFameEntryModals />
       {isAuthenticated ? <HallOfFameLoggedInView /> : <HallOfFamePublicView />}
     </>

@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Roboto+Condensed:wght@700;900&display=swap');
+/* Legacy styles. Wrapped in the `legacy` cascade layer so the redesign
+ * layers (primitives, pages) take precedence without !important.
+ * See app/styles/layers.css for the layer order. */
+@layer legacy {
 
 @tailwind base;
 @tailwind components;
@@ -22760,10 +22763,4 @@ html[data-modality="guest"] div[class*="grid-cols-"] > div {
     padding-bottom: 5.5rem !important;
   }
 }
-
-
-
-
-
-
-
+}

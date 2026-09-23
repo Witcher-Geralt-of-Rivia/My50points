@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import ModalityTracksList from "@/frontend/components/modalities/ModalityTracksList";
+import { Suspense } from "react";
+import ModalityDetailClient from "../ModalityDetailClient";
 import { getModality, isValidModalityId, normalizeModalityId } from "@/frontend/lib/gameModalities";
 import { buildPageMetadata } from "@/frontend/lib/seo/metadata";
 
@@ -44,5 +45,9 @@ export async function generateMetadata({ params }) {
 export default async function ModalityTracksPage({ params }) {
   const rawParams = await params;
   const modalityId = normalizeModalityId(rawParams?.modalityId);
-  return <ModalityTracksList modalityId={modalityId} />;
+  return (
+    <Suspense fallback={null}>
+      <ModalityDetailClient modalityId={modalityId} />
+    </Suspense>
+  );
 }

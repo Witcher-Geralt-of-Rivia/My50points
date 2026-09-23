@@ -1,3 +1,7 @@
+/* Legacy styles. Wrapped in the `legacy` cascade layer so the redesign
+ * layers (primitives, pages) take precedence without !important.
+ * See app/styles/layers.css for the layer order. */
+@layer legacy {
 /* ==========================================================================
  * MY50POINTS — tournament page layout (Milestone 1, visual pass 1)
  *
@@ -396,6 +400,964 @@
   padding: var(--my50-space-5);
 }
 
+/* ==========================================================================
+ * Race workspace - strategy selector + horse table (design page 131)
+ * ========================================================================== */
+
+.rc-strategy {
+  padding: var(--my50-space-4) var(--my50-space-4) var(--my50-space-2);
+}
+
+.rc-strategy__eyebrow {
+  margin: 0 0 var(--my50-space-3);
+  font-size: var(--my50-font-micro);
+  font-weight: 800;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-text-faint);
+}
+
+.rc-strategy__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--my50-space-3);
+}
+
+.rc-strategy__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--my50-space-2);
+  padding: var(--my50-space-4) var(--my50-space-3);
+  min-height: 108px;
+  border-radius: var(--my50-radius-md);
+  border: 2px solid var(--my50-border);
+  background: var(--my50-panel-2);
+  color: var(--my50-text);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.rc-strategy__card:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.rc-strategy__card[data-strategy="full"]  { --rc-accent: var(--my50-purple); }
+.rc-strategy__card[data-strategy="dual"]  { --rc-accent: var(--my50-aqua); }
+.rc-strategy__card[data-strategy="smart"] { --rc-accent: var(--my50-gold); }
+
+.rc-strategy__card:not(:disabled):hover {
+  border-color: var(--rc-accent);
+}
+
+/* Selected: gold frame + ring, per the Pass 1 selection language. */
+.rc-strategy__card--active {
+  border-color: var(--my50-border-selected);
+  box-shadow: var(--my50-ring-selected);
+  background: var(--my50-panel-3);
+}
+
+.rc-strategy__name {
+  font-size: var(--my50-font-label);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--rc-accent);
+  text-align: center;
+}
+
+.rc-strategy__points {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rc-strategy__point {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 40px;
+  padding: 4px 6px;
+  border-radius: var(--my50-radius-xs);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--rc-accent);
+}
+
+.rc-strategy__point-num {
+  font-size: var(--my50-num-md);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--my50-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-strategy__point-label {
+  margin-top: 1px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--my50-text-faint);
+}
+
+.rc-strategy__hint {
+  font-size: var(--my50-font-micro);
+  color: var(--my50-text-muted);
+}
+
+/* --- Selection progress ------------------------------------------------- */
+.rc-pick-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--my50-space-2);
+  padding: var(--my50-space-3) var(--my50-space-4) var(--my50-space-2);
+  font-size: var(--my50-font-micro);
+  font-weight: 800;
+  letter-spacing: var(--my50-tracking-label);
+}
+
+.rc-pick-head__step { color: var(--my50-purple-light); }
+.rc-pick-head__count { color: var(--my50-warning); }
+.rc-pick-head__count--done { color: var(--my50-success); }
+
+/* --- Horse table -------------------------------------------------------- */
+.rc-table {
+  padding: 0 var(--my50-space-4) var(--my50-space-4);
+}
+
+.rc-table__head,
+.rc-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 2.2fr) minmax(0, 1.3fr) minmax(0, 1.3fr) 128px 116px;
+  align-items: center;
+  gap: var(--my50-space-3);
+}
+
+.rc-table__head {
+  padding: 8px var(--my50-space-3);
+  font-size: var(--my50-font-micro);
+  font-weight: 800;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-text-faint);
+  border-bottom: 1px solid var(--my50-border);
+}
+
+.rc-table__num { text-align: right; }
+
+.rc-row {
+  min-height: 64px;
+  padding: 10px var(--my50-space-3);
+  border-bottom: 1px solid var(--my50-border);
+  background: transparent;
+  transition: background-color 0.18s ease;
+}
+
+.rc-row:hover { background: rgba(255, 255, 255, 0.03); }
+
+.rc-row--selected {
+  background: rgba(245, 197, 24, 0.07);
+  box-shadow: inset 3px 0 0 var(--my50-border-selected);
+}
+
+.rc-row__cell {
+  min-width: 0;
+  font-size: var(--my50-font-body);
+  color: var(--my50-text);
+}
+
+.rc-row__cell--num { display: flex; }
+
+.rc-row__cell--horse {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rc-row__name {
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-row__slot {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: var(--my50-radius-pill);
+  background: var(--my50-gold);
+  color: #1a1400;
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-row__cell--muted {
+  color: var(--my50-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-row__cell--odds {
+  display: flex;
+  justify-content: flex-end;
+  text-align: right;
+  font-weight: 900;
+  color: var(--my50-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-row__cell--action { display: flex; justify-content: flex-end; }
+
+.rc-choose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--my50-radius-pill);
+  border: 1px solid var(--my50-border-strong);
+  background: transparent;
+  color: var(--my50-text);
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.rc-choose:not(:disabled):hover { background: rgba(255, 255, 255, 0.07); }
+
+.rc-choose:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.rc-choose--on {
+  background: var(--my50-gold);
+  border-color: var(--my50-gold);
+  color: #1a1400;
+}
+
+/* MY50 dividend chip — same green surface / gold numerals as the booklet. */
+.rc-dividend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 5px 10px;
+  border-radius: var(--my50-radius-xs);
+  background: var(--my50-dividend-bg);
+  color: var(--my50-dividend-ink);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mobile card is hidden on wide screens */
+.rc-card { display: none; }
+
+/* ==========================================================================
+ * Ticket review (design page 57) - the one cream surface on a dark page
+ * ========================================================================== */
+
+.tr-panel {
+  border-radius: var(--my50-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--my50-border);
+  background: var(--my50-cream);
+  color: var(--my50-cream-ink);
+}
+
+.tr-panel__head {
+  background: linear-gradient(90deg, var(--my50-purple-deep), var(--my50-purple));
+  color: #fff;
+  padding: var(--my50-space-4) var(--my50-space-5);
+}
+
+.tr-panel__title {
+  margin: 2px 0 0;
+  font-size: var(--my50-font-h2);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tr-panel__sub {
+  margin: 0;
+  font-size: var(--my50-font-micro);
+  font-weight: 800;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-gold);
+}
+
+.tr-body { padding: var(--my50-space-4) var(--my50-space-5) var(--my50-space-5); }
+
+.tr-row {
+  display: grid;
+  grid-template-columns: 116px 150px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: var(--my50-space-3);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--my50-cream-line);
+}
+
+.tr-row:last-of-type { border-bottom: 0; }
+
+.tr-row__race {
+  font-weight: 900;
+  font-size: var(--my50-font-label);
+  letter-spacing: 0.04em;
+}
+
+.tr-row__track {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--my50-cream-ink-muted);
+  letter-spacing: 0.08em;
+}
+
+.tr-row__strategy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: var(--my50-radius-xs);
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.tr-row__strategy[data-strategy="full"]  { background: var(--my50-purple); color: #fff; }
+.tr-row__strategy[data-strategy="dual"]  { background: var(--my50-aqua); color: #03212b; }
+.tr-row__strategy[data-strategy="smart"] { background: var(--my50-gold); color: #1a1400; }
+.tr-row__strategy[data-strategy="none"] {
+  background: transparent;
+  color: var(--my50-cream-ink-muted);
+  border: 1px dashed var(--my50-cream-line);
+}
+
+.tr-picks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tr-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--my50-font-label);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-pick__pts {
+  min-width: 34px;
+  padding: 2px 6px;
+  border-radius: var(--my50-radius-xs);
+  background: rgba(20, 16, 10, 0.08);
+  text-align: center;
+}
+
+.tr-empty { color: var(--my50-cream-ink-muted); font-size: var(--my50-font-label); }
+
+.tr-edit {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: var(--my50-radius-pill);
+  border: 1px solid rgba(20, 16, 10, 0.3);
+  background: transparent;
+  color: var(--my50-cream-ink);
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.tr-edit:not(:disabled):hover { background: rgba(20, 16, 10, 0.07); }
+.tr-edit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Strategy distribution summary */
+.tr-dist {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--my50-space-3);
+  margin-top: var(--my50-space-4);
+  padding-top: var(--my50-space-4);
+  border-top: 2px solid var(--my50-cream-line);
+}
+
+.tr-dist__cell {
+  padding: 10px 12px;
+  border-radius: var(--my50-radius-sm);
+  text-align: center;
+}
+
+.tr-dist__cell[data-strategy="full"]  { background: var(--my50-purple); color: #fff; }
+.tr-dist__cell[data-strategy="dual"]  { background: var(--my50-aqua); color: #03212b; }
+.tr-dist__cell[data-strategy="smart"] { background: var(--my50-gold); color: #1a1400; }
+
+.tr-dist__label {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: var(--my50-tracking-label);
+  opacity: 0.85;
+}
+
+.tr-dist__pct {
+  display: block;
+  font-size: var(--my50-num-lg);
+  font-weight: 900;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-dist__races { display: block; font-size: 10px; font-weight: 700; opacity: 0.8; }
+
+.tr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--my50-space-3);
+  margin-top: var(--my50-space-5);
+}
+
+.tr-actions .tp-btn--ghost {
+  border-color: rgba(20, 16, 10, 0.3);
+  color: var(--my50-cream-ink);
+}
+
+.tr-actions .tp-btn--ghost:hover { background: rgba(20, 16, 10, 0.07); }
+
+.tr-status {
+  margin-top: var(--my50-space-3);
+  font-size: var(--my50-font-label);
+  font-weight: 700;
+}
+
+.tr-status--error { color: #9a1420; }
+.tr-status--ok { color: #0f5d2a; }
+
+/* ==========================================================================
+ * Generated ticket receipt (design pages 58 / 133)
+ * ========================================================================== */
+
+.gt {
+  position: relative;
+  max-width: 460px;
+  margin-inline: auto;
+  border-radius: var(--my50-radius-md);
+  background: #fdfbf5;
+  color: var(--my50-cream-ink);
+  overflow: hidden;
+  border: 1px solid rgba(20, 16, 10, 0.16);
+}
+
+.gt__head {
+  background: #000;
+  padding: var(--my50-space-4);
+  text-align: center;
+  border-bottom: 2px dashed rgba(20, 16, 10, 0.25);
+}
+
+.gt__brand {
+  margin: 0;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+.gt__stripe {
+  display: block;
+  height: 4px;
+  margin-top: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--my50-purple) 0 33.33%,
+    var(--my50-aqua) 33.33% 66.66%,
+    var(--my50-gold) 66.66% 100%
+  );
+}
+
+.gt__meta { padding: var(--my50-space-4); text-align: center; }
+
+.gt__tournament {
+  margin: 0;
+  font-weight: 900;
+  font-size: var(--my50-font-h3);
+  text-transform: uppercase;
+}
+
+.gt__sub { margin: 4px 0 0; font-size: var(--my50-font-label); color: var(--my50-cream-ink-muted); }
+
+.gt__id {
+  margin: var(--my50-space-3) 0 0;
+  font-size: var(--my50-font-label);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.gt__id-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-cream-ink-muted);
+}
+
+.gt__rows { border-top: 2px dashed rgba(20, 16, 10, 0.25); }
+
+.gt__row {
+  display: grid;
+  grid-template-columns: 78px 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px var(--my50-space-4);
+  border-bottom: 1px solid rgba(20, 16, 10, 0.1);
+  font-size: var(--my50-font-label);
+}
+
+.gt__row:last-child { border-bottom: 0; }
+
+.gt__race { font-weight: 900; }
+
+.gt__deco {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  height: 34px;
+  padding: var(--my50-space-3);
+  border-top: 2px dashed rgba(20, 16, 10, 0.25);
+}
+
+.gt__deco span { background: #111; width: 2px; height: 100%; }
+
+.gt__deco-note {
+  padding: 0 var(--my50-space-4) var(--my50-space-4);
+  text-align: center;
+  font-size: 10px;
+  color: var(--my50-cream-ink-muted);
+}
+
+/* ==========================================================================
+ * TABLA DE DIVIDENDOS FIJOS (design page 26)
+ * Booklet: all 7 tournament races stacked. Dividend = green cell, gold numeral.
+ * ========================================================================== */
+
+.dv-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1000px;
+  max-height: 92vh;
+  overflow: hidden;
+  border-radius: var(--my50-radius-lg);
+  border: 1px solid var(--my50-border-brand);
+  background: var(--my50-panel);
+  color: var(--my50-text);
+}
+
+.dv-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  padding: 6px;
+  border-radius: var(--my50-radius-xs);
+  border: 0;
+  background: transparent;
+  color: var(--my50-text-muted);
+  cursor: pointer;
+}
+
+.dv-close:hover { background: rgba(255, 255, 255, 0.1); color: var(--my50-text); }
+
+.dv-head {
+  flex: 0 0 auto;
+  padding: var(--my50-space-5) var(--my50-space-6);
+  text-align: center;
+  background: linear-gradient(90deg, var(--my50-purple-deep), var(--my50-purple), var(--my50-purple-deep));
+}
+
+.dv-head__title {
+  margin: 0;
+  font-size: var(--my50-font-h1);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--my50-gold);
+}
+
+.dv-head__sub {
+  margin: 4px 0 0;
+  font-size: var(--my50-font-label);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.dv-meta {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--my50-space-4);
+  padding: var(--my50-space-3) var(--my50-space-5);
+  border-bottom: 1px solid var(--my50-border);
+}
+
+.dv-meta__badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: var(--my50-radius-sm);
+  border: 2px solid var(--my50-aqua);
+  color: var(--my50-aqua);
+  font-size: var(--my50-font-label);
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.dv-meta__badge span {
+  font-size: 9px;
+  letter-spacing: var(--my50-tracking-label);
+  color: var(--my50-text-muted);
+}
+
+.dv-meta__note { font-size: var(--my50-font-label); color: var(--my50-text-muted); }
+
+.dv-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--my50-space-4) var(--my50-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--my50-space-5);
+}
+
+.dv-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: var(--my50-space-7) 0;
+  color: var(--my50-purple-light);
+}
+
+.dv-empty {
+  padding: var(--my50-space-7) 0;
+  text-align: center;
+  color: var(--my50-text-faint);
+  font-size: var(--my50-font-label);
+}
+
+.dv-race__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--my50-space-3);
+  padding: 8px var(--my50-space-3);
+  border-radius: var(--my50-radius-sm) var(--my50-radius-sm) 0 0;
+  background: var(--my50-panel-3);
+  border: 1px solid var(--my50-border);
+  border-bottom: 0;
+}
+
+.dv-race__index {
+  font-size: var(--my50-font-label);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--my50-gold);
+  text-transform: uppercase;
+}
+
+.dv-race__track {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--my50-text-faint);
+}
+
+.dv-race__facts {
+  margin-left: auto;
+  font-size: var(--my50-font-micro);
+  color: var(--my50-text-muted);
+}
+
+.dv-table {
+  border: 1px solid var(--my50-border);
+  border-radius: 0 0 var(--my50-radius-sm) var(--my50-radius-sm);
+  overflow: hidden;
+}
+
+.dv-table__head,
+.dv-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 2.1fr) minmax(0, 1.2fr) minmax(0, 1.2fr) 116px;
+  align-items: center;
+  gap: var(--my50-space-3);
+  padding: 8px var(--my50-space-3);
+}
+
+.dv-table__head {
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  letter-spacing: var(--my50-tracking-label);
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(90deg, var(--my50-purple-deep), var(--my50-purple));
+}
+
+.dv-right { text-align: right; }
+
+.dv-row {
+  min-height: 52px;
+  border-top: 1px solid var(--my50-border);
+  background: var(--my50-panel-2);
+  font-size: var(--my50-font-body);
+}
+
+.dv-row:nth-child(even) { background: var(--my50-panel); }
+
+.dv-row--scratched { opacity: 0.45; }
+
+.dv-cell { min-width: 0; }
+
+.dv-cell--num { display: flex; }
+
+.dv-saddle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-weight: 900;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dv-cell--horse {
+  font-weight: 800;
+  color: var(--my50-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-scratch {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(225, 29, 46, 0.5);
+  color: var(--my50-negative);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dv-cell__mobile-meta { display: none; }
+
+.dv-cell--muted {
+  color: var(--my50-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-cell--dividend { display: flex; justify-content: flex-end; }
+
+/* The signature treatment: green surface, gold numerals. */
+.dv-dividend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  padding: 6px 12px;
+  border-radius: var(--my50-radius-xs);
+  background: var(--my50-dividend-bg);
+  color: var(--my50-dividend-ink);
+  font-weight: 900;
+  font-size: var(--my50-font-body-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.dv-foot {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--my50-space-3) var(--my50-space-5);
+  border-top: 1px solid var(--my50-border);
+}
+
+/* ==========================================================================
+ * Per-race selection card (TicketSummary) - Pass 2 visual system
+ * ========================================================================== */
+
+.ts-card {
+  border-radius: var(--my50-radius-lg);
+  border: 1px solid var(--my50-border);
+  background: var(--my50-panel);
+  overflow: hidden;
+}
+
+.ts-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--my50-space-2);
+  padding: var(--my50-space-3) var(--my50-space-4);
+  border-bottom: 1px solid var(--my50-border);
+}
+
+.ts-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--my50-font-label);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--my50-text);
+}
+
+.ts-card__strategy {
+  padding: 3px 10px;
+  border-radius: var(--my50-radius-xs);
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.ts-card__strategy[data-strategy="full"]  { background: var(--my50-purple); color: #fff; }
+.ts-card__strategy[data-strategy="dual"]  { background: var(--my50-aqua); color: #03212b; }
+.ts-card__strategy[data-strategy="smart"] { background: var(--my50-gold); color: #1a1400; }
+
+.ts-card__body { padding: var(--my50-space-4); }
+
+.ts-card__empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--my50-font-label);
+  color: var(--my50-text-faint);
+}
+
+.ts-card__picks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--my50-space-2);
+}
+
+.ts-pick {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--my50-space-3);
+  padding: 8px 10px;
+  border-radius: var(--my50-radius-sm);
+  background: var(--my50-panel-2);
+  border: 1px solid var(--my50-border);
+  font-size: var(--my50-font-body);
+}
+
+.ts-pick__num { font-weight: 900; color: var(--my50-text-muted); font-variant-numeric: tabular-nums; }
+
+.ts-pick__name {
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ts-pick__pts {
+  padding: 2px 8px;
+  border-radius: var(--my50-radius-pill);
+  background: var(--my50-gold);
+  color: #1a1400;
+  font-size: var(--my50-font-micro);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.ts-pick__div {
+  min-width: 60px;
+  padding: 3px 8px;
+  border-radius: var(--my50-radius-xs);
+  background: var(--my50-dividend-bg);
+  color: var(--my50-dividend-ink);
+  text-align: center;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.ts-card__remaining {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--my50-space-4);
+  font-size: var(--my50-font-label);
+  color: var(--my50-text-muted);
+}
+
+.ts-card__remaining strong { color: var(--my50-warning); font-variant-numeric: tabular-nums; }
+.ts-card__remaining strong[data-done="yes"] { color: var(--my50-success); }
+
+.ts-card__confirm { width: 100%; margin-top: var(--my50-space-4); }
+
+.ts-card__confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--my50-border);
+  background: var(--my50-panel-2);
+}
+
+.gt__status {
+  margin: 0;
+  padding: 10px var(--my50-space-4);
+  background: var(--my50-dividend-bg);
+  color: #fff;
+  font-size: var(--my50-font-label);
+  font-weight: 800;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+ * Global IDIOMA control on the tournament page.
+ * App-wide it is position:fixed, so on this long page it floated over the
+ * review panel's corner while scrolling (390px). Here it is anchored to the
+ * top of the document instead, so it scrolls away with the page header and can
+ * never sit over the workflow. Other routes are untouched; behaviour of
+ * LanguageToggle itself is unchanged.
+ * -------------------------------------------------------------------------- */
+body:has(.tp-root) .app-lang-toggle {
+  position: absolute;
+}
+
+/* The app-wide "3 tickets gratis" notice is the first thing on this page and
+   its dismiss (x) sat directly under the toggle. Start it below the toggle's
+   footprint so both controls stay tappable. Scoped to the tournament page. */
+body:has(.tp-root) .free-play-notice {
+  margin-top: 48px;
+}
+
 /* --------------------------------------------------------------------------
  * Journey rail (StepTracker) — global, because the component is shared.
  * > 768px keeps the full horizontal chip rail; <= 768px collapses to the
@@ -533,6 +1495,25 @@
   .tp-races {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  /* Horse table drops ENTRENADOR before it drops anything that matters. */
+  .rc-table__head,
+  .rc-row {
+    grid-template-columns: 48px minmax(0, 2fr) minmax(0, 1.2fr) 116px 104px;
+  }
+
+  .rc-table__head > :nth-child(4),
+  .rc-row__cell:nth-child(4) { display: none; }
+
+  .tr-row { grid-template-columns: 100px 130px minmax(0, 1fr) 84px; }
+
+  .dv-table__head,
+  .dv-row {
+    grid-template-columns: 48px minmax(0, 2fr) minmax(0, 1.2fr) 108px;
+  }
+
+  .dv-table__head > :nth-child(4),
+  .dv-row > .dv-cell:nth-child(4) { display: none; }
 }
 
 /* Phone - 390 and below */
@@ -582,4 +1563,157 @@
     scroll-snap-align: center;
     flex: 0 0 136px;
   }
+
+  /* --- Race workspace on a phone ---------------------------------------- */
+  .rc-strategy { padding: var(--my50-space-3); }
+
+  .rc-strategy__grid { gap: var(--my50-space-2); }
+
+  .rc-strategy__card {
+    min-height: 92px;
+    padding: var(--my50-space-3) 6px;
+    gap: 6px;
+  }
+
+  .rc-strategy__point { min-width: 32px; padding: 3px 4px; }
+  .rc-strategy__point-num { font-size: 17px; }
+  .rc-strategy__hint { display: none; }
+
+  .rc-table { padding: 0 var(--my50-space-3) var(--my50-space-3); }
+
+  /* The seven-column table becomes one card per horse; the whole card is the
+     pick control, so choosing never requires horizontal scrolling. */
+  .rc-table__head { display: none; }
+
+  .rc-row {
+    display: block;
+    padding: 0;
+    margin-bottom: var(--my50-space-2);
+    border: 1px solid var(--my50-border);
+    border-radius: var(--my50-radius-sm);
+    background: var(--my50-panel-2);
+  }
+
+  .rc-row--selected {
+    border-color: var(--my50-border-selected);
+    box-shadow: var(--my50-ring-selected);
+  }
+
+  .rc-row__cell { display: none !important; }
+
+  .rc-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    min-height: 92px;
+    padding: 10px 12px;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: var(--my50-text);
+  }
+
+  .rc-card:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .rc-card__l1 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+
+  .rc-card__name {
+    font-size: var(--my50-font-body-lg);
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rc-card__l2 {
+    font-size: var(--my50-font-label);
+    color: var(--my50-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rc-card__l3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+  }
+
+  .rc-card__div-label {
+    font-size: var(--my50-font-micro);
+    font-weight: 800;
+    letter-spacing: var(--my50-tracking-label);
+    color: var(--my50-text-faint);
+  }
+
+
+  .rc-card__l3 .rc-choose { margin-left: auto; min-height: 40px; }
+
+  /* --- Review + receipt on a phone --------------------------------------- */
+  .tr-body { padding: var(--my50-space-3); }
+
+  .tr-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 6px;
+    align-items: start;
+  }
+
+  .tr-row__strategy { justify-self: end; }
+  .tr-picks { grid-column: 1 / -1; }
+  .tr-edit { grid-column: 1 / -1; justify-self: start; }
+
+  .tr-dist { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .tr-dist__cell { padding: 8px 4px; }
+  .tr-dist__pct { font-size: 20px; }
+
+  .tr-actions .tp-btn { flex: 1 1 100%; }
+
+  .gt__row { grid-template-columns: 64px 80px minmax(0, 1fr); padding: 8px 12px; }
+
+  /* --- Dividends on a phone ---------------------------------------------- *
+   * Horse identity and the dividend stay side by side and always visible;
+   * jockey / trainer / weight reflow onto a secondary line under the name. */
+  .dv-scroll { padding: var(--my50-space-3); }
+
+  .dv-table__head,
+  .dv-row {
+    grid-template-columns: 40px minmax(0, 1fr) 96px;
+    gap: var(--my50-space-2);
+  }
+
+  .dv-table__head > :nth-child(3),
+  .dv-table__head > :nth-child(4) { display: none; }
+
+  .dv-row > .dv-cell:nth-child(3),
+  .dv-row > .dv-cell:nth-child(4) { display: none; }
+
+  .dv-row { min-height: 60px; }
+
+  .dv-cell--horse { white-space: normal; }
+
+  .dv-cell__mobile-meta {
+    display: block;
+    margin-top: 2px;
+    font-size: var(--my50-font-micro);
+    font-weight: 600;
+    color: var(--my50-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dv-saddle { width: 28px; height: 28px; font-size: 13px; }
+
+  .dv-dividend { min-width: 0; width: 100%; padding: 6px 8px; font-size: var(--my50-font-body); }
+
+  .dv-race__facts { margin-left: 0; flex-basis: 100%; }
+}
 }

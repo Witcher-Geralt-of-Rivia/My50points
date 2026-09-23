@@ -1,4 +1,4 @@
-import ModalityHub from "@/frontend/components/modalities/ModalityHub";
+import ModalitiesClient from "./ModalitiesClient";
 import { buildPageMetadata } from "@/frontend/lib/seo/metadata";
 
 export const metadata = buildPageMetadata({
@@ -10,5 +10,5 @@ export const metadata = buildPageMetadata({
 });
 
 export default function ModalidadesPage() {
-  return <ModalityHub />;
+  return <ModalitiesClient />;
 }

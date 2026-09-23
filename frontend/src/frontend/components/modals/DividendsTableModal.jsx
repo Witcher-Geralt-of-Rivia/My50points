@@ -1,193 +1,157 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, DollarSign, RefreshCw } from "lucide-react";
+/**
+ * Dividendos fijos MY50 — the tournament's 7-race booklet (emerald sheet).
+ *
+ * Runner data comes from the tournament detail (real race records), passed in
+ * as `races` or read from GET /tournaments/{slug}. GET /tournaments/{slug}/dividends
+ * is deliberately NOT used: it fills missing values with Horse.odds / 2.0 and
+ * placeholder metadata ("TBD", weight "124", a default distance/time) and does
+ * not say which values are frozen MY50 dividends. The MY50 column therefore
+ * renders publishedMy50Dividend() → "— / Pendiente de publicación" today.
+ * No PESO column: there is no real weight field.
+ */
+
+import { useEffect, useState } from "react";
+import { Clock, Ruler, Users, ShieldAlert } from "lucide-react";
+import { Dialog } from "@/frontend/components/ui";
 import { fetchJson } from "@/frontend/lib/api/client";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
+import { saddleColor } from "@/frontend/lib/saddleColors";
+import { formatTime, tournamentRaces } from "@/frontend/lib/redesign";
+import { publishedMy50Dividend, MY50_PENDING } from "@/frontend/lib/my50Dividend";
 
-const SADDLE_COLORS = {
-  1: { bg: "#dc2626", text: "#ffffff" }, // Red
-  2: { bg: "#ffffff", text: "#000000" }, // White
-  3: { bg: "#2563eb", text: "#ffffff" }, // Blue
-  4: { bg: "#facc15", text: "#000000" }, // Yellow
-  5: { bg: "#16a34a", text: "#ffffff" }, // Green
-  6: { bg: "#000000", text: "#ffffff" }, // Black
-  7: { bg: "#ea580c", text: "#ffffff" }, // Orange
-  8: { bg: "#ec4899", text: "#ffffff" }, // Pink
-  9: { bg: "#06b6d4", text: "#000000" }, // Turquoise
-  10: { bg: "#9333ea", text: "#ffffff" }, // Purple
-  11: { bg: "#9ca3af", text: "#000000" }, // Grey
-  12: { bg: "#84cc16", text: "#000000" }, // Lime
-  13: { bg: "#78350f", text: "#ffffff" }, // Brown
-  14: { bg: "#881337", text: "#ffffff" }, // Maroon
-};
+function Saddle({ number }) {
+  const c = saddleColor(number);
+  return (
+    <span className="saddle saddle--md" style={{ "--sb": c.bg, "--sf": c.text }} aria-label={`N.º ${number}`}>
+      {number}
+    </span>
+  );
+}
 
-export default function DividendsTableModal({ isOpen, onClose, tournamentSlug }) {
-  const { t, language } = useLanguage();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
+function My50Cell({ runner, isEn }) {
+  const value = publishedMy50Dividend(runner);
+  if (value != null) return <span className="divv divv--on t-num">{value.toFixed(2)}</span>;
+  return (
+    <span className="dvb__pending">
+      <span aria-hidden className="dvb__dash">—</span>
+      <span>{isEn ? MY50_PENDING.en : MY50_PENDING.es}</span>
+    </span>
+  );
+}
+
+export default function DividendsTableModal({ isOpen, onClose, tournamentSlug, races: racesProp = null, tournamentName = null }) {
+  const { language } = useLanguage();
+  const isEn = language === "en";
+  const [fetched, setFetched] = useState(null);
+  const [state, setState] = useState("idle"); // idle | loading | error
 
   useEffect(() => {
-    if (!isOpen || !tournamentSlug) return;
-    setLoading(true);
-    fetchJson(`/tournaments/${tournamentSlug}/dividends`)
-      .then((res) => {
-        if (res && res.races) setData(res);
-      })
-      .catch((err) => console.error("Error fetching dividends:", err))
-      .finally(() => setLoading(false));
-  }, [isOpen, tournamentSlug]);
+    if (!isOpen || racesProp || !tournamentSlug) return undefined;
+    let live = true;
+    setState("loading");
+    fetchJson(`/tournaments/${encodeURIComponent(tournamentSlug)}`)
+      .then((d) => { if (live) { setFetched(d?.tournament || null); setState("idle"); } })
+      .catch(() => { if (live) setState("error"); });
+    return () => { live = false; };
+  }, [isOpen, racesProp, tournamentSlug]);
 
-  if (!isOpen) return null;
-
-  const currentRace = data?.races?.[activeTab] || null;
+  const races = racesProp || tournamentRaces(fetched);
+  const name = tournamentName || fetched?.name || null;
 
   return (
-    <div
-      id="dividends-table-overlay"
-      className="fixed inset-0 z-[9996] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in"
-      role="dialog"
-      aria-modal="true"
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      wide
+      accent="green"
+      material="emerald"
+      className="dvb"
+      eyebrow={isEn ? `Official table · ${races.length || 7} races` : `Tabla oficial · ${races.length || 7} carreras`}
+      title={isEn ? "MY50 fixed dividends" : "Dividendos fijos MY50"}
     >
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-[#102419] via-[#0b1710] to-[#050c08] p-5 sm:p-7 shadow-[0_0_50px_rgba(16,185,129,0.25)] text-white overflow-hidden">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-          aria-label={t("modals.dividends.close")}
-        >
-          <X className="w-5 h-5" />
-        </button>
+      {name ? <p className="dvb__sub">{name}</p> : null}
+      <p className="dvb__notice" role="note">
+        <ShieldAlert size={18} aria-hidden />
+        <span>
+          {isEn
+            ? "MY50 fixed dividends for this tournament are not published yet. Live odds are never shown as MY50 dividends."
+            : "Los dividendos fijos MY50 de este torneo aún no están publicados. Nunca mostramos cuotas en vivo como dividendo MY50."}
+        </span>
+      </p>
 
-        {/* Header */}
-        <div className="mb-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
-            <DollarSign className="w-4 h-4 text-emerald-400" />
-            {t("modals.dividends.title")} (Base $2.00 Win)
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wide bg-gradient-to-r from-emerald-200 via-emerald-400 to-teal-300 bg-clip-text text-transparent font-display">
-            {data?.tournamentName || (language === "en" ? "50points Tournament" : "Torneo 50points")} — {t("figmaUI.slips.frozenDiv")}
-          </h2>
-          <p className="text-xs text-zinc-400">
-            {language === "en" ? "Racetrack" : "Hipódromo"}: <span className="text-white font-semibold">{data?.track || (language === "en" ? "Official" : "Oficial")}</span> • {t("modals.dividends.subtitle")}
-          </p>
-        </div>
+      {races.length > 1 ? (
+        <nav className="dvb__jump" aria-label={isEn ? "Races" : "Carreras"}>
+          {races.map((r, i) => (
+            <a key={r.id ?? i} href={`#dvb-race-${i + 1}`} className="dvb__jumpchip t-data">{i + 1}</a>
+          ))}
+        </nav>
+      ) : null}
 
-        {/* Race Tabs (Carreras 1 a 7) */}
-        {data?.races && data.races.length > 0 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-emerald-900/40 mb-4 scrollbar-thin">
-            {data.races.map((r, idx) => (
-              <button
-                key={r.raceNumber}
-                onClick={() => setActiveTab(idx)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  activeTab === idx
-                    ? "bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-                    : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 border border-white/5"
-                }`}
-              >
-                {t("modals.dividends.race")} {r.raceNumber} ({idx + 1}/7)
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Race Content */}
-        <div className="flex-1 overflow-y-auto pr-1">
-          {loading ? (
-            <div className="flex items-center justify-center py-16 text-emerald-400 gap-2">
-              <RefreshCw className="w-6 h-6 animate-spin" />
-              <span>{t("modals.dividends.loading")}</span>
-            </div>
-          ) : currentRace ? (
-            <div>
-              {/* Race Meta */}
-              <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5 mb-3 text-xs">
-                <div className="font-bold text-emerald-300 uppercase">
-                  {currentRace.name}
+      {state === "loading" ? (
+        <div className="dvb__loading"><div className="ui-skel" style={{ height: 220 }} /></div>
+      ) : state === "error" ? (
+        <p className="dvb__empty">{isEn ? "The race card could not be loaded." : "No se pudo cargar el programa de carreras."}</p>
+      ) : !races.length ? (
+        <p className="dvb__empty">{isEn ? "No races published yet." : "Aún no hay carreras publicadas."}</p>
+      ) : (
+        <div className="dvb__races">
+          {races.map((race, idx) => {
+            const index = idx + 1;
+            const track = Number(race.raceNumber);
+            const horses = (race.horses || []).slice().sort((a, b) => (a.postPosition || 0) - (b.postPosition || 0));
+            const time = formatTime(race.scheduledTime, isEn);
+            const dist = Number(race.distance);
+            return (
+              <section key={race.id ?? idx} id={`dvb-race-${index}`} className="dvb__race" aria-labelledby={`dvb-race-h-${index}`}>
+                <header className="dvb__racehead">
+                  <span className="dvb__raceidx t-data">{index}</span>
+                  <div className="dvb__racetitle">
+                    <h3 id={`dvb-race-h-${index}`} className="t-card">
+                      {isEn ? "Race" : "Carrera"} {index}
+                      {Number.isFinite(track) && track !== index ? (
+                        <span className="t-meta dvb__track"> · {isEn ? `track race ${track}` : `carrera de pista ${track}`}</span>
+                      ) : null}
+                    </h3>
+                    <ul className="dvb__facts">
+                      {time ? <li><Clock size={14} aria-hidden />{time}</li> : null}
+                      {Number.isFinite(dist) && dist > 0 ? <li><Ruler size={14} aria-hidden />{dist} m</li> : null}
+                      <li><Users size={14} aria-hidden />{horses.length} {isEn ? "runners" : "participantes"}</li>
+                    </ul>
+                  </div>
+                </header>
+                <div className="dvb__table" role="table" aria-label={`${isEn ? "Race" : "Carrera"} ${index}`}>
+                  <div className="dvb__row dvb__row--head" role="row">
+                    <span role="columnheader">#</span>
+                    <span role="columnheader">{isEn ? "Horse" : "Caballo"}</span>
+                    <span role="columnheader" className="dvb__desk">{isEn ? "Jockey" : "Jinete"}</span>
+                    <span role="columnheader" className="dvb__desk">{isEn ? "Trainer" : "Entrenador"}</span>
+                    <span role="columnheader" className="dvb__right">MY50</span>
+                  </div>
+                  {horses.map((h) => (
+                    <div key={h.id} role="row" className={`dvb__row${h.scratched ? " is-scratched" : ""}`}>
+                      <span role="cell"><Saddle number={h.postPosition} /></span>
+                      <span role="cell" className="dvb__horse">
+                        <span className="dvb__name">{h.name}</span>
+                        {h.scratched ? <span className="ui-chip" data-tone="locked">{isEn ? "Scratched" : "Retirado"}</span> : null}
+                        <span className="dvb__mob t-meta">{[h.jockey, h.trainer].filter(Boolean).join(" · ") || "—"}</span>
+                      </span>
+                      <span role="cell" className="dvb__desk dvb__muted">{h.jockey || "—"}</span>
+                      <span role="cell" className="dvb__desk dvb__muted">{h.trainer || "—"}</span>
+                      <span role="cell" className="dvb__right"><My50Cell runner={h} isEn={isEn} /></span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center gap-3 text-zinc-400">
-                  <span>{language === "en" ? "Distance" : "Distancia"}: <strong className="text-white">{currentRace.distance}</strong></span>
-                  <span>{language === "en" ? "Surface" : "Superficie"}: <strong className="text-white">{currentRace.surface}</strong></span>
-                  <span>{language === "en" ? "Time" : "Hora"}: <strong className="text-white">{currentRace.scheduledTime}</strong></span>
-                </div>
-              </div>
-
-              {/* Runners Table */}
-              <div className="overflow-x-auto rounded-xl border border-emerald-900/40">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-emerald-950/60 text-emerald-300 font-bold uppercase tracking-wider border-b border-emerald-900/50">
-                    <tr>
-                      <th className="p-2.5 text-center w-12">#</th>
-                      <th className="p-2.5">{t("modals.dividends.horse")}</th>
-                      <th className="p-2.5">{t("figmaUI.carousel.jockey")} / {t("figmaUI.carousel.trainer")}</th>
-                      <th className="p-2.5 text-center">{language === "en" ? "Weight" : "Peso"}</th>
-                      <th className="p-2.5 text-center">Odds</th>
-                      <th className="p-2.5 text-right font-black text-emerald-400">{t("modals.dividends.odds")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {(currentRace.runners || []).map((runner) => {
-                      const saddle = SADDLE_COLORS[runner.postPosition] || { bg: "#374151", text: "#ffffff" };
-                      return (
-                        <tr
-                          key={runner.horseId}
-                          className={`hover:bg-white/[0.04] transition-colors ${runner.scratched ? "opacity-40 line-through" : ""}`}
-                        >
-                          <td className="p-2.5 text-center">
-                            <span
-                              className="inline-flex w-7 h-7 rounded-lg items-center justify-center font-black text-xs shadow"
-                              style={{ backgroundColor: saddle.bg, color: saddle.text }}
-                            >
-                              {runner.programNumber || runner.postPosition}
-                            </span>
-                          </td>
-                          <td className="p-2.5 font-bold text-white">
-                            {runner.name}
-                            {runner.scratched && (
-                              <span className="ml-2 text-[10px] uppercase font-bold text-red-400 border border-red-500/40 px-1.5 py-0.5 rounded">
-                                {t("figmaUI.carousel.scratched")}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-2.5 text-zinc-400">
-                            <div>{runner.jockey}</div>
-                            <div className="text-[10px] text-zinc-500">{runner.trainer}</div>
-                          </td>
-                          <td className="p-2.5 text-center text-zinc-400">
-                            {runner.weight} lbs
-                          </td>
-                          <td className="p-2.5 text-center font-mono text-zinc-300">
-                            {runner.odds ? `${runner.odds.toFixed(1)}/1` : "3/1"}
-                          </td>
-                          <td className="p-2.5 text-right font-mono font-black text-emerald-400 text-sm">
-                            ${runner.dividend ? runner.dividend.toFixed(2) : "2.00"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-zinc-500 text-xs">
-              {t("modals.dividends.noData")}
-            </div>
-          )}
+              </section>
+            );
+          })}
         </div>
+      )}
 
-        {/* Footer */}
-        <div className="mt-4 pt-3 border-t border-emerald-900/40 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
-          >
-            {t("modals.dividends.close")}
-          </button>
-        </div>
+      <div className="dvb__foot">
+        <button type="button" className="ui-btn ui-btn--secondary" onClick={onClose}>{isEn ? "Close" : "Cerrar"}</button>
       </div>
-    </div>
+    </Dialog>
   );
 }

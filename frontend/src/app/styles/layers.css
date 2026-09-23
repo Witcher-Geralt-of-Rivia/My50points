@@ -1,0 +1,9 @@
+/* Cascade-layer order for the MY50 redesign.
+ * tokens     design tokens (custom properties)
+ * foundation element defaults for the redesign (named "foundation"
+ *            because Tailwind reserves the layer name "base")
+ * legacy     all pre-redesign stylesheets (wrapped in @layer legacy)
+ * primitives shared UI primitives
+ * pages      page / feature compositions
+ * Later layers win over earlier ones for normal declarations. */
+@layer tokens, foundation, legacy, primitives, pages;

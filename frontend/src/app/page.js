@@ -1,5 +1,4 @@
-import HomePageClient from "./HomePageClient";
-import { mapTournamentForHomeCard } from "@/frontend/lib/api/mappers";
+import HomeExperience from "./HomeExperience";
 import { getServerBackendUrl } from "@/frontend/lib/config/api";
 
 export const revalidate = 30;
@@ -21,8 +20,9 @@ async function fetchHomeTournaments() {
 }
 
 export default async function Home() {
-  const raw = await fetchHomeTournaments();
-  const initialTournaments = raw.map(mapTournamentForHomeCard);
+  // Canonical home. The former HomePageClient / landing / comenzar
+  // experiences are no longer routed (landing and comenzar redirect here).
+  const initialTournaments = await fetchHomeTournaments();
 
-  return <HomePageClient initialTournaments={initialTournaments} />;
+  return <HomeExperience initialTournaments={initialTournaments} />;
 }

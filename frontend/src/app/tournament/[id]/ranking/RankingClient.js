@@ -1,218 +1,159 @@
 'use client';
 
+/**
+ * /tournament/{slug}/ranking — contextual tournament ranking.
+ * Podium + standings from GET /tournaments/{slug}/leaderboard (read-only).
+ * Polls every 15 s only while the tournament is live.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import ModalityScope from '@/frontend/components/modalities/ModalityScope';
-import { readPersistedModality, resolveActiveModality } from '@/frontend/lib/gameModalities';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronLeft, Trophy, Activity, MessageCircle, Info,
-  MapPin, Calendar, Users, Zap,
-} from 'lucide-react';
 import Link from 'next/link';
+import { ChevronLeft, Trophy, MessageCircle, ArrowRight } from 'lucide-react';
+import ModalityScope from '@/frontend/components/modalities/ModalityScope';
+import RankingBoard from '@/frontend/components/ranking/RankingBoard';
+import TournamentChat from '@/frontend/components/tournament/TournamentChat';
+import { StatusChip, StateBlock } from '@/frontend/components/ui';
 import { fetchJson } from '@/frontend/lib/api/client';
 import { mapTournamentLeaderboard } from '@/frontend/lib/api/mappers';
+import { readPersistedModality, resolveActiveModality, withModalityQuery } from '@/frontend/lib/gameModalities';
 import { useAuth } from '@/frontend/contexts/AuthContext';
 import { useAchievementCards } from '@/frontend/contexts/AchievementCardsContext';
 import { useRankingUpdates } from '@/frontend/contexts/RankingUpdatesContext';
-import FloatingTicketBar from '@/frontend/components/tournament/FloatingTicketBar';
-import AppPageHeader from '@/frontend/components/layout/AppPageHeader';
-import FigmaLiveRankingTable from '@/frontend/components/tournament/FigmaLiveRankingTable';
-import RealTimeRanking from '@/frontend/components/tournament/RealTimeRanking';
-import TournamentChat from '@/frontend/components/tournament/TournamentChat';
-
-const tabs = [
-  { id: 'ranking', label: 'Ranking', icon: Trophy },
-  { id: 'live', label: 'En Vivo', icon: Activity },
-  { id: 'chat', label: 'Chat', icon: MessageCircle },
-];
+import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
+import { displayStatus, formatDateLong, ART } from '@/frontend/lib/redesign';
 
 export default function RankingClient() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const modalityId = resolveActiveModality({
-    searchModality: searchParams.get('modality'),
-    user,
-    persisted: readPersistedModality(),
-  });
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+  const modalityId = resolveActiveModality({ searchModality: searchParams.get('modality'), user, persisted: readPersistedModality() });
   const { tryAwardTournament } = useAchievementCards();
   const { checkGlobalRank, checkTournamentRank } = useRankingUpdates();
   const [tournament, setTournament] = useState(null);
-  const [rankingData, setRankingData] = useState(null);
-  const [rawEntries, setRawEntries] = useState([]);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('ranking');
-  const [activeTicketIndex, setActiveTicketIndex] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const [tab, setTab] = useState('ranking');
 
-  const loadRanking = useCallback(async () => {
+  const load = useCallback(async () => {
     const slug = params.id;
     if (!slug) return;
-
     try {
-      const [tournamentRes, lbRes] = await Promise.all([
+      const [tRes, lbRes] = await Promise.all([
         fetchJson(`/tournaments/${slug}`),
         fetchJson(`/tournaments/${slug}/leaderboard`),
       ]);
-      setTournament(tournamentRes.tournament);
-      setRawEntries(lbRes.leaderboard || []);
-      const mapped = mapTournamentLeaderboard(
-        lbRes.leaderboard || [],
-        user?.id,
-        lbRes.ticketEntries || lbRes.leaderboard
-      );
-      setRankingData(mapped);
-
+      const board = lbRes.leaderboard || [];
+      setTournament(tRes.tournament);
+      setRows(board);
+      setFailed(false);
       if (user?.id) {
-        const me = (lbRes.leaderboard || []).find((e) => e.userId === user.id);
-        if (me?.rankChange > 0) {
-          checkTournamentRank(me, {
-            racesWithGain: 2,
-            tournamentName: lbRes.tournamentName || tournamentRes.tournament?.name,
-          });
-        } else if (me?.rank) {
-          checkGlobalRank(me.rank, { racesWithGain: 2 });
-        }
+        const me = board.find((e) => e.userId === user.id);
+        if (me?.rankChange > 0) checkTournamentRank(me, { racesWithGain: 2, tournamentName: lbRes.tournamentName || tRes.tournament?.name });
+        else if (me?.rank) checkGlobalRank(me.rank, { racesWithGain: 2 });
       }
     } catch {
-      setTournament(null);
-      setRankingData(null);
-      setRawEntries([]);
+      setFailed(true);
     } finally {
       setLoading(false);
     }
   }, [params.id, user?.id, checkGlobalRank, checkTournamentRank]);
 
+  // Achievement card for a live/finished tournament (unchanged behaviour).
   useEffect(() => {
-    setLoading(true);
-    loadRanking();
-    const id = setInterval(loadRanking, 15000);
+    if (!tournament || !user?.id || !rows.length) return;
+    if (!['completed', 'live'].includes(tournament.status)) return;
+    tryAwardTournament(tournament, mapTournamentLeaderboard(rows, user.id, rows));
+  }, [tournament, rows, user?.id, tryAwardTournament]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (tournament?.status !== 'live') return undefined;
+    const id = setInterval(load, 15000);
     return () => clearInterval(id);
-  }, [loadRanking]);
-
-  useEffect(() => {
-    if (!tournament || !rankingData || !user?.id) return;
-    const done = tournament.status === 'completed' || tournament.status === 'live';
-    if (!done) return;
-    tryAwardTournament(tournament, rankingData);
-  }, [tournament, rankingData, user?.id, tryAwardTournament]);
-
-  const statusConfig = {
-    live: { label: 'EN VIVO', color: 'bg-red-500', glow: 'shadow-[0_0_20px_rgba(239,68,68,0.5)]' },
-    upcoming: { label: 'PROXIMO', color: 'bg-purple', glow: 'shadow-[0_0_20px_rgba(124,58,237,0.3)]' },
-    open: { label: 'ABIERTO', color: 'bg-green-500', glow: '' },
-    completed: { label: 'COMPLETADO', color: 'bg-white/20', glow: '' },
-  };
+  }, [tournament?.status, load]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <div className="text-white/40 animate-pulse">Loading ranking...</div>
+      <div className="ui-container ui-page" aria-busy="true">
+        <div className="ui-skel" style={{ height: 180 }} />
+        <div className="ui-skel" style={{ height: 320, marginTop: 24 }} />
       </div>
     );
   }
 
-  if (!tournament || !rankingData) {
+  if (failed || !tournament) {
     return (
-      <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🏇</div>
-          <p className="text-white/40">Torneo no encontrado</p>
-          <Link href="/tournaments" className="text-purple-light text-sm mt-2 inline-block hover:underline">
-            Volver a Torneos
-          </Link>
-        </div>
+      <div className="ui-container ui-page">
+        <StateBlock title={isEn ? 'Ranking unavailable' : 'Ranking no disponible'}
+          actions={<Link href="/leaderboard" className="ui-btn ui-btn--primary">{isEn ? 'Global ranking' : 'Ranking global'}</Link>}>
+          {isEn ? 'This tournament ranking could not be loaded.' : 'No se pudo cargar el ranking de este torneo.'}
+        </StateBlock>
       </div>
     );
   }
 
-  const status = statusConfig[tournament.status] || statusConfig.upcoming;
+  const status = displayStatus(tournament);
+  const tournamentHref = withModalityQuery(`/tournament/${tournament.slug}`, modalityId);
+  const boardRows = rows.map((r, idx) => ({
+    key: `${r.userId}-${r.ticketNumber ?? idx}`,
+    pos: r.rank ?? idx + 1,
+    name: r.username || '—',
+    color: r.avatarColor,
+    sub: r.ticketNumber ? `${isEn ? 'Ticket' : 'Boleto'} ${r.ticketNumber}` : null,
+    points: r.totalPoints,
+    change: r.rankChange || 0,
+    extra: r.racesPlayed != null ? `${r.racesPlayed}/7` : null,
+    isMe: user?.id != null && r.userId === user.id,
+  }));
 
   return (
     <ModalityScope modalityId={modalityId}>
-    <div className="min-h-screen">
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0">
-          <img src="/images/live-feed.jpg" alt="" className="w-full h-full object-cover opacity-20" />
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/60 via-brand-dark/90 to-brand-dark" />
+      <div className="ui-container ui-page">
+        <nav className="ui-crumb" aria-label={isEn ? 'Breadcrumb' : 'Migas de pan'}>
+          <Link href={tournamentHref}><ChevronLeft size={16} aria-hidden />{tournament.name}</Link>
+        </nav>
+        <header className="pg-band" data-accent={status.key === 'live' ? 'live' : 'gold'}>
+          <img className="pg-band__art" src={ART.rankingHero} alt="" aria-hidden decoding="async" />
+          <div className="pg-band__veil" aria-hidden />
+          <div className="pg-band__content">
+            <div className="pg-band__chips"><StatusChip tone={status.key}>{isEn ? status.en : status.es}</StatusChip></div>
+            <p className="t-eyebrow">{isEn ? 'Tournament ranking' : 'Ranking del torneo'}</p>
+            <h1 className="t-page">{tournament.name}</h1>
+            <p className="t-body">{[tournament.track, formatDateLong(tournament.date, isEn)].filter(Boolean).join(' · ')}</p>
+          </div>
+        </header>
+
+        <div className="ui-tabs" role="tablist" aria-label={isEn ? 'Sections' : 'Secciones'}>
+          <button type="button" role="tab" aria-selected={tab === 'ranking'} className={`ui-tab${tab === 'ranking' ? ' is-on' : ''}`} onClick={() => setTab('ranking')}>
+            <Trophy size={16} aria-hidden />{isEn ? 'Standings' : 'Clasificación'}
+          </button>
+          <button type="button" role="tab" aria-selected={tab === 'chat'} className={`ui-tab${tab === 'chat' ? ' is-on' : ''}`} onClick={() => setTab('chat')}>
+            <MessageCircle size={16} aria-hidden />Chat
+          </button>
         </div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-purple/5 rounded-full blur-[100px]" />
 
-        <div className="relative app-page pt-4 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <Link
-              href={`/tournament/${tournament.slug}`}
-              className="inline-flex items-center gap-1 text-white/40 hover:text-white/70 text-sm transition-colors"
-            >
-              <ChevronLeft size={16} />
-              <span>Carreras</span>
-            </Link>
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white ${status.color} ${status.glow}`}>
-              {tournament.status === 'live' && (
-                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse-live" />
-              )}
-              {status.label}
-            </span>
-          </div>
+        {tab === 'ranking' ? (
+          <RankingBoard
+            rows={boardRows}
+            isEn={isEn}
+            columns={{ extra: isEn ? 'Races' : 'Carreras' }}
+            emptyTitle={status.key === 'finished' ? (isEn ? 'No scored tickets' : 'Sin boletos puntuados') : undefined}
+            emptyText={status.key === 'upcoming' || status.key === 'today'
+              ? isEn ? 'Standings are published once the first race is run.' : 'La clasificación se publica cuando se corra la primera carrera.'
+              : undefined}
+          />
+        ) : (
+          <div className="ui-glass rchat"><TournamentChat /></div>
+        )}
 
-          <AppPageHeader title={tournament.name} className="mb-2" />
-          <div className="flex items-center gap-3 text-xs text-white/40">
-            <span className="flex items-center gap-1"><MapPin size={10} />{tournament.location}</span>
-            <span className="flex items-center gap-1"><Calendar size={10} />{tournament.track}</span>
-            <span className="flex items-center gap-1"><Users size={10} />{rankingData.totalParticipants}</span>
-          </div>
+        <div className="pg-cta">
+          <Link href={tournamentHref} className="ui-btn ui-btn--secondary">{isEn ? 'Back to tournament' : 'Volver al torneo'}<ArrowRight size={17} aria-hidden /></Link>
+          <Link href="/leaderboard" className="ui-btn ui-btn--ghost">{isEn ? 'Global ranking' : 'Ranking global'}</Link>
         </div>
       </div>
-
-      <div className="app-page pb-28">
-        <div className="flex gap-1 p-1 bg-white/[0.03] border border-white/10 rounded-xl mb-4">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                activeTab === tab.id
-                  ? 'bg-purple text-white'
-                  : 'text-white/40 hover:text-white/70'
-              }`}
-            >
-              <tab.icon size={14} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          {activeTab === 'ranking' && (
-            <motion.div key="ranking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <FigmaLiveRankingTable
-                entries={rawEntries}
-                tournament={tournament}
-                currentUserId={user?.id}
-                onRefresh={loadRanking}
-                onOpenChat={() => setActiveTab('chat')}
-              />
-            </motion.div>
-          )}
-          {activeTab === 'live' && (
-            <motion.div key="live" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <RealTimeRanking data={rankingData} />
-            </motion.div>
-          )}
-          {activeTab === 'chat' && (
-            <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <TournamentChat />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <FloatingTicketBar
-        tickets={rankingData.userTickets}
-        activeIndex={activeTicketIndex}
-        onSelect={setActiveTicketIndex}
-      />
-    </div>
     </ModalityScope>
   );
 }

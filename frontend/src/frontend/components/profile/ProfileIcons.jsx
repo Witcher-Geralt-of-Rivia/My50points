@@ -191,7 +191,7 @@ export function ProfileIconChevronUp({ className }) {
 export function ProfileIconPrivacy({ className }) {
   return (
     <Svg className={className}>
-      <path d="M12 4.5l6 2.5v5c0 4-2.5 6.5-6 7.5-3.5-1.5-6-3.5-7.5V7l6-2.5z" />
+      <path d="M12 4.5l6 2.5v5c0 4-2.5 6.5-6 7.5-3.5-1-6-3.5-6-7.5V7l6-2.5z" />
       <path d="M10 12.5l1.5 1.5 3-3" />
     </Svg>
   );
@@ -230,7 +230,7 @@ export function ProfileIconLeader({ className }) {
     <Svg className={className}>
       <circle cx="12" cy="9" r="3.5" />
       <path d="M6.5 19c0-2.8 2.5-4.5 5.5-4.5s5.5 1.7 5.5 4.5" />
-      <path d="M12 2.5l.8 1.6 1.8.3-1.3 1.2.3 1.7-1.5-.8-1.5.8-1.7-1.5.8 1.7.3-1.2-1.3-.3 1.8L12 2.5z" />
+      <path d="M12 2.5l.8 1.6 1.8.3-1.3 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.3-1.2 1.8-.3L12 2.5z" />
     </Svg>
   );
 }

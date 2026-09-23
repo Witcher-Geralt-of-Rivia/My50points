@@ -14,6 +14,7 @@ import PlayerTicketsPanel from "@/frontend/components/profile/PlayerTicketsPanel
 import ProfileHubChrome from "@/frontend/components/profile/hub/ProfileHubChrome";
 import AppPageHeader from "@/frontend/components/layout/AppPageHeader";
 import ProfileIcon from "@/frontend/components/profile/ProfileIcons";
+import Avatar from "@/frontend/components/ui/Avatar";
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -226,17 +227,8 @@ export default function ProfileView({ userId: viewUserId }) {
             className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-10"
           >
             <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple to-purple-light p-[3px]">
-                <div
-                  className="w-full h-full rounded-full flex items-center justify-center text-2xl font-bold"
-                  style={{
-                    backgroundColor: userProfile.color + "20",
-                    color: userProfile.color,
-                  }}
-                >
-                  {userProfile.initials}
-                </div>
-              </div>
+              {/* Local initials avatar: white on the player colour (legible ring). */}
+              <Avatar name={userProfile.username || userProfile.initials} color={userProfile.color} size={96} />
             </div>
 
             <div className="flex-1 text-center sm:text-left">

@@ -1,110 +1,87 @@
 'use client';
 
+/**
+ * Tournament core — one continuous flow:
+ *   Hero (state CTA) → Ticket stubs → 7-race progress → race workspace
+ *   → pearl review → CONFIRMAR TICKET → receipt → ranking.
+ *
+ * TICKET CONTRACT (locked):
+ * - Before confirmation every selection is a LOCAL draft (lib/ticketDraft).
+ *   Race navigation, strategy changes, "Guardar carrera" and "Editar" only
+ *   touch that draft: no POST /tickets, no DELETE /tickets, ever.
+ * - At 7/7 the review offers CONFIRMAR TICKET → POST /tickets/aggregate. That
+ *   is the ONLY commit point, guarded against double submission.
+ * - A confirmed ticket is immutable here: no Edit, no resubmit.
+ * Entitlement (ticket 1 free, 2/3 via ad unlock) and every endpoint are
+ * unchanged; this file only decides when they are called.
+ */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Trophy, ChevronLeft, CheckCircle2, ArrowRight, Lock, AlertCircle,
-} from 'lucide-react';
 import Link from 'next/link';
-import AppPageHeader from '@/frontend/components/layout/AppPageHeader';
+import { ChevronLeft, Trophy, Lock, ListChecks, Radio, ArrowRight } from 'lucide-react';
 import RaceCard from '@/frontend/components/tournament/RaceCard';
-import PickSelector, { strategies } from '@/frontend/components/tournament/PickSelector';
 import TicketSummary from '@/frontend/components/tournament/TicketSummary';
-import TicketConfirmation from '@/frontend/components/tournament/TicketConfirmation';
+import RaceProgress from '@/frontend/components/tournament/RaceSummaryMatrix';
+import TicketCarousel from '@/frontend/components/tournament/TicketCarousel';
+import TicketUnlockModal from '@/frontend/components/tournament/TicketUnlockModal';
+import TicketReviewPanel from '@/frontend/components/tournament/TicketReviewPanel';
+import GeneratedTicket from '@/frontend/components/tournament/GeneratedTicket';
+import TournamentHero from '@/frontend/components/tournament/TournamentHero';
+import DividendsTableModal from '@/frontend/components/modals/DividendsTableModal';
+import WorkspaceOnboardingTour, { OPEN_TOUR_EVENT } from '@/frontend/components/onboarding/WorkspaceOnboardingTour';
+import ModalityScope from '@/frontend/components/modalities/ModalityScope';
+import AuthGateDialog from '@/frontend/components/ui/AuthGateDialog';
+import { StateBlock } from '@/frontend/components/ui';
 import { useAuth } from '@/frontend/contexts/AuthContext';
 import { fetchAuthJson, fetchJson } from '@/frontend/lib/api/client';
 import { fetchTournamentDetail } from '@/frontend/lib/api/tournaments';
-import ModalityScope from '@/frontend/components/modalities/ModalityScope';
-import StepTracker from '@/frontend/components/layout/StepTracker';
-import {
-  isValidModalityId,
-  readPersistedModality,
-  withModalityQuery,
-} from '@/frontend/lib/gameModalities';
+import { isValidModalityId, readPersistedModality, withModalityQuery } from '@/frontend/lib/gameModalities';
 import { markTrackTicketUsed } from '@/frontend/lib/trackTicketUsage';
-import WorkspaceOnboardingTour, { OPEN_TOUR_EVENT } from '@/frontend/components/onboarding/WorkspaceOnboardingTour';
-import DividendsTableModal from '@/frontend/components/modals/DividendsTableModal';
-import RaceSummaryMatrix from '@/frontend/components/tournament/RaceSummaryMatrix';
-import TicketCarousel from '@/frontend/components/tournament/TicketCarousel';
-import TicketUnlockModal from '@/frontend/components/tournament/TicketUnlockModal';
-import FigmaStrategySlips from '@/frontend/components/tournament/FigmaStrategySlips';
-import FigmaFinalRanking from '@/frontend/components/tournament/FigmaFinalRanking';
-import TournamentHero, { TournamentKpiStrip } from '@/frontend/components/tournament/TournamentHero';
-import { getTournamentPhase, getPhaseVisibility } from '@/frontend/lib/tournamentState';
+import { getTournamentPhase, getPhaseVisibility, PHASE } from '@/frontend/lib/tournamentState';
+import { displayStatus, firstPostTime } from '@/frontend/lib/redesign';
+import {
+  draftKey, emptyDraft, loadDraft, saveDraft, clearDraft, requiredPicks, isRaceComplete, hasDraftContent,
+} from '@/frontend/lib/ticketDraft';
 import { useLanguage } from '@/frontend/lib/i18n/LanguageContext';
 
-const STRATEGY_MAP = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
-const STRATEGY_REVERSE = { full_point: 'full', dual_point: 'dual', smart_pick: 'smart' };
-
-function normalizeHorse(h) {
-  return {
-    ...h,
-    silkColors: { primary: h.silkPrimary || '#7c3aed', secondary: h.silkSecondary || '#ffffff' },
-    weight: 54 + (h.postPosition % 8),
-  };
-}
-
-function normalizeRace(race) {
-  return {
-    ...race,
-    number: race.raceNumber,
-    class: race.raceClass || '',
-    postTime: race.scheduledTime || '',
-    surface: race.surface || 'Dirt',
-    distance: race.distance || 1200,
-    tournamentRace: true,
-    horses: (race.horses || []).map(normalizeHorse),
-  };
-}
-
+const TO_API = { full: 'full_point', dual: 'dual_point', smart: 'smart_pick' };
+const FROM_API = { full_point: 'full', dual_point: 'dual', smart_pick: 'smart' };
 const RACES_PER_TOURNAMENT = 7;
+const TICKETS = [1, 2, 3];
 
 function normalizeTournament(t) {
-  const sorted = (t.races || [])
-    .slice()
-    .sort((a, b) => (a.raceNumber || 0) - (b.raceNumber || 0));
-  const races = sorted.length >= RACES_PER_TOURNAMENT ? sorted.slice(-RACES_PER_TOURNAMENT) : sorted;
+  const sorted = (t.races || []).slice().sort((a, b) => (a.raceNumber || 0) - (b.raceNumber || 0));
+  const races = sorted.length > RACES_PER_TOURNAMENT ? sorted.slice(-RACES_PER_TOURNAMENT) : sorted;
   return {
     ...t,
     totalRaces: RACES_PER_TOURNAMENT,
-    playersJoined: t._count?.tickets || 0,
-    totalPlayers: Math.max(2000, (t._count?.tickets || 0) + 500),
-    racesCompleted: Math.min(t.currentRace || 0, RACES_PER_TOURNAMENT),
-    races: races.map(normalizeRace),
+    // Finished races, from each race's own status (never a pointer).
+    racesCompleted: races.filter((r) => ['finished', 'completed'].includes(String(r.status || '').toLowerCase())).length,
+    races: races.map((race) => ({ ...race, horses: race.horses || [] })),
   };
 }
 
 function TournamentSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-50 animate-pulse p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="bg-white border-[2.5px] border-[#7c3aed] rounded-2xl p-6 shadow-lg space-y-4">
-          <div className="h-5 w-36 bg-purple-100 rounded-lg" />
-          <div className="h-8 w-2/3 bg-purple-200/60 rounded-xl" />
-          <div className="h-4 w-48 bg-slate-200 rounded-md" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-          {[...Array(7)].map((_, i) => (
-            <div key={i} className="h-24 bg-white border-2 border-purple-200 rounded-xl" />
-          ))}
-        </div>
+    <div className="ui-container ui-page" aria-busy="true">
+      <div className="ui-skel" style={{ height: 320, borderRadius: 'var(--my50-r-xl)' }} />
+      <div className="ui-grid--3" style={{ marginTop: 24 }}>
+        {[0, 1, 2].map((i) => <div key={i} className="ui-skel" style={{ height: 150 }} />)}
       </div>
+      <div className="ui-skel" style={{ height: 88, marginTop: 24 }} />
     </div>
   );
 }
 
-export default function TournamentClient({ tournamentSlugParam = null, onClose = null }) {
+export default function TournamentClient({ tournamentSlugParam = null }) {
   const params = useParams();
   const searchParams = useSearchParams();
   const tournamentSlug = tournamentSlugParam || params?.id;
-  const { token, isAuthenticated, ensureGuestSession, loading: authLoading, user } = useAuth();
+  const { token, ensureGuestSession, loading: authLoading, user } = useAuth();
   const { language } = useLanguage();
   const isEn = language === 'en';
   const fromQuery = searchParams.get('modality');
-  const modalityId = isValidModalityId(fromQuery)
-    ? fromQuery
-    : readPersistedModality() || 'free';
+  const modalityId = isValidModalityId(fromQuery) ? fromQuery : readPersistedModality() || 'free';
   const returnPath = searchParams.get('return');
   const trackFromQuery = searchParams.get('track');
   const ticketFromQuery = Number.parseInt(searchParams.get('ticket') || '', 10);
@@ -113,1185 +90,613 @@ export default function TournamentClient({ tournamentSlugParam = null, onClose =
   const [tournamentRaw, setTournamentRaw] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [submittedTickets, setSubmittedTickets] = useState({});
-  const [submitting, setSubmitting] = useState(false);
-
-  const [expandedRace, setExpandedRace] = useState(null);
-  const [activeStrategy, setActiveStrategy] = useState('full');
-  const [picks, setPicks] = useState({});
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [confirmedRace, setConfirmedRace] = useState(null);
-  const [activeTicketNumber, setActiveTicketNumber] = useState(
-    ticketFromQuery >= 1 && ticketFromQuery <= 3 ? ticketFromQuery : 1,
-  );
-  const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  // Server-persisted rows per `${raceId}-${ticket}` → { strategy (local id), picks }.
+  const [serverRows, setServerRows] = useState({});
   const [unlocks, setUnlocks] = useState({ 2: false, 3: false });
+  const [confirmed, setConfirmed] = useState({});
+  const [backendTickets, setBackendTickets] = useState({});
+  const [drafts, setDrafts] = useState({});
+  const [activeTicket, setActiveTicket] = useState(ticketFromQuery >= 1 && ticketFromQuery <= 3 ? ticketFromQuery : 1);
+  const [activeRaceId, setActiveRaceId] = useState(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [confirming, setConfirming] = useState({});
+  const [confirmError, setConfirmError] = useState({});
+  const [authGate, setAuthGate] = useState(false);
   const [unlockModalFor, setUnlockModalFor] = useState(null);
-  const [aggregateStatus, setAggregateStatus] = useState({});
-  const [aggregateLocking, setAggregateLocking] = useState({});
-  const [ticketMarkedComplete, setTicketMarkedComplete] = useState(false);
-  const [showDividendsModal, setShowDividendsModal] = useState(false);
+  const [showDividends, setShowDividends] = useState(false);
   const [leaderboardRows, setLeaderboardRows] = useState([]);
-  const [gameAlert, setGameAlert] = useState({
-    show: false,
-    title: "",
-    message: "",
-    type: "error", // "error" | "warning" | "success"
-  });
-
-  const showGameAlert = useCallback((rawMessage, type = 'error') => {
-    let title = '⚠️ AVISO DEL JUEGO';
-    let message = rawMessage;
-
-    const lowerMsg = typeof rawMessage === 'string' ? rawMessage.toLowerCase() : '';
-
-    if (
-      lowerMsg.includes('no longer accepting picks') ||
-      lowerMsg.includes('carrera ya no acepta') ||
-      lowerMsg.includes('cerrada') ||
-      lowerMsg.includes('closed')
-    ) {
-      title = '🔒 CARRERA CERRADA';
-      message = '¡Esta carrera ya comenzó y está cerrada! No se aceptan más selecciones para esta carrera. Completa las otras carreras abiertas.';
-    } else if (lowerMsg.includes('submiterror') || lowerMsg.includes('error al enviar')) {
-      title = '❌ ERROR DE ENVÍO';
-      message = 'No se pudo registrar tu selección. Por favor, verifica tu conexión y vuelve a intentarlo.';
-    }
-
-    setGameAlert({
-      show: true,
-      title,
-      message,
-      type,
-    });
-  }, []);
-
-  const renderGameAlertModal = useCallback(() => {
-    if (!gameAlert.show) return null;
-    return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={{ type: "spring", duration: 0.4 }}
-          className={`relative w-full max-w-md overflow-hidden rounded-2xl border bg-slate-900 p-6 text-center shadow-2xl ${
-            gameAlert.type === "error"
-              ? "border-red-500/50 shadow-red-500/10"
-              : gameAlert.type === "success"
-              ? "border-emerald-500/50 shadow-emerald-500/10"
-              : "border-amber-500/50 shadow-amber-500/10"
-          }`}
-        >
-          {/* Top ambient color glow */}
-          <div
-            className={`absolute top-0 left-0 right-0 h-1.5 ${
-              gameAlert.type === "error"
-                ? "bg-gradient-to-r from-red-500 via-rose-500 to-red-600"
-                : gameAlert.type === "success"
-                ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500"
-                : "bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500"
-            }`}
-          />
-
-          {/* Icon Container */}
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-950 border border-slate-800">
-            {gameAlert.type === "error" ? (
-              <span className="text-3xl">🚫</span>
-            ) : gameAlert.type === "success" ? (
-              <span className="text-3xl">🏆</span>
-            ) : (
-              <span className="text-3xl">🏇</span>
-            )}
-          </div>
-
-          {/* Title */}
-          <h3 className={`text-xl font-black uppercase tracking-wider mb-2 ${
-            gameAlert.type === "error"
-              ? "text-red-400"
-              : gameAlert.type === "success"
-              ? "text-emerald-400"
-              : "text-amber-400"
-          }`}>
-            {gameAlert.title}
-          </h3>
-
-          {/* Message */}
-          <p className="text-slate-300 text-sm leading-relaxed mb-6 font-medium">
-            {gameAlert.message}
-          </p>
-
-          {/* Action Button */}
-          <button
-            type="button"
-            onClick={() => setGameAlert(prev => ({ ...prev, show: false }))}
-            className={`w-full py-3 px-6 rounded-xl font-extrabold uppercase tracking-widest text-xs transition-all duration-300 transform active:scale-95 shadow-md ${
-              gameAlert.type === "error"
-                ? "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-white shadow-red-500/20"
-                : gameAlert.type === "success"
-                ? "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/20"
-                : "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-orange-500/20"
-            }`}
-          >
-            Entendido
-          </button>
-        </motion.div>
-      </div>
-    );
-  }, [gameAlert.show, gameAlert.title, gameAlert.message, gameAlert.type]);
+  const [now, setNow] = useState(() => Date.now());
+  const aggregateInFlight = useRef({});
+  const mountedRef = useRef(true);
+  const workspaceRef = useRef(null);
 
   useEffect(() => {
-    if (ticketFromQuery >= 1 && ticketFromQuery <= 3) {
-      setActiveTicketNumber(ticketFromQuery);
-    }
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // Re-evaluate the entry window every 30 s (no network).
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (ticketFromQuery >= 1 && ticketFromQuery <= 3) setActiveTicket(ticketFromQuery);
   }, [ticketFromQuery]);
 
+  // Resume a stored guest session only (ensureGuestSession never creates one).
   useEffect(() => {
     if (authLoading || token) return;
     if (modalityId !== 'guest' && modalityId !== 'free') return;
     ensureGuestSession().catch(() => {});
   }, [authLoading, token, modalityId, ensureGuestSession]);
 
+  // Read-only detail load: no ?refresh=1 (that triggered a server re-scrape).
   useEffect(() => {
-    const slug = tournamentSlug;
-    if (!slug) return;
-
+    if (!tournamentSlug) return;
+    let live = true;
     setLoading(true);
-    fetchTournamentDetail(slug, { refresh: true })
-      .then((data) => {
-        setTournamentRaw(data.tournament);
-      })
-      .catch((err) => {
-        setError(err.message);
-      })
-      .finally(() => setLoading(false));
+    fetchTournamentDetail(tournamentSlug, { refresh: false })
+      .then((data) => { if (live) setTournamentRaw(data.tournament); })
+      .catch((err) => { if (live) setError(err?.message || 'error'); })
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
   }, [tournamentSlug]);
 
-  useEffect(() => {
-    if (!token || !tournamentRaw) return;
+  const tournament = useMemo(() => (tournamentRaw ? normalizeTournament(tournamentRaw) : null), [tournamentRaw]);
+  const races = useMemo(() => tournament?.races || [], [tournament]);
+  const phase = useMemo(() => getTournamentPhase(tournament), [tournament]);
+  const visibility = useMemo(() => getPhaseVisibility(phase), [phase]);
+  const status = useMemo(() => (tournament ? displayStatus(tournament) : null), [tournament]);
+  const firstPost = useMemo(() => firstPostTime(tournament), [tournament]);
+  // Entries close at the first post of race 1 (the backend enforces the same).
+  const entriesOpen = Boolean(
+    tournament &&
+      (phase === PHASE.UPCOMING || phase === PHASE.OPEN) &&
+      ['upcoming', 'open'].includes(String(races[0]?.status || 'upcoming').toLowerCase()) &&
+      (!firstPost || now < firstPost.getTime()),
+  );
+  const finished = phase === PHASE.COMPLETED || phase === PHASE.ARCHIVED;
+  const identityId = user?.id != null ? `u${user.id}` : null;
+  const isGuestUser = Boolean(user?.isGuest);
 
+  // Server state: persisted rows + entitlement + confirmed tickets (read-only GETs).
+  const loadServerState = useCallback(() => {
+    if (!token || !tournamentRaw?.id) return;
     fetchAuthJson(`/tickets?tournamentId=${tournamentRaw.id}`)
       .then((data) => {
-        if (!data?.tickets) return;
-        const ticketMap = {};
-        for (const t of data.tickets) {
-          // A persisted row means the race was submitted: mark it so the
-          // carousel/sheet show USADO (not EN PROCESO) right after refresh.
-          ticketMap[`${t.raceId}-${t.ticketNumber}`] = {
-            ...t,
-            isSubmitted: true,
-            picksCount: Array.isArray(t.picks) ? t.picks.length : 0,
+        const map = {};
+        for (const t of data?.tickets || []) {
+          let picks = t.picks;
+          if (typeof picks === 'string') {
+            try { picks = JSON.parse(picks); } catch { picks = []; }
+          }
+          map[`${t.raceId}-${t.ticketNumber}`] = {
+            strategy: FROM_API[t.strategy] || null,
+            picks: Array.isArray(picks) ? picks : [],
+            pointsEarned: t.pointsEarned,
+            isScored: t.isScored,
           };
         }
-        setSubmittedTickets(ticketMap);
+        if (mountedRef.current) setServerRows(map);
       })
       .catch(() => {});
-
-    // M2/M4 ad entitlements + confirmed (aggregate-locked) state.
     fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw.id}`)
       .then((data) => {
-        if (!data) return;
+        if (!data || !mountedRef.current) return;
         setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
         if (data.confirmed) {
-          setAggregateStatus((p) => {
+          setConfirmed((p) => {
             const next = { ...p };
-            for (const [num, on] of Object.entries(data.confirmed)) {
-              if (on) next[num] = 'locked';
-            }
+            for (const [n, on] of Object.entries(data.confirmed)) if (on) next[n] = true;
             return next;
           });
         }
       })
       .catch(() => {});
-  }, [token, tournamentRaw]);
+  }, [token, tournamentRaw?.id]);
 
-  const reloadUnlocks = useCallback(() => {
-    if (!token || !tournamentRaw) return;
-    fetchAuthJson(`/tickets/unlocks?tournamentId=${tournamentRaw.id}`)
-      .then((data) => {
-        if (!data) return;
-        setUnlocks({ 2: Boolean(data.ticket2), 3: Boolean(data.ticket3) });
-      })
-      .catch(() => {});
-  }, [token, tournamentRaw]);
+  useEffect(() => { loadServerState(); }, [loadServerState]);
 
-  const isGuestUser = Boolean(user?.isGuest);
-  // Ticket 1 free for everyone; Tickets 2 & 3 need their own ad unlock each
-  // (M2 and M4 guests alike — enforced server-side too).
-  const isTicketLocked = useCallback((ticketNum) => {
-    if (ticketNum <= 1) return false;
-    return !unlocks[ticketNum];
-  }, [unlocks]);
-
-  const tournament = useMemo(() => {
-    if (!tournamentRaw) return null;
-    return normalizeTournament(tournamentRaw);
-  }, [tournamentRaw]);
-
+  // Load the local drafts for this identity + tournament. If a ticket has no
+  // local draft but the server still holds unconfirmed per-race rows (older
+  // flow), those seed the draft so nothing the player chose is lost.
   useEffect(() => {
-    if (!playFirst || !tournament?.races?.length) return;
-    const first =
-      tournament.races.find((r) => r.number === 1 || r.raceNumber === 1) || tournament.races[0];
-    if (first?.id) {
-      setExpandedRace(first.id);
-      setActiveStrategy('full');
-      setPicks({});
-    }
-  }, [playFirst, tournament]);
-
-  const nextRace = useMemo(() => {
-    if (!tournament) return null;
-    return tournament.races.find((r) => r.status === 'upcoming' || r.status === 'live' || r.status === 'open') || tournament.races[tournament.races.length - 1];
-  }, [tournament]);
-
-  useEffect(() => {
-    if (!nextRace || !nextRace.scheduledTime || nextRace.scheduledTime === 'TBD') {
-      setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    if (!identityId || !tournamentRaw?.id || !races.length) {
+      setDrafts({});
       return;
     }
-
-    const targetTime = new Date(nextRace.scheduledTime);
-    if (isNaN(targetTime.getTime())) {
-      setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      return;
-    }
-
-    const tick = () => {
-      const now = new Date();
-      const diff = Math.max(0, targetTime - now);
-      setCountdown({
-        days: Math.floor(diff / (24 * 3600000)),
-        hours: Math.floor((diff % (24 * 3600000)) / 3600000),
-        minutes: Math.floor((diff % 3600000) / 60000),
-        seconds: Math.floor((diff % 60000) / 1000)
-      });
-    };
-
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, [nextRace]);
-
-  const currentRacePicks = expandedRace ? (picks[expandedRace] || []) : [];
-  const currentRace = tournament?.races.find((r) => r.id === expandedRace);
-  const strategy = strategies.find((s) => s.id === activeStrategy);
-  const totalPointsRemaining = 50 - (strategy?.allocation?.slice(0, currentRacePicks.length).reduce((s, v) => s + v, 0) || 0);
-  const isPicksComplete = currentRacePicks.length === (strategy?.maxPicks || 1);
-
-  const handlePickHorse = useCallback((horseId) => {
-    if (!expandedRace) return;
-    setPicks((prev) => {
-      const racePicks = prev[expandedRace] || [];
-      if (racePicks.includes(horseId)) {
-        return { ...prev, [expandedRace]: racePicks.filter((id) => id !== horseId) };
+    const next = {};
+    for (const n of TICKETS) {
+      const key = draftKey(identityId, tournamentRaw.id, n);
+      let d = loadDraft(key, races);
+      if (!hasDraftContent(d) && !confirmed[n]) {
+        const seeded = emptyDraft();
+        for (const race of races) {
+          const row = serverRows[`${race.id}-${n}`];
+          if (row?.strategy && row.picks.length) {
+            seeded.races[race.id] = { strategy: row.strategy, picks: row.picks, saved: isRaceComplete(row) };
+          }
+        }
+        if (hasDraftContent(seeded)) d = seeded;
       }
-      const maxPicks = strategies.find((s) => s.id === activeStrategy)?.maxPicks || 1;
-      if (racePicks.length >= maxPicks) return prev;
-      return { ...prev, [expandedRace]: [...racePicks, horseId] };
+      next[n] = d;
+    }
+    setDrafts(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identityId, tournamentRaw?.id, races.length, serverRows]);
+
+  const draft = drafts[activeTicket] || emptyDraft();
+  const isConfirmed = Boolean(confirmed[activeTicket]);
+
+  const updateDraft = useCallback((ticketNum, mutate) => {
+    setDrafts((prev) => {
+      const current = prev[ticketNum] || emptyDraft();
+      const updated = {
+        ...current,
+        meta: { slug: tournamentRaw?.slug, name: tournamentRaw?.name, date: tournamentRaw?.date },
+        races: { ...current.races },
+      };
+      mutate(updated.races);
+      saveDraft(draftKey(identityId, tournamentRaw?.id, ticketNum), updated);
+      return { ...prev, [ticketNum]: updated };
     });
-  }, [expandedRace, activeStrategy]);
+  }, [identityId, tournamentRaw?.id, tournamentRaw?.slug, tournamentRaw?.name, tournamentRaw?.date]);
 
-  const handleStrategyChange = useCallback((strategyId) => {
-    setActiveStrategy(strategyId);
-    if (expandedRace) {
-      setPicks((prev) => ({ ...prev, [expandedRace]: [] }));
+  // Selection shown for a race of the active ticket: server rows once the
+  // ticket is confirmed, otherwise the local draft.
+  const selectionForRace = useCallback((raceId) => {
+    if (isConfirmed) return serverRows[`${raceId}-${activeTicket}`] || null;
+    return draft.races[raceId] || null;
+  }, [isConfirmed, serverRows, activeTicket, draft]);
+
+  const savedCount = useMemo(() => races.filter((r) => draft.races[r.id]?.saved).length, [races, draft]);
+  const allSaved = races.length === RACES_PER_TOURNAMENT && savedCount === RACES_PER_TOURNAMENT;
+
+  const isTicketLocked = useCallback((n) => n > 1 && !unlocks[n] && !confirmed[n], [unlocks, confirmed]);
+
+  const ticketStubs = TICKETS.map((n) => {
+    const d = drafts[n] || emptyDraft();
+    const saved = races.filter((r) => d.races[r.id]?.saved).length;
+    let state = 'available';
+    if (confirmed[n]) state = 'confirmed';
+    else if (isTicketLocked(n)) state = 'locked';
+    else if (hasDraftContent(d)) state = 'progress';
+    return { n, state, saved };
+  });
+
+  const raceState = useCallback((race) => {
+    const st = String(race.status || '').toLowerCase();
+    if (isConfirmed) {
+      const row = serverRows[`${race.id}-${activeTicket}`];
+      if (['finished', 'completed'].includes(st)) return { state: 'result', strategy: row?.strategy };
+      return { state: 'confirmed', strategy: row?.strategy };
     }
-  }, [expandedRace]);
+    if (['finished', 'completed'].includes(st)) return { state: 'result' };
+    if (st === 'live' || st === 'running') return { state: 'running' };
+    if (!entriesOpen) return { state: 'closed' };
+    const entry = draft.races[race.id];
+    if (entry?.saved) return { state: 'saved', strategy: entry.strategy };
+    if (entry?.picks?.length) return { state: 'draft', strategy: entry.strategy };
+    return { state: 'empty' };
+  }, [isConfirmed, serverRows, activeTicket, entriesOpen, draft]);
 
-  const handleConfirm = useCallback(async () => {
-    if (!expandedRace || submitting) return;
+  const firstOpenRaceIndex = useMemo(() => {
+    const idx = races.findIndex((r) => !draft.races[r.id]?.saved);
+    return idx === -1 ? 0 : idx;
+  }, [races, draft]);
 
-    const racePicks = picks[expandedRace] || [];
-    if (racePicks.length === 0) return;
+  const scrollTo = (selector) => {
+    requestAnimationFrame(() => {
+      document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
-    if (!isAuthenticated) {
-      try {
-        await ensureGuestSession();
-      } catch {
-        showGameAlert('Error al enviar el ticket');
-        return;
-      }
-    }
-
-    setSubmitting(true);
-    try {
-      const apiStrategy = STRATEGY_MAP[activeStrategy];
-      const data = await fetchAuthJson('/tickets', {
-        method: 'POST',
-        body: JSON.stringify({
-          raceId: expandedRace,
-          tournamentId: tournamentRaw?.id,
-          raceNumber: currentRace?.raceNumber ?? currentRace?.number,
-          strategy: apiStrategy,
-          picks: racePicks,
-          ticketNumber: activeTicketNumber,
-        }),
-      });
-
-      setConfirmedRace(expandedRace);
-      setSubmittedTickets((prev) => ({
-        ...prev,
-        [`${expandedRace}-${activeTicketNumber}`]: {
-          ...data.ticket,
-          raceId: expandedRace,
-          ticketNumber: activeTicketNumber,
-        },
-      }));
-      setShowConfirmation(true);
-    } catch (err) {
-      const msg = err?.data?.detail || err?.message || 'Error al enviar el ticket';
-      showGameAlert(typeof msg === 'string' ? msg : 'Error al enviar el ticket');
-      if (err?.status === 404 && tournamentRaw?.slug) {
-        fetchTournamentDetail(tournamentRaw.slug, { refresh: false })
-          .then((data) => setTournamentRaw(data.tournament))
-          .catch(() => {});
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }, [
-    expandedRace,
-    activeStrategy,
-    picks,
-    isAuthenticated,
-    ensureGuestSession,
-    submitting,
-    activeTicketNumber,
-    tournamentRaw,
-    currentRace,
-    showGameAlert,
-  ]);
-
-  const handleCloseConfirmation = useCallback(() => {
-    setShowConfirmation(false);
-    setConfirmedRace(null);
-    setExpandedRace(null);
+  const openRace = useCallback((raceId, { scroll = true } = {}) => {
+    setReviewOpen(false);
+    setActiveRaceId(raceId);
+    if (scroll) scrollTo('#trn-workspace');
   }, []);
 
-  const ticketKey = useCallback(
-    (raceId, ticketNum = activeTicketNumber) => `${raceId}-${ticketNum}`,
-    [activeTicketNumber]
-  );
+  // Anonymous visitors get the auth gate, never a raw "Unauthorized".
+  const requireIdentity = () => {
+    if (token) return true;
+    setAuthGate(true);
+    return false;
+  };
 
-  const submittedForRace = useCallback(
-    (raceId, ticketNum = activeTicketNumber) => submittedTickets[ticketKey(raceId, ticketNum)],
-    [submittedTickets, ticketKey, activeTicketNumber]
-  );
-
-  const confirmedStrategyForRace = useCallback(
-    (raceId) => {
-      const sub = submittedForRace(raceId);
-      return sub ? STRATEGY_REVERSE[sub.strategy] || 'full' : null;
-    },
-    [submittedForRace]
-  );
-
-  const isRaceConfirmed = useCallback(
-    (raceId) => !!submittedForRace(raceId),
-    [submittedForRace]
-  );
-
-  const handleEditRace = useCallback(
-    async (raceId) => {
-      if (!tournamentRaw?.id || submitting) return;
-
-      setSubmitting(true);
-      try {
-        if (!isAuthenticated) {
-          await ensureGuestSession();
-        }
-
-        await fetchAuthJson(
-          `/tickets?tournamentId=${tournamentRaw.id}&ticketNumber=${activeTicketNumber}&raceId=${raceId}`,
-          { method: 'DELETE' }
-        );
-
-        const sub = submittedForRace(raceId);
-        if (sub) {
-          setActiveStrategy(STRATEGY_REVERSE[sub.strategy] || 'full');
-          setPicks((prev) => ({ ...prev, [raceId]: sub.picks || [] }));
-        }
-
-        setSubmittedTickets((prev) => {
-          const next = { ...prev };
-          delete next[`${raceId}-${activeTicketNumber}`];
-          return next;
-        });
-
-        setExpandedRace(raceId);
-        window.dispatchEvent(new Event("50points-tickets-updated"));
-      } catch (err) {
-        showGameAlert(err?.message || 'Error al eliminar el pick');
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [
-      tournamentRaw,
-      activeTicketNumber,
-      isAuthenticated,
-      ensureGuestSession,
-      submittedForRace,
-      submitting,
-      showGameAlert,
-    ]
-  );
-
-  const handleSelectTicket = useCallback((ticketNum) => {
-    if (ticketNum > 1 && isTicketLocked(ticketNum)) {
-      setUnlockModalFor(ticketNum);
+  const startOrContinue = () => {
+    if (!requireIdentity() || !races.length) return;
+    if (allSaved) {
+      setReviewOpen(true);
+      setActiveRaceId(null);
+      scrollTo('#ticket-review');
       return;
     }
-    setActiveTicketNumber(ticketNum);
-    setExpandedRace(null);
-    setPicks({});
-    setActiveStrategy('full');
-  }, [isTicketLocked]);
-
-  const confirmedCount = useMemo(() => {
-    if (!tournament) return 0;
-    return tournament.races.filter((r) => submittedForRace(r.id)).length;
-  }, [tournament, submittedForRace]);
-
-  // Race summary must reflect what the BACKEND persisted for the active
-  // ticket, not just the in-memory editing buffer — otherwise a confirmed
-  // 7/7 ticket rendered "SIN PICKS / Vacío" after a refresh.
-  const effectivePicks = useMemo(() => {
-    const merged = {};
-    for (const race of tournament?.races || []) {
-      const sub = submittedForRace(race.id);
-      if (sub && Array.isArray(sub.picks) && sub.picks.length > 0) {
-        merged[race.id] = sub.picks;
-      }
-    }
-    for (const [raceId, arr] of Object.entries(picks || {})) {
-      if (Array.isArray(arr) && arr.length > 0) merged[raceId] = arr;
-    }
-    return merged;
-  }, [tournament, submittedForRace, picks]);
-
-  // P0-2: when all 7 races are confirmed for the active ticket, persist the
-  // complete ticket via /aggregate (TournamentTicket root). One attempt per
-  // ticket per data state; manual retry button below on failure. Refresh-safe
-  // because submittedTickets reload from the backend on mount.
-  const aggregateTried = useRef({});
-  const [aggregateRetryTick, setAggregateRetryTick] = useState(0);
-  useEffect(() => {
-    if (!tournament || !token || !tournamentRaw?.id) return;
-    if (confirmedCount < (tournament.totalRaces || 7)) return;
-    if (aggregateStatus[activeTicketNumber] === 'locked') return;
-    // Never re-submit once the tournament is closed: the persisted state
-    // above already shows the locked ticket, no raw 400s.
-    const submittable = ['upcoming', 'live', 'open'].includes(tournament.status);
-    if (!submittable) return;
-    const triedKey = `${activeTicketNumber}:${confirmedCount}:${aggregateRetryTick}`;
-    if (aggregateTried.current[triedKey]) return;
-    aggregateTried.current[triedKey] = true;
-    let live = true;
-    (async () => {
-      setAggregateLocking((p) => ({ ...p, [activeTicketNumber]: true }));
-      try {
-        const selections = tournament.races.map((r, idx) => {
-          const sub = submittedForRace(r.id);
-          return {
-            raceId: r.id,
-            raceOrder: idx + 1,
-            strategy: sub.strategy,
-            picks: sub.picks,
-          };
-        });
-        await fetchAuthJson('/tickets/aggregate', {
-          method: 'POST',
-          body: JSON.stringify({
-            tournamentId: tournamentRaw.id,
-            ticketNumber: activeTicketNumber,
-            selections,
-          }),
-        });
-        if (live) {
-          setAggregateStatus((p) => ({ ...p, [activeTicketNumber]: 'locked' }));
-          setAggregateLocking((p) => ({ ...p, [activeTicketNumber]: false }));
-        }
-      } catch (err) {
-        if (live) {
-          const msg = err?.data?.detail || err?.message || 'No se pudo bloquear el ticket';
-          setAggregateStatus((p) => ({ ...p, [activeTicketNumber]: `error:${typeof msg === 'string' ? msg : 'Error'}` }));
-          setAggregateLocking((p) => ({ ...p, [activeTicketNumber]: false }));
-        }
-      }
-    })();
-    return () => { live = false; };
-  }, [confirmedCount, tournament, token, tournamentRaw, activeTicketNumber, submittedForRace, aggregateStatus, aggregateRetryTick]);
-
-  const pendingCount = useMemo(() => {
-    if (!tournament) return 0;
-    return tournament.races.length - confirmedCount;
-  }, [tournament, confirmedCount]);
-
-  const allRacesPlayed =
-    tournament &&
-    confirmedCount >= tournament.totalRaces;
-
-  const ticketIsFullyComplete = confirmedCount >= (tournament?.totalRaces || 7);
+    openRace(races[firstOpenRaceIndex].id);
+  };
 
   useEffect(() => {
-    if (!allRacesPlayed || ticketMarkedComplete || !trackFromQuery) return;
-    markTrackTicketUsed(trackFromQuery, ticketFromQuery, tournament?.slug);
-    setTicketMarkedComplete(true);
-  }, [
-    allRacesPlayed,
-    ticketMarkedComplete,
-    trackFromQuery,
-    ticketFromQuery,
-    tournament?.slug,
-  ]);
+    if (playFirst && token && entriesOpen && races.length && !isConfirmed && !activeRaceId) {
+      setActiveRaceId(races[firstOpenRaceIndex].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playFirst, token, entriesOpen, races.length, isConfirmed]);
 
-  // Presentation phase derived from the authoritative backend status. Used to
-  // stop mutually exclusive sections rendering at the same time; it does not
-  // gate any request and does not change any rule.
-  const phase = useMemo(() => getTournamentPhase(tournament), [tournament]);
-  const visibility = useMemo(() => getPhaseVisibility(phase), [phase]);
+  const handleSelectTicket = (n) => {
+    if (isTicketLocked(n)) {
+      if (requireIdentity()) setUnlockModalFor(n);
+      return;
+    }
+    setActiveTicket(n);
+    setActiveRaceId(null);
+    setReviewOpen(false);
+  };
+
+  const activeRace = races.find((r) => r.id === activeRaceId) || null;
+  const activeIndex = activeRace ? races.indexOf(activeRace) : -1;
+  const activeEntry = activeRace ? draft.races[activeRace.id] : null;
+  const activeStrategy = activeEntry?.strategy || 'full';
+
+  const handleStrategyChange = (strategyId) => {
+    if (!activeRace) return;
+    updateDraft(activeTicket, (r) => {
+      const prev = r[activeRace.id];
+      if (prev?.strategy === strategyId) return;
+      r[activeRace.id] = { strategy: strategyId, picks: [], saved: false };
+    });
+  };
+
+  const handlePickHorse = (horseId) => {
+    if (!activeRace) return;
+    updateDraft(activeTicket, (r) => {
+      const prev = r[activeRace.id] || { strategy: activeStrategy, picks: [], saved: false };
+      const picks = prev.picks.includes(horseId)
+        ? prev.picks.filter((id) => id !== horseId)
+        : prev.picks.length < requiredPicks(prev.strategy) ? [...prev.picks, horseId] : prev.picks;
+      r[activeRace.id] = { ...prev, picks, saved: false };
+    });
+  };
+
+  const goToIndex = (idx) => {
+    if (idx < 0 || idx >= races.length) return;
+    openRace(races[idx].id, { scroll: false });
+  };
+
+  const handleSaveRace = () => {
+    if (!activeRace || !isRaceComplete(activeEntry)) return;
+    updateDraft(activeTicket, (r) => { r[activeRace.id] = { ...r[activeRace.id], saved: true }; });
+    const remaining = races.filter((r) => r.id !== activeRace.id && !draft.races[r.id]?.saved);
+    if (remaining.length === 0) {
+      setActiveRaceId(null);
+      setReviewOpen(true);
+      scrollTo('#ticket-review');
+      return;
+    }
+    const after = races.slice(activeIndex + 1).find((r) => !draft.races[r.id]?.saved) || remaining[0];
+    openRace(after.id, { scroll: false });
+    scrollTo('#trn-progress');
+  };
+
+  const handleNext = () => {
+    if (activeIndex === races.length - 1 || allSaved) {
+      if (allSaved) {
+        setActiveRaceId(null);
+        setReviewOpen(true);
+        scrollTo('#ticket-review');
+      } else goToIndex(firstOpenRaceIndex);
+      return;
+    }
+    goToIndex(activeIndex + 1);
+  };
+
+  // THE commit point. One POST /tickets/aggregate per ticket, guarded.
+  const submitAggregate = useCallback(async () => {
+    const n = activeTicket;
+    if (!token || !tournamentRaw?.id || !entriesOpen || confirmed[n] || !allSaved) return;
+    if (aggregateInFlight.current[n]) return;
+    aggregateInFlight.current[n] = true;
+    setConfirming((p) => ({ ...p, [n]: true }));
+    setConfirmError((p) => ({ ...p, [n]: null }));
+    const selections = races.map((race, idx) => {
+      const entry = draft.races[race.id];
+      return { raceId: race.id, raceOrder: idx + 1, strategy: TO_API[entry.strategy], picks: entry.picks };
+    });
+    try {
+      const res = await fetchAuthJson('/tickets/aggregate', {
+        method: 'POST',
+        body: JSON.stringify({ tournamentId: tournamentRaw.id, ticketNumber: n, selections }),
+      });
+      if (!mountedRef.current) return;
+      if (res?.tournamentTicket) setBackendTickets((p) => ({ ...p, [n]: res.tournamentTicket }));
+      setServerRows((prev) => {
+        const next = { ...prev };
+        for (const s of res?.tournamentTicket?.selections || selections) {
+          next[`${s.raceId}-${n}`] = { strategy: FROM_API[s.strategy] || null, picks: s.picks };
+        }
+        return next;
+      });
+      setConfirmed((p) => ({ ...p, [n]: true }));
+      clearDraft(draftKey(identityId, tournamentRaw.id, n));
+      setReviewOpen(false);
+      if (trackFromQuery) markTrackTicketUsed(trackFromQuery, n, tournament?.slug);
+      window.dispatchEvent(new Event('50points-tickets-updated'));
+      scrollTo('.receipt');
+    } catch (err) {
+      if (!mountedRef.current) return;
+      if (err?.status === 401) {
+        setAuthGate(true);
+      } else if (err?.status === 402) {
+        setUnlockModalFor(n);
+      }
+      const detail = err?.data?.detail;
+      setConfirmError((p) => ({
+        ...p,
+        [n]: typeof detail === 'string'
+          ? detail
+          : isEn ? 'The ticket could not be confirmed. Please try again.' : 'No se pudo confirmar el boleto. Inténtalo de nuevo.',
+      }));
+    } finally {
+      aggregateInFlight.current[n] = false;
+      if (mountedRef.current) setConfirming((p) => ({ ...p, [n]: false }));
+    }
+  }, [activeTicket, token, tournamentRaw?.id, entriesOpen, confirmed, allSaved, races, draft, identityId, trackFromQuery, tournament?.slug, isEn]);
 
   const rankingHref = withModalityQuery(
     tournament?.slug ? `/tournament/${tournament.slug}/ranking` : '/leaderboard',
     modalityId,
   );
 
-  // Real standings for the final ranking. Only fetched when the tournament has
-  // actually finished — never fabricated.
+  // No /dividends fetch for the workspace: that endpoint cannot prove a value
+  // is a frozen MY50 dividend (it falls back to Horse.odds), so the race
+  // workspace renders the "pending publication" state via publishedMy50Dividend.
+
   useEffect(() => {
-    if (!visibility.showFinalRanking || !tournament?.slug) {
+    if (!(finished || phase === PHASE.LIVE) || !tournament?.slug) {
       setLeaderboardRows([]);
       return;
     }
     let live = true;
     fetchJson(`/tournaments/${tournament.slug}/leaderboard`)
-      .then((data) => {
-        if (live) setLeaderboardRows(data?.leaderboard || []);
-      })
-      .catch(() => {
-        if (live) setLeaderboardRows([]);
-      });
+      .then((data) => { if (live) setLeaderboardRows(data?.leaderboard || []); })
+      .catch(() => { if (live) setLeaderboardRows([]); });
     return () => { live = false; };
-  }, [visibility.showFinalRanking, tournament?.slug]);
-
-  const finalRankingEntries = useMemo(() => {
-    const rows = leaderboardRows || [];
-    if (rows.length === 0) return [];
-    const leader = Number(rows[0]?.totalPoints ?? 0);
-    return rows.map((r, idx) => {
-      const points = Number(r.totalPoints ?? 0);
-      const gap = leader - points;
-      return {
-        pos: r.rank ?? idx + 1,
-        name: r.username || '—',
-        ticket: r.ticketNumber ? `T${r.ticketNumber}` : null,
-        points,
-        diff: idx === 0 || gap <= 0 ? null : `-${gap.toLocaleString()}`,
-      };
-    });
-  }, [leaderboardRows]);
-
-  const backHref = returnPath
-    ? withModalityQuery(returnPath, modalityId)
-    : withModalityQuery('/tournaments', modalityId);
-  const showFreeFlowNav = isValidModalityId(fromQuery) && modalityId !== 'free';
-
-  const toggleRace = useCallback(
-    async (raceId) => {
-      // Auto-submit previous race picks if complete
-      if (expandedRace && expandedRace !== raceId && !isRaceConfirmed(expandedRace)) {
-        const prevRacePicks = picks[expandedRace] || [];
-        const prevRace = tournament?.races.find((r) => r.id === expandedRace);
-        const prevStrategy = strategies.find((s) => s.id === activeStrategy);
-        const maxPicks = prevStrategy?.maxPicks || 1;
-
-        if (prevRacePicks.length === maxPicks) {
-          try {
-            if (!isAuthenticated) {
-              await ensureGuestSession();
-            }
-            const apiStrategy = STRATEGY_MAP[activeStrategy];
-            const data = await fetchAuthJson('/tickets', {
-              method: 'POST',
-              body: JSON.stringify({
-                raceId: expandedRace,
-                tournamentId: tournamentRaw?.id,
-                raceNumber: prevRace?.raceNumber ?? prevRace?.number,
-                strategy: apiStrategy,
-                picks: prevRacePicks,
-                ticketNumber: activeTicketNumber,
-              }),
-            });
-
-            // Update submittedTickets state immediately
-            setSubmittedTickets((prev) => ({
-              ...prev,
-              [ticketKey(expandedRace, activeTicketNumber)]: {
-                ...data.ticket,
-                raceId: expandedRace,
-                ticketNumber: activeTicketNumber,
-              },
-            }));
-            
-            // Dispatch event to sync
-            window.dispatchEvent(new Event("50points-tickets-updated"));
-          } catch (err) {
-            console.error("Auto-submit failed", err);
-          }
-        }
-      }
-
-      setExpandedRace((prev) => (prev === raceId ? null : raceId));
-    },
-    [
-      expandedRace,
-      picks,
-      tournament,
-      activeStrategy,
-      isAuthenticated,
-      ensureGuestSession,
-      tournamentRaw,
-      activeTicketNumber,
-      isRaceConfirmed,
-      ticketKey,
-    ]
-  );
-
-  const openNextRace = () => {
-    if (!nextRace) return;
-    toggleRace(nextRace.id);
-    const el = document.getElementById(`race-${nextRace.id}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
+  }, [finished, phase, tournament?.slug]);
 
   if (loading) return <TournamentSkeleton />;
 
   if (error || !tournament) {
     return (
-      <div className="min-h-screen bg-[#161b30] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🏇</div>
-          <p className="text-white/40">Torneo no encontrado</p>
-          <Link href="/tournaments" className="text-purple-light text-sm mt-2 inline-block hover:underline">
-            Volver a Torneos
-          </Link>
-        </div>
+      <div className="ui-container ui-page">
+        <StateBlock
+          title={isEn ? 'Tournament not found' : 'Torneo no encontrado'}
+          actions={<Link href={withModalityQuery('/tournaments', modalityId)} className="ui-btn ui-btn--primary">{isEn ? 'See tournaments' : 'Ver torneos'}</Link>}
+        >
+          {isEn ? 'This tournament does not exist or is no longer available.' : 'Este torneo no existe o ya no está disponible.'}
+        </StateBlock>
       </div>
     );
   }
 
+  // Hero CTA — chosen from real state; it never writes anything.
+  const nextToPlay = races[firstOpenRaceIndex];
+  let heroCta = null;
+  if (finished || phase === PHASE.LIVE || !entriesOpen) {
+    heroCta = isConfirmed
+      ? { label: isEn ? 'VIEW TICKET' : 'VER BOLETO', onClick: () => scrollTo('.receipt') }
+      : { label: isEn ? 'VIEW RANKING' : 'VER RANKING', href: rankingHref };
+  } else if (isConfirmed) {
+    heroCta = { label: isEn ? 'VIEW TICKET' : 'VER BOLETO', onClick: () => scrollTo('.receipt') };
+  } else if (token && allSaved) {
+    heroCta = { label: isEn ? 'REVIEW TICKET' : 'REVISAR BOLETO', onClick: startOrContinue };
+  } else if (token && hasDraftContent(draft) && nextToPlay) {
+    heroCta = {
+      label: isEn ? `CONTINUE RACE ${firstOpenRaceIndex + 1}` : `CONTINUAR CARRERA ${firstOpenRaceIndex + 1}`,
+      onClick: startOrContinue,
+    };
+  } else {
+    heroCta = { label: isEn ? 'CREATE TICKET' : 'CREAR BOLETO', onClick: startOrContinue };
+  }
+
+  const nextAvailableTicket = TICKETS.find((n) => n !== activeTicket && !confirmed[n] && !isTicketLocked(n));
+  const nextLockedTicket = TICKETS.find((n) => n !== activeTicket && isTicketLocked(n));
+  const backHref = returnPath ? withModalityQuery(returnPath, modalityId) : withModalityQuery('/tournaments', modalityId);
+  const showWorkspace = token && entriesOpen && !isConfirmed && activeRace && !reviewOpen;
+  const showReview = token && entriesOpen && !isConfirmed && reviewOpen && allSaved;
 
   return (
     <ModalityScope modalityId={modalityId}>
       <WorkspaceOnboardingTour modalityId={modalityId} showFloatingTrigger={false} />
-      <div className="min-h-screen tp-root">
-      <div className="app-page pt-4">
-        <StepTracker
-          currentStep={
-            // A finished tournament sits on stage 7 (Ranking y Resultados);
-            // a running one on stage 6. Display only — no state is changed.
-            visibility.showFinalRanking
-              ? 'ranking'
-              : tournament.status === 'live'
-                ? 'torneo'
-                : ticketIsFullyComplete
-                  ? 'confirmacion'
-                  : 'estrategias'
-          }
-          modalityId={modalityId}
-          rankingHref={rankingHref}
+      <div className="ui-container ui-page trn">
+        <nav className="ui-crumb" aria-label={isEn ? 'Breadcrumb' : 'Migas de pan'}>
+          <Link href={backHref}><ChevronLeft size={16} aria-hidden />{returnPath ? (isEn ? 'Back to tracks' : 'Volver a hipódromos') : isEn ? 'Tournaments' : 'Torneos'}</Link>
+        </nav>
+
+        <TournamentHero
+          tournament={tournament}
+          status={status}
+          firstPost={firstPost}
+          racesRun={tournament.racesCompleted}
+          totalRaces={RACES_PER_TOURNAMENT}
+          primaryCta={heroCta}
+          rankingHref={heroCta?.href === rankingHref ? null : rankingHref}
+          onOpenDividends={() => setShowDividends(true)}
+          onOpenGuide={() => window.dispatchEvent(new CustomEvent(OPEN_TOUR_EVENT))}
+          showCountdown={entriesOpen}
+          isEn={isEn}
         />
-      </div>
-      <div className="tp-container" style={{ paddingTop: 'var(--my50-space-5)' }}>
-        <AppPageHeader title={tournament.name} className="mb-4" />
-        <div className="flex flex-wrap items-center gap-3">
-          {onClose ? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 text-white/55 hover:text-white text-sm transition-colors bg-transparent border-0 cursor-pointer"
-            >
-              <ChevronLeft size={16} />
-              <span>Volver a hipodromos</span>
-            </button>
-          ) : (
-            <Link
-              href={backHref}
-              className="inline-flex items-center gap-1.5 text-white/55 hover:text-white text-sm transition-colors"
-            >
-              <ChevronLeft size={16} />
-              <span>{returnPath ? 'Volver a hipodromos' : 'Volver a Torneos'}</span>
-            </Link>
-          )}
-        </div>
-      </div>
 
-      <div className="tp-container" style={{ paddingTop: 'var(--my50-space-5)', paddingBottom: 'var(--my50-space-7)' }}>
-        <div className="tp-stack">
-          <TournamentHero
-            tournament={tournament}
-            phase={phase}
-            visibility={visibility}
-            countdown={countdown}
-            nextRace={nextRace}
-            totalRaces={tournament.totalRaces || 7}
-            racesCompleted={tournament.racesCompleted || 0}
-            onPrimaryAction={nextRace ? openNextRace : undefined}
-            onOpenDividends={() => setShowDividendsModal(true)}
-            onOpenGuide={() => window.dispatchEvent(new CustomEvent(OPEN_TOUR_EVENT))}
-            rankingHref={rankingHref}
-            isEn={isEn}
-          />
+        {races.length !== RACES_PER_TOURNAMENT ? (
+          <StateBlock title={isEn ? 'Race card incomplete' : 'Programa incompleto'} accent="gold">
+            {isEn
+              ? `This tournament has ${races.length} of 7 races published. Tickets open when the full card is available.`
+              : `Este torneo tiene ${races.length} de 7 carreras publicadas. Los boletos se abren cuando el programa esté completo.`}
+          </StateBlock>
+        ) : null}
 
-          <TournamentKpiStrip
-            phase={phase}
-            showProgress={visibility.showProgress}
-            showTicketKpis={visibility.showTicketKpis}
-            totalRaces={tournament.totalRaces || 7}
-            racesCompleted={tournament.racesCompleted || 0}
-            confirmedCount={confirmedCount}
-            pendingCount={pendingCount}
-            activeTicketNumber={activeTicketNumber}
-            playersJoined={tournament.playersJoined}
-            isEn={isEn}
-          />
-
-          {ticketIsFullyComplete ? (
-            <div className="rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 to-teal-950/40 px-5 py-4 backdrop-blur-sm">
-              <div className="flex items-start gap-3">
-                <span className="text-3xl mt-0.5">🏆</span>
-                <div className="flex-1">
-                  <p className="text-base font-bold text-emerald-300 mb-1">
-                    ¡Ticket {activeTicketNumber} completado!
-                  </p>
-                  <p className="text-sm text-emerald-200/70 mb-3">
-                    Registraste tus 7 selecciones. Cuando las carreras corran, el sistema calculará tus puntos automáticamente y aparecerás en el ranking.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      href="/leaderboard"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-colors"
-                    >
-                      <Trophy size={13} />
-                      Ver Ranking
-                    </Link>
-                    {activeTicketNumber < 3 && (
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTicket(activeTicketNumber + 1)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/10 transition-colors"
-                      >
-                        Llenar Ticket {activeTicketNumber + 1}
-                        <ArrowRight size={13} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : allRacesPlayed && returnPath ? (
-            <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3">
-              <p className="text-sm text-emerald-200/90 mb-2">
-                Completaste las 7 carreras con el Ticket {ticketFromQuery}. Tu ticket quedó marcado como usado.
-              </p>
-              <Link
-                href={backHref}
-                className="inline-flex items-center gap-2 text-sm font-bold text-emerald-300 hover:text-emerald-200"
-              >
-                Volver a elegir otro ticket
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          ) : null}
-
-          {visibility.showTicketWorkflow ? (
-            <>
-          {/* Aggregate lock status: complete 7-race ticket persisted via /aggregate */}
-          <div
-            className={`rounded-xl border px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold ${
-              aggregateStatus[activeTicketNumber] === 'locked'
-                ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
-                : String(aggregateStatus[activeTicketNumber] || '').startsWith('error:')
-                  ? 'border-red-500/50 bg-red-500/10 text-red-300'
-                  : 'border-white/10 bg-white/[0.03] text-white/50'
-            }`}
-            role="status"
-          >
-            <span className="uppercase tracking-widest">
-              Boleto {activeTicketNumber} · {confirmedCount}/{tournament.races.length || 7} carreras
-            </span>
-            {aggregateLocking[activeTicketNumber] && <span>Bloqueando ticket completo…</span>}
-            {aggregateStatus[activeTicketNumber] === 'locked' && <span>✓ Ticket 7 carreras bloqueado y guardado</span>}
-            {String(aggregateStatus[activeTicketNumber] || '').startsWith('error:') && (
-              <>
-                <span>{String(aggregateStatus[activeTicketNumber]).slice(6)}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAggregateStatus((p) => {
-                      const next = { ...p };
-                      delete next[activeTicketNumber];
-                      return next;
-                    });
-                    setAggregateRetryTick((t) => t + 1);
-                  }}
-                  className="underline underline-offset-2 hover:text-white cursor-pointer"
-                >
-                  Reintentar
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Figma Ticket Lifecycle Carousel (Pages 11–20, 37–44, 88–90) */}
+        {visibility.showTicketWorkflow && races.length === RACES_PER_TOURNAMENT ? (
           <TicketCarousel
-            activeTicketId={activeTicketNumber}
+            tickets={ticketStubs}
+            activeTicketId={activeTicket}
             onSelectTicket={handleSelectTicket}
-            ticketsState={submittedTickets}
-            totalRaces={tournament.races.length || 7}
-            completedCount={confirmedCount}
-            lockedTickets={{ 2: isTicketLocked(2), 3: isTicketLocked(3) }}
-            confirmedTickets={{
-              1: aggregateStatus[1] === 'locked',
-              2: aggregateStatus[2] === 'locked',
-              3: aggregateStatus[3] === 'locked',
-            }}
+            onUnlockRequest={(n) => { if (requireIdentity()) setUnlockModalFor(n); }}
             isGuest={isGuestUser}
-            modalityId={modalityId}
-            onUnlockRequest={(n) => setUnlockModalFor(n)}
+            totalRaces={RACES_PER_TOURNAMENT}
           />
-          {unlockModalFor && (
-            <TicketUnlockModal
-              ticketNumber={unlockModalFor}
-              tournamentId={tournamentRaw?.id}
-              tournamentName={tournament?.name}
-              onClose={() => setUnlockModalFor(null)}
-              onUnlocked={() => {
-                reloadUnlocks();
-                setUnlockModalFor(null);
-                setActiveTicketNumber(unlockModalFor);
-                setExpandedRace(null);
-                setPicks({});
-                setActiveStrategy('full');
-              }}
-            />
-          )}
+        ) : null}
 
-          {/* Figma 7-Race General Summary Matrix (Pages 28–36, 48–52, 76–80) */}
-          <div className="tour-step-races-bar">
-          <RaceSummaryMatrix
+        {!entriesOpen && !finished && !isConfirmed && races.length ? (
+          <p className="trn-banner" data-accent="live">
+            {phase === PHASE.LIVE ? <Radio size={17} aria-hidden /> : <Lock size={17} aria-hidden />}
+            {isEn
+              ? 'Entries closed at the first post. Follow the races and the live ranking.'
+              : 'Las jugadas cerraron en la primera salida. Sigue las carreras y el ranking en vivo.'}
+          </p>
+        ) : null}
+
+        <section className="trn-section" id="trn-progress" aria-labelledby="trn-progress-title">
+          <div className="trn-section__head">
+            <div>
+              <p className="t-eyebrow" data-accent="aqua">{visibility.showTicketWorkflow ? (isEn ? 'Step 2' : 'Paso 2') : isEn ? 'Card' : 'Programa'}</p>
+              <h2 id="trn-progress-title" className="t-section">{isEn ? 'The 7 races' : 'Las 7 carreras'}</h2>
+            </div>
+            {token && entriesOpen && !isConfirmed ? (
+              <span className="ui-chip" data-tone={allSaved ? 'confirmed' : savedCount ? 'progress' : 'available'}>
+                <ListChecks size={14} aria-hidden />{savedCount}/7 {isEn ? 'saved' : 'guardadas'}
+              </span>
+            ) : null}
+          </div>
+          <RaceProgress
+            races={races}
+            activeRaceId={showWorkspace ? activeRaceId : null}
+            raceState={raceState}
+            onSelectRace={token && entriesOpen && !isConfirmed ? (id) => openRace(id) : !token && entriesOpen ? () => setAuthGate(true) : undefined}
+            readOnly={!entriesOpen || isConfirmed}
+          />
+        </section>
+
+        {showWorkspace ? (
+          <section className="trn-section trn-workspace" id="trn-workspace" ref={workspaceRef} aria-label={isEn ? 'Race workspace' : 'Mesa de juego'}>
+            <RaceCard
+              key={activeRace.id}
+              race={activeRace}
+              index={activeIndex + 1}
+              activeStrategy={activeStrategy}
+              selectedHorses={activeEntry?.picks || []}
+              onPickHorse={handlePickHorse}
+              onStrategyChange={handleStrategyChange}
+              isEn={isEn}
+            />
+            <TicketSummary
+              index={activeIndex + 1}
+              activeStrategy={activeStrategy}
+              selectedHorses={activeEntry?.picks || []}
+              horses={activeRace.horses}
+              saved={Boolean(activeEntry?.saved)}
+              onSave={handleSaveRace}
+              onPrev={activeIndex > 0 ? () => goToIndex(activeIndex - 1) : undefined}
+              onNext={handleNext}
+              isLast={allSaved || activeIndex === races.length - 1}
+              savedCount={savedCount}
+              isEn={isEn}
+            />
+          </section>
+        ) : null}
+
+        {showReview ? (
+          <TicketReviewPanel
             tournament={tournament}
-            races={tournament.races}
-            currentRaceIndex={tournament.races.findIndex((r) => r.id === (currentRace?.id || expandedRace))}
-            onSelectRace={(idx) => {
-              const target = tournament.races[idx];
-              if (target) toggleRace(target.id);
-            }}
-            picks={effectivePicks}
-            onOpenDividends={() => setShowDividendsModal(true)}
+            races={races}
+            activeTicketNumber={activeTicket}
+            selectionForRace={selectionForRace}
+            onEditRace={(id) => openRace(id)}
+            onBack={() => openRace(races[0].id)}
+            onConfirm={submitAggregate}
+            confirming={Boolean(confirming[activeTicket])}
+            errorMessage={confirmError[activeTicket]}
+            isEn={isEn}
           />
-          </div>
+        ) : null}
 
-          {/* The ticket tabs + race badges that used to live here duplicated
-              TicketCarousel and RaceSummaryMatrix exactly. Removed from this
-              page; the space is reserved for the Pass 2 strategy + horse
-              selection interface. TournamentTicketSheet itself is untouched. */}
+        {isConfirmed ? (
+          <GeneratedTicket
+            tournament={tournament}
+            races={races}
+            selectionForRace={selectionForRace}
+            ticketNumber={activeTicket}
+            backendTicket={backendTickets[activeTicket] || null}
+            rankingHref={rankingHref}
+            onPlayAnother={
+              entriesOpen && nextAvailableTicket
+                ? () => handleSelectTicket(nextAvailableTicket)
+                : entriesOpen && nextLockedTicket
+                  ? () => handleSelectTicket(nextLockedTicket)
+                  : null
+            }
+            anotherLabel={
+              entriesOpen && !nextAvailableTicket && nextLockedTicket
+                ? isEn ? `Unlock ticket ${nextLockedTicket}` : `Desbloquear boleto ${nextLockedTicket}`
+                : null
+            }
+            isEn={isEn}
+          />
+        ) : null}
 
-          {currentRace && (
-            <motion.div
-              key={currentRace.id}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              {/* Figma Strategy Selection Slips (Pages 57–64, 75, 81–82, 100) */}
-              <FigmaStrategySlips
-                strategy={isRaceConfirmed(currentRace.id) ? (confirmedStrategyForRace(currentRace.id) || 'full') : activeStrategy}
-                onSelectStrategy={!isRaceConfirmed(currentRace.id) ? handleStrategyChange : undefined}
-                race={currentRace}
-                horses={currentRace.horses}
-                selectedHorseIds={isRaceConfirmed(currentRace.id) ? (submittedForRace(currentRace.id)?.picks || []) : (picks[currentRace.id] || [])}
-                onToggleHorse={!isRaceConfirmed(currentRace.id) ? handlePickHorse : undefined}
-                onOpenRaceModal={() => {
-                  const el = document.getElementById(`race-${currentRace.id}`);
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }}
-              />
-
-              <RaceCard
-                race={currentRace}
-                activeStrategy={isRaceConfirmed(currentRace.id) ? (confirmedStrategyForRace(currentRace.id) || 'full') : activeStrategy}
-                selectedHorses={isRaceConfirmed(currentRace.id) ? (submittedForRace(currentRace.id)?.picks || []) : (picks[currentRace.id] || [])}
-                confirmedStrategy={confirmedStrategyForRace(currentRace.id)}
-                onPickHorse={!isRaceConfirmed(currentRace.id) ? handlePickHorse : undefined}
-                onStrategyChange={!isRaceConfirmed(currentRace.id) ? handleStrategyChange : undefined}
-                isExpanded={true}
-                onToggleExpand={() => toggleRace(currentRace.id)}
-                tournamentRace={true}
-              />
-              
-              {isRaceConfirmed(currentRace.id) ? (
-                <ConfirmedRaceSummary
-                  race={currentRace}
-                  ticket={submittedForRace(currentRace.id)}
-                  onEdit={() => handleEditRace(currentRace.id)}
-                  isClosed={currentRace.status === 'completed' || currentRace.status === 'live' || currentRace.status === 'LIVE' || currentRace.status === 'COMPLETED'}
-                />
-              ) : (
-                <TicketSummary raceNumber={currentRace.number} activeStrategy={activeStrategy} selectedHorses={currentRacePicks} horses={currentRace.horses} totalPoints={totalPointsRemaining} onConfirm={handleConfirm} isComplete={isPicksComplete} />
-              )}
-            </motion.div>
-          )}
-            </>
-          ) : (
-            <RaceSummaryMatrix
-              tournament={tournament}
-              races={tournament.races}
-              currentRaceIndex={-1}
-              picks={effectivePicks}
-              onOpenDividends={() => setShowDividendsModal(true)}
-              readOnly
-            />
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <section className="tp-panel">
-              <p className="tp-eyebrow">{isEn ? 'Tournament info' : 'Info del torneo'}</p>
-              <div className="mt-4 space-y-3">
-                <InfoRow label={isEn ? 'Track' : 'Pista'} value={tournament.track} />
-                <InfoRow label={isEn ? 'Location' : 'Ubicacion'} value={tournament.location} />
-                <InfoRow
-                  label={isEn ? 'Date' : 'Fecha'}
-                  value={new Date(tournament.date).toLocaleDateString(isEn ? 'en-GB' : 'es-ES', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })}
-                />
-                <InfoRow label={isEn ? 'Races' : 'Carreras'} value={`${tournament.racesCompleted} / ${tournament.totalRaces}`} />
-              </div>
-            </section>
-
-            <section className="tp-panel">
-              <p className="tp-eyebrow">{isEn ? 'How it works' : 'Como funciona'}</p>
-              <div className="mt-4 flex flex-col gap-3" style={{ fontSize: 'var(--my50-font-body)', color: 'var(--my50-text-muted)' }}>
-                <div className="flex gap-2.5">
-                  <span className="tp-step-num">1</span>
-                  <p className="m-0">Distribuye <strong style={{ color: 'var(--my50-gold)' }}>50 puntos</strong> apostando al <strong style={{ color: 'var(--my50-success)' }}>GANADOR</strong> de cada carrera</p>
-                </div>
-                <div className="flex gap-2.5">
-                  <span className="tp-step-num">2</span>
-                  <p className="m-0">Full Point: 50 pts en 1 caballo. Dual: 25+25 en 2. Smart: 30+15+5 en 3</p>
-                </div>
-                <div className="flex gap-2.5">
-                  <span className="tp-step-num">3</span>
-                  <p className="m-0">Todas las apuestas son al ganador. Si tu caballo gana, sumas sus puntos</p>
-                </div>
-                <div className="flex gap-2.5">
-                  <span className="tp-step-num">4</span>
-                  <p className="m-0">Cada torneo tiene <strong style={{ color: 'var(--my50-gold)' }}>3 boletos</strong>: cada uno recorre las 7 carreras y suma su propio total (no se mezclan)</p>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          {/* Ranking: the final podium belongs to a finished tournament only.
-              Everywhere else the page keeps a compact entry point so access to
-              the full ranking is never removed. */}
-          {visibility.showFinalRanking ? (
-            <FigmaFinalRanking
-              entries={finalRankingEntries}
-              tournamentName={tournament.name}
-              tournamentDate={tournament.date}
-              fullRankingHref={rankingHref}
-              previewLimit={10}
-              showSearch={false}
-            />
-          ) : (
-            <div className="tp-ranking-teaser">
+        {(finished || phase === PHASE.LIVE) ? (
+          <section className="trn-section trn-standings" aria-labelledby="trn-standings-title">
+            <div className="trn-section__head">
               <div>
-                <p className="tp-eyebrow">MY 50 POINTS</p>
-                <h2 className="tp-section-title">
-                  {visibility.showLiveRanking
-                    ? (isEn ? 'Live ranking' : 'Ranking en vivo')
-                    : (isEn ? 'Tournament ranking' : 'Ranking del torneo')}
-                </h2>
-                <p style={{ margin: '6px 0 0', color: 'var(--my50-text-muted)' }}>
-                  {visibility.showLiveRanking
-                    ? (isEn
-                      ? 'Standings update while the tournament races are running.'
-                      : 'Las posiciones se actualizan mientras corren las carreras.')
-                    : (isEn
-                      ? 'Standings are published once the tournament starts.'
-                      : 'Las posiciones se publican cuando comienza el torneo.')}
-                </p>
+                <p className="t-eyebrow" data-accent="gold">{finished ? (isEn ? 'Final' : 'Final') : isEn ? 'Live' : 'En vivo'}</p>
+                <h2 id="trn-standings-title" className="t-section">{isEn ? 'Tournament ranking' : 'Ranking del torneo'}</h2>
               </div>
-              <Link href={rankingHref} className="tp-btn tp-btn--ghost">
-                {isEn ? 'Open full ranking' : 'Ver ranking completo'}
-                <ArrowRight size={15} />
+              <Link href={rankingHref} className="ui-btn ui-btn--secondary ui-btn--sm">
+                <Trophy size={16} aria-hidden />{isEn ? 'Full ranking' : 'Ranking completo'}<ArrowRight size={16} aria-hidden />
               </Link>
             </div>
-          )}
-        </div>
+            {leaderboardRows.length ? (
+              <ol className="mini-rank">
+                {leaderboardRows.slice(0, 5).map((r, idx) => (
+                  <li key={`${r.userId || r.username}-${r.ticketNumber || idx}`} className="mini-rank__row" data-pos={r.rank ?? idx + 1}>
+                    <span className="mini-rank__pos t-data">{r.rank ?? idx + 1}</span>
+                    <span className="mini-rank__name">{r.username || '—'}{r.ticketNumber ? <span className="t-meta"> · {isEn ? 'Ticket' : 'Boleto'} {r.ticketNumber}</span> : null}</span>
+                    <span className="mini-rank__pts t-num">{Number(r.totalPoints ?? 0).toLocaleString(isEn ? 'en-GB' : 'es-ES')} pts</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="t-meta">{isEn ? 'Standings appear as results are published.' : 'Las posiciones aparecen cuando se publican los resultados.'}</p>
+            )}
+          </section>
+        ) : null}
       </div>
 
-      {confirmedRace && (
-        <TicketConfirmation
-          isOpen={showConfirmation}
-          onClose={handleCloseConfirmation}
-          raceName={currentRace?.name}
-          raceNumber={currentRace?.number}
-          activeStrategy={activeStrategy}
-          selectedHorses={picks[confirmedRace] || []}
-          horses={tournament.races.find((r) => r.id === confirmedRace)?.horses || []}
-          tournamentSlug={tournament.slug}
+      {unlockModalFor ? (
+        <TicketUnlockModal
+          ticketNumber={unlockModalFor}
+          tournamentId={tournamentRaw?.id}
+          tournamentName={tournament?.name}
+          isGuest={isGuestUser}
+          onClose={() => setUnlockModalFor(null)}
+          onUnlocked={(granted) => {
+            const n = unlockModalFor;
+            setUnlockModalFor(null);
+            // Apply exactly what the server granted (M2: 2 and 3; M4: this
+            // ticket), then re-read /tickets/unlocks as the source of truth.
+            setUnlocks((p) => {
+              const next = { ...p };
+              for (const g of Array.isArray(granted) && granted.length ? granted : [n]) next[g] = true;
+              return next;
+            });
+            loadServerState();
+            setActiveTicket(n);
+            setActiveRaceId(null);
+            setReviewOpen(false);
+          }}
         />
-      )}
-      <AnimatePresence>
-        {gameAlert.show && renderGameAlertModal()}
-      </AnimatePresence>
-
-      <DividendsTableModal
-        isOpen={showDividendsModal}
-        onClose={() => setShowDividendsModal(false)}
-        tournamentSlug={tournament?.slug}
-      />
-    </div>
+      ) : null}
+      <AuthGateDialog open={authGate} onClose={() => setAuthGate(false)} />
+      <DividendsTableModal isOpen={showDividends} onClose={() => setShowDividends(false)} tournamentSlug={tournament?.slug} races={races} tournamentName={tournament?.name} />
     </ModalityScope>
   );
 }
-
-function InfoRow({ label, value, highlight = false }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-white/30">{label}</span>
-      <span className={`text-xs font-medium ${highlight ? 'text-gold font-bold' : 'text-white/70'}`}>{value}</span>
-    </div>
-  );
-}
-
-function ConfirmedRaceSummary({
-  race,
-  ticket,
-  onEdit,
-  isClosed,
-}) {
-  const strategyKey = STRATEGY_REVERSE[ticket?.strategy] || 'full';
-  const strategy = strategies.find((s) => s.id === strategyKey);
-  const allocation = strategy?.allocation || [50];
-
-  const selectedHorseData = (ticket?.picks || [])
-    .map((id) => race.horses.find((h) => h.id === id))
-    .filter(Boolean);
-
-  return (
-    <>
-      {/* Desktop sidebar card */}
-      <div className="block">
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-lg overflow-hidden sticky top-4">
-          <div className="p-4 border-b border-white/5">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 size={16} className="text-emerald-400" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                Picks Confirmados
-              </h3>
-            </div>
-            <p className="text-xs text-white/40 font-semibold text-white/60">Carrera {race.raceNumber ?? race.number}</p>
-          </div>
-
-          {/* Strategy badge */}
-          <div className="px-4 py-3 border-b border-white/5 bg-white/[0.01]">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold">Estrategia</span>
-              <span className={`text-xs font-black px-2.5 py-1 rounded bg-gradient-to-r ${strategy?.gradient || 'from-purple to-purple-light'} text-white shadow-sm`}>
-                {strategy?.name || 'Full Point'}
-              </span>
-            </div>
-          </div>
-
-          {/* Picks list */}
-          <div className="p-4">
-            {selectedHorseData.length === 0 ? (
-              <div className="flex items-center gap-2 text-white/30 text-xs py-6 justify-center">
-                <AlertCircle size={14} />
-                <span>Sin selecciones</span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {selectedHorseData.map((horse, idx) => (
-                  <div
-                    key={horse.id}
-                    className="flex items-center justify-between bg-white/[0.03] rounded-lg p-2.5 border border-white/5"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm
-                        ${idx === 0 ? 'bg-purple' : idx === 1 ? 'bg-cyan' : 'bg-gold text-black'}
-                      `}>
-                        {horse.postPosition}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-white truncate">{horse.name}</p>
-                        <p className="text-[10px] text-white/40">{allocation[idx]}pts x {horse.odds.toFixed(2)}</p>
-                      </div>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded shadow-sm
-                      ${idx === 0 ? 'bg-purple text-white' : idx === 1 ? 'bg-cyan text-white' : 'bg-gold text-black'}
-                    `}>
-                      {Math.round(allocation[idx] * horse.odds)}pts
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Edit button */}
-          <div className="p-4 pt-0">
-            {isClosed ? (
-              <button
-                disabled
-                className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider bg-white/5 text-white/20 cursor-not-allowed border border-white/5 flex items-center justify-center gap-2"
-              >
-                <Lock size={14} />
-                Carrera Cerrada
-              </button>
-            ) : (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onEdit}
-                className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-purple/40 to-purple-light/40 hover:from-purple hover:to-purple-light text-white border border-purple-light/35 shadow-[0_0_20px_rgba(124,58,237,0.2)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] transition-all duration-300"
-              >
-                Editar Picks
-              </motion.button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile bottom bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-brand-dark/95 backdrop-blur-xl border-t border-white/10 px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <CheckCircle2 size={14} className="text-emerald-400" />
-            <span className="text-xs font-bold text-white truncate">
-              C{race.raceNumber ?? race.number} · {strategy?.name || 'Full'}
-            </span>
-          </div>
-          {isClosed ? (
-            <span className="text-xs font-bold text-white/30 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5">
-              <Lock size={12} />
-              Cerrada
-            </span>
-          ) : (
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={onEdit}
-              className="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider bg-purple text-white shadow-[0_0_15px_rgba(124,58,237,0.4)]"
-            >
-              Editar
-            </motion.button>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
-

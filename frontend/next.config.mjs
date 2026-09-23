@@ -72,10 +72,43 @@ const nextConfig = {
     return config;
   },
   async redirects() {
+    // Legacy aliases are resolved here, as HTTP redirects, before React
+    // renders. Doing them with server-component redirect() let the RSC
+    // redirect run inside the client Router while the auth provider was
+    // updating state, which intermittently crashed it for signed-in users
+    // ("Rendered more hooks than during the previous render", React #310).
+    // Query strings are forwarded automatically.
     return [
       {
         source: '/tournament',
         destination: '/tournaments',
+        permanent: false,
+      },
+      {
+        source: '/ranking',
+        destination: '/leaderboard',
+        permanent: false,
+      },
+      {
+        source: '/tournament/:id/race/:raceId',
+        destination: '/tournament/:id',
+        permanent: false,
+      },
+      // One canonical home: the former landing / "comenzar" pages resolve to it.
+      {
+        source: '/landing',
+        destination: '/',
+        permanent: false,
+      },
+      {
+        source: '/comenzar',
+        destination: '/',
+        permanent: false,
+      },
+      {
+        // Legacy per-track modality pages: tournaments are chosen from the list.
+        source: '/modalidades/:modalityId(guest|free|paid|special)/:trackSlug',
+        destination: '/tournaments?modality=:modalityId',
         permanent: false,
       },
       {

@@ -1,0 +1,78 @@
+/* ==========================================================================
+ * Shell: main area, legacy-route neutralisation, footer, age gate.
+ * ========================================================================== */
+@layer primitives {
+  :root { --app-menu-tab-width: 0px; --app-menu-offset: 0px; }
+
+  .my50-main { position: relative; display: block; min-height: 70vh; }
+  .my50-main--home { min-height: 100dvh; }
+
+  /* Legacy routes: keep their inner spacing, drop their opaque canvas so the
+   * arena shows through, and give them the redesign container width. */
+  .my50-main--legacy { background: transparent; }
+  .my50-main--legacy .app-surface { background: transparent; min-height: 0; }
+  .my50-main--legacy .app-surface__inner {
+    max-width: var(--my50-container-wide);
+    margin-inline: auto;
+    padding: var(--my50-sp-7) var(--my50-gutter) var(--my50-sp-10);
+  }
+
+  /* ---------------------------------------------------------------- footer */
+  .site-footer {
+    position: relative; margin-top: var(--my50-sp-9);
+    border-top: 1px solid var(--my50-border-dim);
+    background: linear-gradient(180deg, rgba(10, 13, 28, 0.2), rgba(4, 5, 12, 0.85));
+  }
+  .site-footer::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 1px; background: linear-gradient(90deg, transparent, var(--my50-purple-bright), var(--my50-aqua-bright), var(--my50-gold-core), transparent); opacity: 0.45; }
+  .site-footer__inner { display: grid; gap: 24px; padding-block: 36px 40px; }
+  .site-footer__brand { display: flex; align-items: center; gap: 14px; }
+  .site-footer__name { margin: 0; font-family: var(--my50-font-display); font-weight: 800; font-style: italic; font-size: 20px; letter-spacing: 0.04em; }
+  .site-footer__name b { color: var(--my50-gold-highlight); }
+  .site-footer__links { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+  .site-footer__links a { color: var(--my50-text-secondary); text-decoration: none; font-size: 15px; font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; }
+  .site-footer__links a:hover { color: var(--my50-text-primary); }
+  .site-footer__legal { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--my50-text-muted); font-size: 14px; }
+  .site-footer__age { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--my50-live-bright); color: var(--my50-live-bright); font-family: var(--my50-font-display); font-weight: 800; font-size: 15px; }
+  @media (min-width: 1024px) {
+    .site-footer__inner { grid-template-columns: auto 1fr; align-items: center; }
+    .site-footer__links { justify-content: flex-end; }
+    .site-footer__legal { grid-column: 1 / -1; }
+  }
+
+  /* -------------------------------------------------------------- age gate */
+  .age-gate {
+    position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; padding: 16px; overflow-y: auto;
+    background: radial-gradient(900px 500px at 50% 0%, rgba(123, 45, 190, 0.35), transparent 70%), rgba(3, 4, 12, 0.94);
+  }
+  .age-gate__card { width: 100%; max-width: 520px; padding: 28px clamp(20px, 5vw, 36px) 26px; text-align: center; animation: my50-rise var(--my50-t-slow) var(--my50-ease-emph); }
+  .age-gate__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+  .age-gate__brand { display: inline-flex; align-items: center; gap: 10px; }
+  .age-gate__seal {
+    margin: 0 auto 16px; width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; gap: 0; align-content: center;
+    background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.18), transparent 50%), var(--my50-surface-metal);
+    border: 2px solid var(--my50-purple-bright); box-shadow: var(--my50-glow-purple);
+    color: var(--my50-text-primary);
+  }
+  .age-gate__seal svg { color: var(--my50-purple-bright); }
+  .age-gate__seal .t-data { font-size: 26px; margin-top: 2px; }
+  .age-gate__title { margin-bottom: 12px; }
+  .age-gate__text { margin: 0 auto 22px; max-width: 420px; }
+  .age-gate__actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 480px) { .age-gate__actions { grid-template-columns: 1fr 1.4fr; } }
+  .age-gate__note { margin-top: 16px; }
+  .app-boot-gate__content--hidden { visibility: hidden; }
+
+  /* Performance budget on legacy routes (≤2 infinite animations, ≤6 blurs):
+   * decorative glows stop looping and legacy glass panels drop their blur —
+   * the dark canvas behind them keeps them legible. */
+  .my50-main--legacy .modality-entry-card-glow-wrap,
+  .my50-main--legacy .modality-entry-card-glow-wrap * { animation-iteration-count: 1; }
+  .my50-main--legacy .onboard-journey-card__panel,
+  .my50-main--legacy .step-tracker,
+  .my50-main--legacy .how-to-play-step,
+  .my50-main--legacy .how-to-play__faq-card,
+  .my50-main--legacy .how-to-play__cta-bar,
+  .my50-main--legacy .hof-nameplate,
+  .my50-main--legacy .glass-card,
+  .my50-main--legacy [class*="backdrop-blur"] { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}

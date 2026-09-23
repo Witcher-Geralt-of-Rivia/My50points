@@ -116,7 +116,11 @@ export function applyModalityToDocument(modalityId) {
   if (typeof document === "undefined") return;
   const id = isValidModalityId(modalityId) ? modalityId : "free";
   const root = document.documentElement;
-  root.setAttribute("data-modality", id);
+  // M4 keeps the dark canvas everywhere (product decision). The legacy
+  // stylesheet carries ~200 `html[data-modality="guest"]` rules that repaint
+  // the page white, so the document uses a distinct value for guests and
+  // none of those rules can match. The modality itself is still "guest".
+  root.setAttribute("data-modality", id === "guest" ? "guest-m4" : id);
   const vars = brandCssCustomProperties(id);
   Object.entries(vars).forEach(([key, value]) => {
     root.style.setProperty(key, value);

@@ -1,3 +1,7 @@
+/* Legacy styles. Wrapped in the `legacy` cascade layer so the redesign
+ * layers (primitives, pages) take precedence without !important.
+ * See app/styles/layers.css for the layer order. */
+@layer legacy {
 /**
  * MY 50 POINTS brand tokens — synced with src/frontend/lib/brandColors.js
  * Ticket purple · cyan · gold + guest white. Neon vars for line accents.
@@ -227,4 +231,5 @@ html[data-modality="guest"]:has(.modality-page--workflow-tracks) .app-surface {
 
   /* --- Content grid ---------------------------------------------------- */
   --my50-container: 1240px;
+}
 }

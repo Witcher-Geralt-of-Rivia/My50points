@@ -1,3 +1,7 @@
+/* Legacy styles. Wrapped in the `legacy` cascade layer so the redesign
+ * layers (primitives, pages) take precedence without !important.
+ * See app/styles/layers.css for the layer order. */
+@layer legacy {
 
 /* —— Tournament Guide (modal + page) —— */
 .tg-modal {
@@ -2290,4 +2294,5 @@ body:has(.tg-modal, .mw-modal) .guest-claim-tickets-drawer,
     justify-content: center !important;
     min-height: 48px !important;
   }
+}
 }

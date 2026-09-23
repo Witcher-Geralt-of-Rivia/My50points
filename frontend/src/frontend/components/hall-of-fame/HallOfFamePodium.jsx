@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { staticFile } from "@/frontend/lib/config/paths";
+import { localAvatarSrc } from "@/frontend/lib/localAvatar";
 import { HOF_GOLD_WINNER_AVATAR_COLOR } from "@/frontend/lib/data/hallOfFameData";
 
 const PEDESTAL_IMAGES = {
@@ -17,9 +18,9 @@ function formatPoints(value, locale, pointsWord) {
   return `${n.toLocaleString(locale === "en" ? "en-US" : "es-ES")} ${pointsWord}`;
 }
 
+// Local initials avatar (no third-party request, name never leaves the page).
 function avatarUrl(name, color) {
-  const hex = (color || "#7c3aed").replace("#", "");
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${hex}&color=fff&size=256&bold=true`;
+  return localAvatarSrc(name, color, 256);
 }
 
 function GoldWinnerFrame({ name, pointsLabel }) {

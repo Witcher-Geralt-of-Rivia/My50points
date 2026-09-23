@@ -2,153 +2,62 @@
 
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
-import FloatingMenuBar from "@/frontend/components/layout/FloatingMenuBar";
+import SiteNav from "@/frontend/components/nav/SiteNav";
+import SiteFooter from "@/frontend/components/nav/SiteFooter";
 import AppSurface from "@/frontend/components/layout/AppSurface";
-import LanguageToggle from "@/frontend/components/layout/LanguageToggle";
-import { useAuth } from "@/frontend/contexts/AuthContext";
-
-function isHomePath(pathname) {
-  return pathname === "/" || pathname === "";
-}
-
-function isAuthPath(pathname) {
-  return pathname === "/login" || pathname === "/register";
-}
-
-function isComenzarPath(pathname) {
-  return pathname === "/comenzar";
-}
-
-function isInicioPath(pathname) {
-  return pathname === "/inicio";
-}
-
-function isLandingPath(pathname) {
-  return pathname === "/landing";
-}
-
-function isWorkflowTracksPath(pathname) {
-  return /^\/modalidades\/(guest|free|paid|special)\/?$/.test(pathname);
-}
 
 /**
- * Any page that belongs to a modality flow: the modality workspace itself and
- * its sub-routes (e.g. /modalidades/guest/<track>). Marks <main> so that
- * modality *page* theming (such as the white M4 canvas) is owned by the route,
- * not by the participation modality saved in sessionStorage.
+ * Routes built on the redesign primitives. They own their layout (containers,
+ * spacing) and render directly inside <main>. Every other route keeps the
+ * legacy AppSurface wrapper so its existing spacing still works — but all
+ * routes now share the same arena canvas and the same global navigation.
  */
-function isModalityRoutePath(pathname) {
-  return /^\/modalidades\/(guest|free|paid|special)(\/|$)/.test(pathname || "");
-}
-
-function isProfilePath(pathname) {
-  return pathname === "/profile" || /^\/profile\/[^/]+/.test(pathname || "");
-}
-
-function isGuiaTorneoPath(pathname) {
-  return pathname === "/guia-torneo";
-}
-
-function isHowToPlayPath(pathname) {
-  return pathname === "/how-to-play";
-}
-
-function isChromelessPath(pathname) {
-  return isHomePath(pathname);
-}
-
-function isImmersiveBgPath(pathname) {
+function isRedesignedPath(pathname) {
+  const p = pathname || "/";
   return (
-    isComenzarPath(pathname) ||
-    isLandingPath(pathname) ||
-    isHowToPlayPath(pathname) ||
-    isGuiaTorneoPath(pathname) ||
-    isWorkflowTracksPath(pathname) ||
-    isAuthPath(pathname) ||
-    pathname.includes("/hall-of-fame")
+    p === "/" ||
+    p === "/tournaments" ||
+    p.startsWith("/tournament/") ||
+    p === "/leaderboard" ||
+    // /profile/<id> is the legacy public profile: it keeps the legacy wrapper.
+    p === "/profile" ||
+    p === "/login" ||
+    p === "/register" ||
+    p === "/modalidades" ||
+    p.startsWith("/modalidades/")
   );
 }
 
 /**
- * Pages that never show the floating menu or any chrome.
- * - Cover "/" is chromeless (has its own full-screen layout)
- * - Auth pages /login /register have their own minimal chrome
- * - /comenzar and /landing have their own integrated Page 22 Figma design and header
+ * Global shell. The navigation (SiteNav) renders on EVERY route — including
+ * home, login, register and 404 — as a client requirement. Theme is owned by
+ * the route/components; the saved participation modality never repaints the
+ * canvas (M4 uses pearl/silver components on the common dark arena).
  */
-function hideMenuOnPath(pathname) {
-  return (
-    isHomePath(pathname) ||
-    isAuthPath(pathname) ||
-    isComenzarPath(pathname) ||
-    isLandingPath(pathname)
-  );
-}
-
 export default function ConditionalShell({ children }) {
-  const pathname = usePathname() || "";
-  const { isAuthenticated, loading } = useAuth();
-  const onHome = isHomePath(pathname);
-  const onAuth = isAuthPath(pathname);
-  const onComenzar = isComenzarPath(pathname);
-  const onLanding = isLandingPath(pathname);
-  const onInicio = isInicioPath(pathname);
-  const onWorkflowTracks = isWorkflowTracksPath(pathname);
-  const onHowToPlay = isHowToPlayPath(pathname);
-  const onGuiaTorneo = isGuiaTorneoPath(pathname);
-  const onProfile = isProfilePath(pathname);
-  const hideChrome = isChromelessPath(pathname);
-  const skipSurface =
-    hideChrome ||
-    onAuth ||
-    onComenzar ||
-    onLanding ||
-    onHowToPlay ||
-    onGuiaTorneo ||
-    onInicio;
-
-  // Floating menu is visible on all regular app pages
-  // Suppressed on: cover (/), auth (/login, /register), and landing (/comenzar, /landing)
-  const showFloatingMenu = !hideMenuOnPath(pathname);
-  const showLanguageToggle = showFloatingMenu;
-
-  if (loading) {
-    return <main className="min-h-screen">{children}</main>;
-  }
-
-  // Shared main class — same layout regardless of auth state
-  const baseMainClass = (() => {
-    if (hideChrome) return "min-h-screen";
-    if (onAuth) return "app-main app-main--auth min-h-screen";
-    if (onComenzar || onLanding) return "min-h-screen w-full bg-[#05020a]";
-    if (onInicio)
-      return "app-main app-main--with-menu app-main--immersive app-main--inicio min-h-screen";
-    if (onWorkflowTracks)
-      return "app-main app-main--with-menu app-main--immersive app-main--workflow-tracks min-h-screen";
-    if (onHowToPlay)
-      return "app-main app-main--with-menu app-main--immersive app-main--how-to-play min-h-screen";
-    if (onGuiaTorneo)
-      return "app-main app-main--with-menu app-main--immersive app-main--tournament-guide min-h-screen";
-    if (onProfile)
-      return "app-main app-main--with-menu app-main--immersive app-main--profile-hub min-h-screen";
-    return "app-main app-main--with-menu app-main--immersive min-h-screen";
-  })();
-  const mainClass = isModalityRoutePath(pathname)
-    ? `${baseMainClass} app-main--modality-route`
-    : baseMainClass;
+  const pathname = usePathname() || "/";
+  const isHome = pathname === "/";
+  const redesigned = isRedesignedPath(pathname);
 
   return (
     <>
-      {/* Floating menu — shown for everyone (guest + registered) on all app pages */}
-      {showFloatingMenu ? (
-        <Suspense fallback={null}>
-          <FloatingMenuBar />
-        </Suspense>
-      ) : null}
-      {showLanguageToggle ? <LanguageToggle className="app-lang-toggle" /> : null}
-
-      <main className={mainClass}>
-        {skipSurface ? children : <AppSurface>{children}</AppSurface>}
+      <div className="my50-arena" aria-hidden>
+        <div className="my50-arena__grid" />
+      </div>
+      <Suspense fallback={null}>
+        <SiteNav overlay={isHome} />
+      </Suspense>
+      <main
+        id="main"
+        className={
+          redesigned
+            ? `my50-main${isHome ? " my50-main--home" : ""}`
+            : "my50-main app-main app-main--immersive my50-main--legacy"
+        }
+      >
+        {redesigned ? children : <AppSurface>{children}</AppSurface>}
       </main>
+      <SiteFooter />
     </>
   );
 }
