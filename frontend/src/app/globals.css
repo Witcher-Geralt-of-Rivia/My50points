@@ -21394,12 +21394,18 @@ html[data-modality="guest"] {
   --modality-matte-fg: #0f172a !important;
 }
 
-html[data-modality="guest"],
-html[data-modality="guest"] body,
-html[data-modality="guest"] #__next,
-html[data-modality="guest"] main,
-html[data-modality="guest"] .app-surface,
-html[data-modality="guest"] .app-main,
+/*
+ * Document canvas for M4 is owned by the ROUTE, not by the saved participation
+ * modality. The shell marks <main> with .app-main--modality-route on
+ * /modalidades/(guest|free|paid|special) and its sub-routes. Previously this
+ * block also listed bare html / body / #__next / main / .app-surface /
+ * .app-main, so a guest value left in sessionStorage repainted every route
+ * (tournament, ranking, leaderboard, ...) white: dark cards on a white page.
+ */
+html[data-modality="guest"]:has(.app-main--modality-route),
+html[data-modality="guest"]:has(.app-main--modality-route) body,
+html[data-modality="guest"] .app-main--modality-route,
+html[data-modality="guest"] .app-main--modality-route .app-surface,
 html[data-modality="guest"] .app-main--workflow-tracks,
 html[data-modality="guest"] .tracks-workflow-surface,
 html[data-modality="guest"] .tracks-workflow-surface--embedded,
@@ -22267,7 +22273,7 @@ html[data-modality="guest"] .race-strategy-strip__bar--smart.race-strategy-strip
 
 /* Helper Strategy Banner below Strategy Cards */
 html[data-modality="guest"] .race-strategy-strip + div,
-html[data-modality="guest"] div[class*="bg-purple-950"] {
+html[data-modality="guest"] div[class*="bg-purple-950"]:not(.tp-root *) {
   background: #ffffff !important;
   border: 1.5px solid #c084fc !important;
   border-radius: 0.95rem !important;
@@ -22276,29 +22282,35 @@ html[data-modality="guest"] div[class*="bg-purple-950"] {
 }
 
 /* PASO 2: Horse List Table & Rows for Guest */
-html[data-modality="guest"] div[class*="rounded-xl border"] {
+/*
+ * These class-substring selectors match Tailwind utilities anywhere in the
+ * document, so they are kept out of the tournament page (.tp-root), which
+ * owns its dark theme. Otherwise a guest value saved in sessionStorage turns
+ * text-white labels navy on the dark tournament panels.
+ */
+html[data-modality="guest"] div[class*="rounded-xl border"]:not(.tp-root *) {
   color: #0f172a !important;
 }
 
-html[data-modality="guest"] div[class*="rounded-xl border"][class*="bg-white"] {
+html[data-modality="guest"] div[class*="rounded-xl border"][class*="bg-white"]:not(.tp-root *) {
   background: #ffffff !important;
   border: 1.5px solid #f1f5f9 !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03) !important;
 }
 
-html[data-modality="guest"] div[class*="rounded-xl border"][class*="bg-gradient-to-r"] {
+html[data-modality="guest"] div[class*="rounded-xl border"][class*="bg-gradient-to-r"]:not(.tp-root *) {
   background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%) !important;
   border: 2px solid #7c3aed !important;
   box-shadow: 0 6px 20px rgba(124, 58, 237, 0.15) !important;
 }
 
-html[data-modality="guest"] span[class*="text-white"] {
+html[data-modality="guest"] span[class*="text-white"]:not(.tp-root *) {
   color: #0f172a !important;
   font-weight: 800 !important;
 }
 
-html[data-modality="guest"] span[class*="text-white/"],
-html[data-modality="guest"] p[class*="text-white/"] {
+html[data-modality="guest"] span[class*="text-white/"]:not(.tp-root *),
+html[data-modality="guest"] p[class*="text-white/"]:not(.tp-root *) {
   color: #475569 !important;
   font-weight: 600 !important;
 }

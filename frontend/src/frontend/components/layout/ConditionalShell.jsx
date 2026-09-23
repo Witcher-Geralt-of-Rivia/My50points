@@ -31,6 +31,16 @@ function isWorkflowTracksPath(pathname) {
   return /^\/modalidades\/(guest|free|paid|special)\/?$/.test(pathname);
 }
 
+/**
+ * Any page that belongs to a modality flow: the modality workspace itself and
+ * its sub-routes (e.g. /modalidades/guest/<track>). Marks <main> so that
+ * modality *page* theming (such as the white M4 canvas) is owned by the route,
+ * not by the participation modality saved in sessionStorage.
+ */
+function isModalityRoutePath(pathname) {
+  return /^\/modalidades\/(guest|free|paid|special)(\/|$)/.test(pathname || "");
+}
+
 function isProfilePath(pathname) {
   return pathname === "/profile" || /^\/profile\/[^/]+/.test(pathname || "");
 }
@@ -106,7 +116,7 @@ export default function ConditionalShell({ children }) {
   }
 
   // Shared main class — same layout regardless of auth state
-  const mainClass = (() => {
+  const baseMainClass = (() => {
     if (hideChrome) return "min-h-screen";
     if (onAuth) return "app-main app-main--auth min-h-screen";
     if (onComenzar || onLanding) return "min-h-screen w-full bg-[#05020a]";
@@ -122,6 +132,9 @@ export default function ConditionalShell({ children }) {
       return "app-main app-main--with-menu app-main--immersive app-main--profile-hub min-h-screen";
     return "app-main app-main--with-menu app-main--immersive min-h-screen";
   })();
+  const mainClass = isModalityRoutePath(pathname)
+    ? `${baseMainClass} app-main--modality-route`
+    : baseMainClass;
 
   return (
     <>
