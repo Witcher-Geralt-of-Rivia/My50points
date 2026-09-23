@@ -1,5 +1,7 @@
 /** Collectible achievement cards (tournament wins, podium, record ties). */
 
+import { getApiBase } from '@/frontend/lib/api/client';
+
 export const CARD_TYPES = {
   TOURNAMENT_WINNER: 'tournament_winner',
   TOURNAMENT_SECOND: 'tournament_second',
@@ -44,21 +46,16 @@ export function syncAchievementCardToServer(card) {
   if (typeof window === 'undefined' || !card?.id) return;
   const token = localStorage.getItem('50points_token');
   if (!token) return;
-  const bases =
-    typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
-      ? ['https://five0-points-backend.onrender.com/api', '/api']
-      : ['/api'];
-  const body = JSON.stringify(card);
-  bases.forEach((base) => {
-    fetch(`${base}/profile/achievement-cards`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body,
-    }).catch(() => {});
-  });
+  // Only the configured backend. A legacy host fallback used to receive the
+  // user's bearer token as well; it was removed for security.
+  fetch(`${getApiBase()}/profile/achievement-cards`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(card),
+  }).catch(() => {});
 }
 
 export function addAchievementCard(userId, card) {
