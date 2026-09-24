@@ -14,9 +14,11 @@ Authentication: HTTP Basic, RACING_API_USERNAME / RACING_API_PASSWORD (environme
 
 Observed facts the mapping relies on (and deliberately does NOT go beyond):
 * race identity = meet_id + race_key.race_number + race_key.day_evening.
-* post time: ENTRIES post_time_long is epoch milliseconds for upcoming cards.
-  For already-run cards it comes back as a small value (milliseconds of a day)
-  whose time basis could not be verified -> post time left unknown (None).
+* post time: ENTRIES post_time_long is either epoch milliseconds (UTC) or
+  milliseconds since midnight of the meet date in Europe/London time (it can
+  exceed 24h for late races). Verified 2026-09-24 on Churchill Downs: the
+  same seven races returned both forms and every pair matched exactly
+  (e.g. R1 1790283600000 = 21:00 UTC = 79200000 ms = 22:00 London).
   Results off_time / post_time_long are inconsistent and are never used.
 * runner scratch_indicator: "N" = active, "Y" = scratched (verified against
   the results' scratches lists). Any other code (e.g. "A") is kept raw as
@@ -33,7 +35,8 @@ import base64
 import logging
 import os
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from app.racing.config import RacingConfig
 from app.racing.dto import (
@@ -67,6 +70,8 @@ MAX_MEET_PAGES = 10
 # Observed wager listings returned as meets (not racetracks), e.g. "Horseshoe Turf Pick 3".
 _WAGER_LISTING = re.compile(r"\bpick\s*\d+\b|\bsweep\b", re.IGNORECASE)
 _EPOCH_MS_FLOOR = 10**11         # anything below this is not an epoch-milliseconds instant
+_MS_OF_DAY_MAX = 2 * 86_400_000  # ms-of-day form, late races may pass 24h
+_PROVIDER_CLOCK = ZoneInfo("Europe/London")
 
 
 def _clean(value) -> str | None:
@@ -100,15 +105,22 @@ def parse_fractional_odds(text) -> float | None:
     return round(num / den, 4)
 
 
-def _post_time(race: dict) -> datetime | None:
+def _post_time(race: dict, meeting_date: str | None = None) -> datetime | None:
     raw = race.get("post_time_long")
     try:
         value = int(str(raw))
     except (TypeError, ValueError):
         return None
-    if value < _EPOCH_MS_FLOOR:
-        return None  # milliseconds-of-day form: time basis not verified
-    return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+    if value >= _EPOCH_MS_FLOOR:
+        return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+    if 0 <= value < _MS_OF_DAY_MAX and meeting_date:
+        try:
+            day = date.fromisoformat(meeting_date)
+        except ValueError:
+            return None
+        midnight = datetime(day.year, day.month, day.day, tzinfo=_PROVIDER_CLOCK)
+        return (midnight + timedelta(milliseconds=value)).astimezone(timezone.utc)
+    return None
 
 
 def race_key(meet_id: str, race: dict) -> tuple[str, int] | None:
@@ -260,7 +272,12 @@ class TheRacingApiNorthAmericaProvider(RacingProvider):
         pp = _clean(raw.get("post_pos"))
         if pp and pp.isdigit():
             post_position = int(pp)
+        win_pool_dollar = None
+        for pool in raw.get("horse_data_pools") or []:
+            if isinstance(pool, dict) and pool.get("pool_type_name") == "WIN":
+                win_pool_dollar = _clean(pool.get("dollar"))
         meta = {
+            "winPoolDollar": win_pool_dollar,   # provider fact only (see app/racing/dividends.py, tier 1)
             "jockeyId": jockey_id,
             "trainerId": trainer_id,
             "weight": _clean(raw.get("weight")),
@@ -285,7 +302,7 @@ class TheRacingApiNorthAmericaProvider(RacingProvider):
             meta={k: v for k, v in meta.items() if v is not None},
         )
 
-    def _race(self, meet_id: str, raw: dict) -> ProviderRace | None:
+    def _race(self, meet_id: str, raw: dict, meeting_date: str | None = None) -> ProviderRace | None:
         key = race_key(meet_id, raw)
         if key is None:
             return None
@@ -316,7 +333,7 @@ class TheRacingApiNorthAmericaProvider(RacingProvider):
         return ProviderRace(
             provider_race_id=provider_race_id,
             track_race_number=number,
-            post_time=_post_time(raw),
+            post_time=_post_time(raw, meeting_date),
             name=_clean(raw.get("race_name")),
             distance_meters=None,  # provider distance_value is not exact (1 1/16 Miles -> 8); text kept in meta
             surface=_clean(raw.get("surface_description")),
@@ -335,7 +352,8 @@ class TheRacingApiNorthAmericaProvider(RacingProvider):
         meeting = self._meeting(body)
         if meeting is None:
             raise ProviderSchemaError("north-america entries: meeting header incomplete")
-        races = [r for r in (self._race(provider_meeting_id, raw) for raw in body["races"] if isinstance(raw, dict)) if r]
+        races = [r for r in (self._race(provider_meeting_id, raw, meeting.meeting_date)
+                             for raw in body["races"] if isinstance(raw, dict)) if r]
         return ProviderEntries(meeting=meeting, races=tuple(races), complete=True)
 
     # ----------------------------------------------------------------- results

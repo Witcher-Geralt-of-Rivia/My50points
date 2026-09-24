@@ -46,6 +46,7 @@ function sameLocalDay(a, b) {
 /** First post time of a tournament, from its races (real data only). */
 export function firstPostTime(tournament) {
   const times = (tournament?.races || [])
+    .filter((r) => r.scheduledTime && r.scheduledTime !== 'TBD')   // new Date(null) would be 1970
     .map((r) => new Date(r.scheduledTime))
     .filter((d) => !Number.isNaN(d.getTime()))
     .sort((a, b) => a - b);
@@ -72,7 +73,11 @@ export function formatDateLong(value, isEn) {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString(isEn ? 'en-GB' : 'es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+  // A date-only value (the meeting day at UTC midnight) is a calendar date: never shift it by the viewer's zone.
+  const dateOnly = typeof value === 'string' && /T00:00:00(\.0+)?(Z|\+00:00)$/.test(value);
+  return d.toLocaleDateString(isEn ? 'en-GB' : 'es-ES', {
+    weekday: 'short', day: 'numeric', month: 'short', ...(dateOnly ? { timeZone: 'UTC' } : {}),
+  });
 }
 
 export function formatTime(value, isEn) {

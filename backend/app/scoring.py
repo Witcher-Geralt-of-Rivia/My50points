@@ -1,4 +1,5 @@
 import json
+from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 
 ALLOCATIONS = {
     "full_point": [50],
@@ -159,10 +160,9 @@ PENDING_CANCELLED_RACE = "pending_cancelled_race"
 # CONFIRMED RULE: if ANY selected race is cancelled the whole tournament is
 # cancelled — every ticket/selection of it carries this status and 0 points.
 TOURNAMENT_CANCELLED = "tournament_cancelled"
-# Two or more official winners and the ticket picked one of them: the MY50
-# dead-heat scoring rule is not defined in the project materials, so the race is
-# held pending instead of inventing arithmetic.
-PENDING_DEAD_HEAT = "pending_dead_heat"
+# A winning (or replacement) runner whose frozen MY50 value is tied with another
+# runner of the race: the tenths differentiation rule is not available yet.
+PENDING_TIE_ADJUSTMENT = "pending_tie_adjustment"
 
 # Runner states that can never receive migrated points.
 _NOT_VALID_FOR_REPLACEMENT = ("scratched", "unavailable", "provider_unknown")
@@ -170,6 +170,22 @@ _NOT_VALID_FOR_REPLACEMENT = ("scratched", "unavailable", "provider_unknown")
 
 def _field(h, key, default=None):
     return h.get(key, default) if isinstance(h, dict) else getattr(h, key, default)
+
+
+def _dec(value) -> Decimal | None:
+    """Exact Decimal from a frozen value (text/Decimal); floats go through str()."""
+    if value is None:
+        return None
+    try:
+        return value if isinstance(value, Decimal) else Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def slot_points(allocation: int, dividend: Decimal) -> int:
+    """allocation x frozen dividend, exact, rounded to whole points exactly as
+    before (Python round(): half to even)."""
+    return int((Decimal(allocation) * dividend).quantize(Decimal(1), rounding=ROUND_HALF_EVEN))
 
 
 def frozen_favorite_hierarchy(horses: list | None, official_dividends: dict) -> list[int] | None:
@@ -189,12 +205,8 @@ def frozen_favorite_hierarchy(horses: list | None, official_dividends: dict) -> 
         status = _field(h, "runnerStatus", "active") or "active"
         if _field(h, "scratched", False) or status in _NOT_VALID_FOR_REPLACEMENT:
             continue
-        raw = official_dividends.get(int(hid))
-        try:
-            value = float(raw)
-        except (TypeError, ValueError):
-            return None
-        if value <= 0:
+        value = _dec(official_dividends.get(int(hid)))
+        if value is None or value <= 0:
             return None
         candidates.append((value, int(hid)))
     if not candidates:
@@ -209,12 +221,13 @@ def _replacement_from_hierarchy(hierarchy: list[int], official_dividends: dict) 
     if not hierarchy:
         return None
     first = hierarchy[0]
-    if len(hierarchy) > 1 and float(official_dividends[first]) == float(official_dividends[hierarchy[1]]):
+    if len(hierarchy) > 1 and _dec(official_dividends[first]) == _dec(official_dividends[hierarchy[1]]):
         return None
     return first
 
 
-def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, official_dividends: dict) -> tuple[int, str]:
+def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, official_dividends: dict,
+                   tie_pending: set | None = None) -> tuple[int, str]:
     """Return (points, status). `official_dividends` must be the frozen MY50
     dividend table for the race (possibly empty) — it is REQUIRED here.
 
@@ -271,10 +284,15 @@ def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, of
     # already picked simply accumulate (each slot is scored on its own).
     # Without a complete frozen table, legacy/demo frozen odds decide (seed data);
     # provider-synced runners have no such odds -> honestly pending.
+    tie_pending = tie_pending or set()
     hierarchy = frozen_favorite_hierarchy(horses, official_dividends)
+    replacement_tied = False
     if hierarchy is not None:
         favorite_horse_id = _replacement_from_hierarchy(hierarchy, official_dividends)
+        replacement_tied = favorite_horse_id is None and bool(hierarchy)
 
+    # DEAD HEAT (V1.1): every officially declared first-place winner scores with
+    # its own frozen multiplier; points on several tied winners are summed.
     allocation = ALLOCATIONS[strategy]
     winners = set(by_position.get(_WINNER_POSITION, []))
     total = 0
@@ -284,17 +302,13 @@ def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, of
         effective = int(pick_id)
         if effective in scratched_ids:
             if favorite_horse_id is None:
-                return 0, PENDING_SCRATCH_RULE
+                return 0, PENDING_TIE_ADJUSTMENT if replacement_tied else PENDING_SCRATCH_RULE
             effective = favorite_horse_id
-        if effective in winners and len(winners) > 1:
-            return 0, PENDING_DEAD_HEAT
         if effective in winners:
-            raw = official_dividends.get(effective)
-            try:
-                dividend = float(raw)
-            except (TypeError, ValueError):
-                dividend = 0.0
-            if dividend <= 0:
+            if effective in tie_pending:
+                return 0, PENDING_TIE_ADJUSTMENT
+            dividend = _dec(official_dividends.get(effective))
+            if dividend is None or dividend <= 0:
                 return 0, PENDING_DIVIDEND
-            total += round(allocation[i] * dividend)
+            total += slot_points(allocation[i], dividend)
     return int(total), SCORED

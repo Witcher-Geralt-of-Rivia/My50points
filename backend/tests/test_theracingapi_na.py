@@ -24,8 +24,12 @@ from app.racing.engine import SyncEngine
 from app.racing.errors import ProviderAuthError, ProviderRateLimited
 from app.racing.providers.theracingapi_na import TheRacingApiNorthAmericaProvider, parse_fractional_odds
 from app.racing.scheduler import Scheduler
+from decimal import Decimal
+
+from app.models import My50FixedDividend
+from app.racing.dividends import PENDING_TIE_ADJUSTMENT as TIE_STATUS, fractional_to_decimal
 from app.scoring import (
-    PENDING_DEAD_HEAT, PENDING_SCRATCH_RULE, SCORED, TOURNAMENT_CANCELLED, evaluate_ticket,
+    PENDING_SCRATCH_RULE, PENDING_TIE_ADJUSTMENT, SCORED, TOURNAMENT_CANCELLED, evaluate_ticket,
 )
 from tests.conftest import TestingSessionLocal
 from tests.racing_support import config, snapshot
@@ -174,11 +178,21 @@ def test_scratch_y_is_scratched_and_unknown_a_is_not_invented():
     assert harwich.status == RUNNER_PROVIDER_UNKNOWN and harwich.provider_status_code == "A"
 
 
-def test_run_card_post_time_is_not_guessed():
+def test_ms_of_day_post_time_is_london_clock_and_matches_epoch_form():
     e = _provider(FakeApi()).get_entries(HIST)
-    assert all(r.post_time is None for r in e.races)     # ms-of-day form: basis unverified
-    assert all(r.status == RACE_FINISHED for r in e.races)
     assert e.races[0].meta["postTimeRaw"] == "63900000"
+    assert e.races[0].post_time == datetime(2026, 9, 23, 16, 45, tzinfo=timezone.utc)   # 17:45 London (BST)
+    assert all(r.status == RACE_FINISHED for r in e.races)
+    # same card, both forms observed on 2026-09-24: epoch and ms-of-day agree race by race
+    api = FakeApi()
+    epoch = _provider(api).get_entries(LIVE)
+    ms_form = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{LIVE}/entries"])
+    for race, ms in zip(ms_form["races"], (79200000, 80940000, 82800000, 84600000, 86340000, 88080000, 89820000, 91560000)):
+        race["post_time_long"] = str(ms)
+    api.payloads[f"/v1/north-america/meets/{LIVE}/entries"] = ms_form
+    converted = _provider(api).get_entries(LIVE)
+    assert [r.post_time for r in converted.races[:7]] == [r.post_time for r in epoch.races[:7]]
+    assert converted.races[6].post_time == datetime(2026, 9, 24, 23, 57, tzinfo=timezone.utc)   # 24:57 London
 
 
 def test_fractional_odds_parser():
@@ -290,7 +304,8 @@ def test_provider_odds_cannot_overwrite_frozen_my50_dividend(db):
     eng.sync_entries(LIVE)
     race = _races(db, _tournament(db, LIVE))[0]
     horse = db.query(Horse).filter_by(raceId=race.id, name="Deceiving Diva").one()
-    _freeze_table(db, race, {horse.id: 4.3})
+    row = db.query(My50FixedDividend).filter_by(horseId=horse.id).one()
+    assert (row.value, row.source, row.sourceValue) == ("4.00", "morning_line", "3-1")   # 3/1 + 1
     changed = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{LIVE}/entries"])
     runner = next(h for h in changed["races"][0]["runners"] if h["horse_name"] == "Deceiving Diva")
     runner["morning_line_odds"], runner["live_odds"] = "9-5", "1-5"
@@ -299,7 +314,8 @@ def test_provider_odds_cannot_overwrite_frozen_my50_dividend(db):
     db.expire_all()
     horse = db.get(Horse, horse.id)
     assert (horse.morningLineOdds, horse.liveOdds) == (1.8, 0.2)           # provider information moved
-    assert db.query(OfficialDividend).filter_by(horseId=horse.id).one().dividend == 4.3   # MY50 value did not
+    assert db.query(My50FixedDividend).filter_by(horseId=horse.id).one().value == "4.00"   # MY50 value did not
+    assert db.query(OfficialDividend).count() == 0
 
 
 # 14 ------------------------------------------------------------ cancellation
@@ -312,12 +328,11 @@ def test_one_cancelled_selected_race_cancels_the_whole_tournament(db):
     eng.sync_entries(HIST)
     t = _tournament(db, HIST)
     r1 = _races(db, t)[0]
-    winner = db.query(Horse).filter_by(raceId=r1.id, name="Hodl Hard").one()
-    _freeze_table(db, r1, {h.id: (4.9 if h.id == winner.id else 9.0 + h.id) for h in r1.horses if not h.scratched})
+    winner = db.query(Horse).filter_by(raceId=r1.id, name="Hodl Hard").one()   # ML 4-1 -> frozen 5.00
     user, agg = _ticket(db, t, "cancel_case", {1: [winner.id]})
     eng.sync_results(HIST)
     db.expire_all()
-    assert db.get(TournamentTicket, agg.id).totalPoints == round(50 * 4.9)      # points before the cancellation
+    assert db.get(TournamentTicket, agg.id).totalPoints >= 250                  # includes 50 x 5.00 before the cancellation
     cancelled = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{HIST}/entries"])
     cancelled["races"][2]["is_cancelled"] = True          # track race 3
     api.payloads[f"/v1/north-america/meets/{HIST}/entries"] = cancelled
@@ -352,7 +367,7 @@ def test_withdrawal_moves_down_the_frozen_hierarchy_and_uses_replacement_dividen
     assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 3}], horses, {3: 2.4})[1] == PENDING_SCRATCH_RULE
     # a tie at the top of the frozen table (tenths rule not applied) is not guessed
     tie = {1: 5.2, 2: 1.8, 3: 2.4, 4: 2.4}
-    assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 3}], horses, tie)[1] == PENDING_SCRATCH_RULE
+    assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 3}], horses, tie)[1] == PENDING_TIE_ADJUSTMENT
 
 
 # 17-18 ------------------------------------------------------------ scoring + ranking
@@ -363,19 +378,21 @@ def test_official_result_scores_with_frozen_table_and_ranking_reflects_it(client
     t = _tournament(db, HIST)
     r1 = _races(db, t)[0]
     winner = db.query(Horse).filter_by(raceId=r1.id, name="Hodl Hard").one()
-    others = [h for h in r1.horses if h.id != winner.id and not h.scratched]
-    _freeze_table(db, r1, {winner.id: 4.9, **{h.id: 6.0 + i for i, h in enumerate(others)}})
+    assert db.query(My50FixedDividend).filter_by(horseId=winner.id).one().value == "5.00"   # ML 4-1 + 1
     user, agg = _ticket(db, t, "real_scorer", {1: [winner.id]})
     eng.sync_results(HIST)
     db.expire_all()
     sel = db.query(TicketSelection).filter_by(tournamentTicketId=agg.id, raceId=r1.id).one()
-    assert (sel.scoreStatus, sel.pointsEarned) == (SCORED, round(50 * 4.9))
+    assert (sel.scoreStatus, sel.pointsEarned) == (SCORED, 250)                              # 50 x 5.00
     rows = client.get(f"/api/tournaments/{t.slug}/leaderboard").json()["leaderboard"]
     mine = next(r for r in rows if r["username"] == "real_scorer")
-    assert mine["totalPoints"] == round(50 * 4.9) and mine["rank"] == 1
+    assert mine["totalPoints"] == db.get(TournamentTicket, agg.id).totalPoints >= 250 and mine["rank"] == 1
+    horses = client.get(f"/api/tournaments/{t.slug}").json()["tournament"]["races"][0]["horses"]
+    hodl = next(h for h in horses if h["name"] == "Hodl Hard")
+    assert (hodl["my50Dividend"], hodl["my50DividendFrozen"], hodl["my50TieStatus"]) == ("5.00", True, "unique")
 
 
-def test_dead_heat_is_persisted_and_scoring_held_pending(db):
+def test_dead_heat_each_winner_scores_with_its_own_frozen_multiplier(db):
     api = FakeApi()
     res = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{HIST}/results"])
     res["races"][0]["runners"][1]["win_payoff"] = 9.9          # second runner also paid to win
@@ -384,14 +401,18 @@ def test_dead_heat_is_persisted_and_scoring_held_pending(db):
     eng.sync_entries(HIST)
     t = _tournament(db, HIST)
     r1 = _races(db, t)[0]
-    hodl = db.query(Horse).filter_by(raceId=r1.id, name="Hodl Hard").one()
-    user, agg = _ticket(db, t, "dh_case", {1: [hodl.id]})
+    hodl = db.query(Horse).filter_by(raceId=r1.id, name="Hodl Hard").one()        # frozen 5.00 (4-1)
+    king = db.query(Horse).filter_by(raceId=r1.id, name="My King Air").one()      # frozen 2.40 (7-5)
+    _, single = _ticket(db, t, "dh_single", {1: [hodl.id]})
+    _, both = _ticket(db, t, "dh_both", {1: [hodl.id, king.id]}, strategy="dual_point")
     eng.sync_results(HIST)
     rows = db.query(RaceResult).filter_by(raceId=r1.id).all()
     assert sorted((db.get(Horse, r.horseId).name, r.position, r.isDeadHeat) for r in rows) == \
         [("Hodl Hard", 1, True), ("My King Air", 1, True)]
-    sel = db.query(TicketSelection).filter_by(tournamentTicketId=agg.id, raceId=r1.id).one()
-    assert (sel.scoreStatus, sel.pointsEarned) == (PENDING_DEAD_HEAT, 0)
+    s1 = db.query(TicketSelection).filter_by(tournamentTicketId=single.id, raceId=r1.id).one()
+    assert (s1.scoreStatus, s1.pointsEarned) == (SCORED, 250)                    # 50 x 5.00
+    s2 = db.query(TicketSelection).filter_by(tournamentTicketId=both.id, raceId=r1.id).one()
+    assert (s2.scoreStatus, s2.pointsEarned) == (SCORED, 125 + 60)               # 25 x 5.00 + 25 x 2.40
 
 
 def test_result_that_does_not_match_the_card_stays_pending(db):
@@ -406,6 +427,42 @@ def test_result_that_does_not_match_the_card_stays_pending(db):
     assert db.query(RaceResult).filter_by(raceId=r1.id).count() == 0
     assert (r1.resultStatus, r1.providerStatus) == ("pending", "result_unmapped")
     assert r1.status == "running"                         # still closed for picks
+
+
+# ------------------------------------------------------------ MY50 V1.1 freeze
+def test_fractional_to_decimal_includes_stake_exactly():
+    assert fractional_to_decimal("5/2") == Decimal("3.50") and str(fractional_to_decimal("5-2")) == "3.50"
+    assert str(fractional_to_decimal("8-5")) == "2.60" and str(fractional_to_decimal("30-1")) == "31.00"
+    assert isinstance(fractional_to_decimal("7-2"), Decimal)
+    assert fractional_to_decimal("1-3") is None           # no finite decimal: never rounded
+    assert fractional_to_decimal("") is None and fractional_to_decimal(None) is None
+
+
+def test_publication_freezes_every_runner_once_and_marks_only_ties(db):
+    api = FakeApi()
+    eng = _engine(db, api)
+    eng.sync_entries(HIST)
+    t = _tournament(db, HIST)
+    r1 = _races(db, t)[0]
+    rows = {db.get(Horse, d.horseId).name: d for d in db.query(My50FixedDividend).filter_by(raceId=r1.id)}
+    assert "Abundance" not in rows                        # withdrawn before publication: no value
+    assert {n: (d.value, d.tieStatus) for n, d in rows.items()} == {
+        "Hodl Hard": ("5.00", "unique"), "Problem Solved": ("2.80", "unique"), "My King Air": ("2.40", "unique"),
+        "Four Dimes": ("13.00", "unique"),
+        "Federal Agent": ("21.00", TIE_STATUS), "Berniedott": ("21.00", TIE_STATUS),   # both 20-1
+    }
+    before = sorted((d.horseId, d.value, d.frozenAt) for d in db.query(My50FixedDividend))
+    eng.sync_entries(HIST)                                # re-sync never re-freezes
+    assert sorted((d.horseId, d.value, d.frozenAt) for d in db.query(My50FixedDividend)) == before
+
+
+def test_tied_winner_is_pending_tie_adjustment_others_score():
+    horses = [{"id": i, "scratched": False, "runnerStatus": "active"} for i in (1, 2, 3)]
+    frozen = {1: Decimal("21.00"), 2: Decimal("21.00"), 3: Decimal("2.40")}
+    tied = {1, 2}
+    assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 1}], horses, frozen, tied) == (0, PENDING_TIE_ADJUSTMENT)
+    assert evaluate_ticket("full_point", [3], [{"position": 1, "horseId": 1}], horses, frozen, tied) == (0, SCORED)
+    assert evaluate_ticket("full_point", [3], [{"position": 1, "horseId": 3}], horses, frozen, tied) == (120, SCORED)
 
 
 # 19 ------------------------------------------------------------ 401 / 403

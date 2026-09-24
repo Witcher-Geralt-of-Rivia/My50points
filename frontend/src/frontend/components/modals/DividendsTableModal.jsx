@@ -19,7 +19,7 @@ import { fetchJson } from "@/frontend/lib/api/client";
 import { useLanguage } from "@/frontend/lib/i18n/LanguageContext";
 import { saddleColor } from "@/frontend/lib/saddleColors";
 import { formatTime, tournamentRaces } from "@/frontend/lib/redesign";
-import { publishedMy50Dividend, MY50_PENDING } from "@/frontend/lib/my50Dividend";
+import { publishedMy50Dividend, my50PendingLabel } from "@/frontend/lib/my50Dividend";
 
 function Saddle({ number }) {
   const c = saddleColor(number);
@@ -36,7 +36,7 @@ function My50Cell({ runner, isEn }) {
   return (
     <span className="dvb__pending">
       <span aria-hidden className="dvb__dash">—</span>
-      <span>{isEn ? MY50_PENDING.en : MY50_PENDING.es}</span>
+      <span>{my50PendingLabel(runner, isEn)}</span>
     </span>
   );
 }
@@ -59,6 +59,9 @@ export default function DividendsTableModal({ isOpen, onClose, tournamentSlug, r
 
   const races = racesProp || tournamentRaces(fetched);
   const name = tournamentName || fetched?.name || null;
+  const allRunners = races.flatMap((r) => r.horses || []);
+  const anyPublished = allRunners.some((h) => publishedMy50Dividend(h) != null);
+  const anyTie = allRunners.some((h) => h.my50TieStatus === "pending_tie_adjustment");
 
   return (
     <Dialog
@@ -72,14 +75,20 @@ export default function DividendsTableModal({ isOpen, onClose, tournamentSlug, r
       title={isEn ? "MY50 fixed dividends" : "Dividendos fijos MY50"}
     >
       {name ? <p className="dvb__sub">{name}</p> : null}
-      <p className="dvb__notice" role="note">
-        <ShieldAlert size={18} aria-hidden />
-        <span>
-          {isEn
-            ? "MY50 fixed dividends for this tournament are not published yet."
-            : "Los dividendos fijos MY50 de este torneo aún no están publicados."}
-        </span>
-      </p>
+      {!anyPublished || anyTie ? (
+        <p className="dvb__notice" role="note">
+          <ShieldAlert size={18} aria-hidden />
+          <span>
+            {!anyPublished
+              ? isEn
+                ? "MY50 fixed dividends for this tournament are not published yet."
+                : "Los dividendos fijos MY50 de este torneo aún no están publicados."
+              : isEn
+                ? "Fixed at publication. Runners with the same value await the tie adjustment."
+                : "Fijados al publicar el torneo. Los caballos con el mismo valor esperan el ajuste de empate."}
+          </span>
+        </p>
+      ) : null}
 
       {races.length > 1 ? (
         <nav className="dvb__jump" aria-label={isEn ? "Races" : "Carreras"}>

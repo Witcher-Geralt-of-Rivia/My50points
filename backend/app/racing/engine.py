@@ -247,6 +247,11 @@ class SyncEngine:
             self.db.flush()
             self._apply_race(race, pr, now, report)
             self._sync_runners(race, pr.runners, complete=True, now=now, report=report)
+        # Publication: freeze the MY50 fixed dividends now (insert-only, never updated).
+        from app.racing.dividends import freeze_tournament_dividends
+        frozen = freeze_tournament_dividends(self.db, tournament, now)
+        report.notes.append(f"MY50 dividends frozen: {frozen.frozen}; tied values pending tenths rule: "
+                            f"{sum(len(t[2]) for t in frozen.ties)}; without value: {len(frozen.without_value)}")
         report.tournaments_created += 1
         return tournament
 

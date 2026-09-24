@@ -16,7 +16,7 @@ import { Check, Clock, Ruler, Users, Lock, Ban, CloudOff } from 'lucide-react';
 import { strategies } from './PickSelector';
 import { saddleColor } from '@/frontend/lib/saddleColors';
 import { formatTime } from '@/frontend/lib/redesign';
-import { publishedMy50Dividend, MY50_PENDING } from '@/frontend/lib/my50Dividend';
+import { publishedMy50Dividend, my50PendingLabel } from '@/frontend/lib/my50Dividend';
 import GuideRing from '@/frontend/components/ui/GuideRing';
 
 const STRAT_ACCENT = { full: 'm1', dual: 'm2', smart: 'm3' };
@@ -49,7 +49,7 @@ function RunnerStatusChip({ runner, isEn }) {
 function DividendValue({ runner, isEn, withLabel = false }) {
   const value = publishedMy50Dividend(runner);
   if (value != null) return <span className="divv divv--on t-num">{value.toFixed(2)}</span>;
-  const pending = isEn ? MY50_PENDING.en : MY50_PENDING.es;
+  const pending = my50PendingLabel(runner, isEn);
   return (
     <span className="divv divv--off" title={pending}>
       <span aria-hidden>—</span>

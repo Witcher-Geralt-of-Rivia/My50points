@@ -179,6 +179,25 @@ class OfficialDividend(Base):
     horse: Mapped["Horse"] = relationship()
 
 
+class My50FixedDividend(Base):
+    """MY50 fixed dividend frozen at tournament publication (V1.1 precedence:
+    validated win-pool dollar, else live odds, else morning line, converted
+    numerator/denominator + 1). `value` is the EXACT decimal as text; rows are
+    insert-only and never updated by later syncs or odds moves."""
+    __tablename__ = "My50FixedDividend"
+    __table_args__ = (UniqueConstraint("raceId", "horseId", name="uq_my50_dividend_race_horse"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    raceId: Mapped[int] = mapped_column(ForeignKey("Race.id"))
+    horseId: Mapped[int] = mapped_column(ForeignKey("Horse.id"))
+    value: Mapped[str] = mapped_column(String)                       # exact decimal, e.g. "3.50"
+    source: Mapped[str] = mapped_column(String)                      # live_odds | morning_line
+    sourceValue: Mapped[str | None] = mapped_column(String, nullable=True)  # provider text, e.g. "5-2"
+    # unique | pending_tie_adjustment (equal value in the race; tenths rule pending)
+    tieStatus: Mapped[str] = mapped_column(String, default="unique", server_default="unique")
+    frozenAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
+
+
 class Ticket(Base):
     """Per-race ticket selection row (preserved for backward compatibility and race-level scoring)."""
     __tablename__ = "Ticket"

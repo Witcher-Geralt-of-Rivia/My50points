@@ -182,15 +182,23 @@ def score_race_entries(db: Session, race: Race, result_dicts: list[dict]) -> lis
         # Results stay recorded as racing facts; a cancelled tournament scores nothing.
         cancel_tournament_scores(db, tournament)
         return []
-    official_divs = {
-        d.horseId: d.dividend
-        for d in db.query(OfficialDividend).filter(OfficialDividend.raceId == race.id).all()
-    }
+    # The frozen MY50 table (published tournaments) wins; the legacy admin
+    # OfficialDividend path remains for demo/admin-scored races.
+    from app.racing.dividends import race_frozen_table
+    frozen = race_frozen_table(db, race.id)
+    if frozen is not None:
+        official_divs, tie_pending = frozen
+    else:
+        official_divs = {
+            d.horseId: d.dividend
+            for d in db.query(OfficialDividend).filter(OfficialDividend.raceId == race.id).all()
+        }
+        tie_pending = set()
     horses = _horse_rows(race)
     scored_tickets = []
 
     for ticket in db.query(Ticket).filter(Ticket.raceId == race.id).all():
-        points, status = evaluate_ticket(ticket.strategy, ticket.picks, result_dicts, horses, official_divs)
+        points, status = evaluate_ticket(ticket.strategy, ticket.picks, result_dicts, horses, official_divs, tie_pending)
         now_scored = status == SCORED
         was_scored = bool(ticket.isScored)
         prev_points = ticket.pointsEarned if was_scored else 0
@@ -221,7 +229,7 @@ def score_race_entries(db: Session, race: Race, result_dicts: list[dict]) -> lis
         .all()
     )
     for sel in selections:
-        points, status = evaluate_ticket(sel.strategy, sel.picks, result_dicts, horses, official_divs)
+        points, status = evaluate_ticket(sel.strategy, sel.picks, result_dicts, horses, official_divs, tie_pending)
         now_scored = status == SCORED
         prev = sel.pointsEarned if sel.isScored else 0
         new_points = points if now_scored else 0

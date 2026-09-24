@@ -157,8 +157,32 @@ def list_tournaments(
     }
 
 
-def _horse_dict(h: Horse) -> dict:
+def _frozen_map(db: Session, race_ids) -> dict:
+    """horseId -> frozen MY50 row for the given races (read-only)."""
+    from app.models import My50FixedDividend
+
+    ids = list(race_ids)
+    if not ids:
+        return {}
+    return {d.horseId: d for d in db.query(My50FixedDividend).filter(My50FixedDividend.raceId.in_(ids)).all()}
+
+
+def _my50_fields(row) -> dict:
+    """Explicit provenance for the MY50 fixed dividend: the frontend shows a
+    number ONLY when my50DividendFrozen is true and no tie adjustment is pending."""
+    if row is None:
+        return {"my50Dividend": None, "my50DividendFrozen": False, "my50DividendSource": None, "my50TieStatus": None}
     return {
+        "my50Dividend": row.value,            # exact decimal text, e.g. "3.50"
+        "my50DividendFrozen": True,
+        "my50DividendSource": row.source,     # live_odds | morning_line
+        "my50TieStatus": row.tieStatus,       # unique | pending_tie_adjustment
+    }
+
+
+def _horse_dict(h: Horse, frozen: dict | None = None) -> dict:
+    return {
+        **_my50_fields((frozen or {}).get(h.id)),
         "id": h.id,
         "postPosition": h.postPosition,
         "programNumber": h.programNumber,
@@ -200,6 +224,7 @@ def get_tournament(
 
     ticket_count = db.query(func.count(Ticket.id)).filter(Ticket.tournamentId == t.id).scalar() or 0
     races = sorted(t.races, key=lambda r: r.raceNumber)
+    frozen = _frozen_map(db, [r.id for r in races])
 
     return {
         "tournament": {
@@ -221,7 +246,7 @@ def get_tournament(
             "races": [
                 {
                     **_race_fields(r),
-                    "horses": [_horse_dict(h) for h in sorted(r.horses, key=lambda x: x.postPosition)],
+                    "horses": [_horse_dict(h, frozen) for h in sorted(r.horses, key=lambda x: x.postPosition)],
                     "results": [
                         {"id": res.id, "position": res.position, "horseId": res.horseId, "isDeadHeat": bool(res.isDeadHeat)}
                         for res in sorted(r.results, key=lambda x: x.position)
@@ -459,12 +484,15 @@ def get_tournament_dividends(slug: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tournament not found")
 
     tables = []
+    frozen = _frozen_map(db, [r.id for r in t.races])
     for r in sorted(t.races, key=lambda r: r.raceNumber):
         div_map = {d.horseId: d.dividend for d in (r.dividends or [])}
         runners = []
         for h in sorted(r.horses, key=lambda x: x.postPosition):
-            value = div_map.get(h.id)
+            row = frozen.get(h.id)
+            value = float(row.value) if row is not None else div_map.get(h.id)
             runners.append({
+                **_my50_fields(row),
                 "horseId": h.id,
                 "postPosition": h.postPosition,
                 "programNumber": h.programNumber,
