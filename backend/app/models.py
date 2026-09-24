@@ -1,10 +1,11 @@
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.types import PrismaDateTime
+from app.types import ExactPoints, PrismaDateTime
 
 
 class User(Base):
@@ -210,7 +211,7 @@ class Ticket(Base):
     ticketNumber: Mapped[int] = mapped_column(Integer, default=1)
     strategy: Mapped[str] = mapped_column(String)
     picks: Mapped[str] = mapped_column(String)
-    pointsEarned: Mapped[int] = mapped_column(Integer, default=0)
+    pointsEarned: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     isScored: Mapped[bool] = mapped_column(Boolean, default=False)
     # unscored | scored | pending_dividend | pending_scratch_rule
     scoreStatus: Mapped[str] = mapped_column(String, default="unscored", server_default="unscored")
@@ -234,7 +235,7 @@ class TournamentTicket(Base):
     status: Mapped[str] = mapped_column(String, default="confirmed")  # confirmed | locked | completed
     isAdUnlocked: Mapped[bool] = mapped_column(Boolean, default=False)
     adUnlockToken: Mapped[str | None] = mapped_column(String, nullable=True)
-    totalPoints: Mapped[int] = mapped_column(Integer, default=0)
+    totalPoints: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     originalCreatorAlias: Mapped[str | None] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -255,7 +256,7 @@ class TicketSelection(Base):
     raceOrder: Mapped[int] = mapped_column(Integer)  # 1 to 7
     strategy: Mapped[str] = mapped_column(String)    # full_point | dual_point | smart_pick
     picks: Mapped[str] = mapped_column(String)       # JSON string list of horse IDs
-    pointsEarned: Mapped[int] = mapped_column(Integer, default=0)
+    pointsEarned: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     isScored: Mapped[bool] = mapped_column(Boolean, default=False)
     scoreStatus: Mapped[str] = mapped_column(String, default="unscored", server_default="unscored")
 
@@ -274,10 +275,10 @@ class TournamentRankSnapshot(Base):
     raceNumber: Mapped[int] = mapped_column(Integer)
     userId: Mapped[int] = mapped_column(ForeignKey("User.id"))
     ticketNumber: Mapped[int] = mapped_column(Integer, default=1)
-    pointsAtRace: Mapped[int] = mapped_column(Integer, default=0)
+    pointsAtRace: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     rankAtRace: Mapped[int] = mapped_column(Integer, default=1)
-    pointsBehindLeader: Mapped[int] = mapped_column(Integer, default=0)
-    pointsBehindNext: Mapped[int] = mapped_column(Integer, default=0)
+    pointsBehindLeader: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
+    pointsBehindNext: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
 
 
@@ -289,18 +290,18 @@ class LeaderboardEntry(Base):
     userId: Mapped[int] = mapped_column(ForeignKey("User.id"))
     tournamentId: Mapped[int] = mapped_column(ForeignKey("Tournament.id"))
     ticketNumber: Mapped[int] = mapped_column(Integer, default=1)
-    totalPoints: Mapped[int] = mapped_column(Integer, default=0)
+    totalPoints: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     racesPlayed: Mapped[int] = mapped_column(Integer, default=0)
-    fullPoints: Mapped[int] = mapped_column(Integer, default=0)
-    dualPoints: Mapped[int] = mapped_column(Integer, default=0)
-    smartPoints: Mapped[int] = mapped_column(Integer, default=0)
+    fullPoints: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
+    dualPoints: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
+    smartPoints: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     winStreak: Mapped[int] = mapped_column(Integer, default=0)
     bestStreak: Mapped[int] = mapped_column(Integer, default=0)
     rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
     previousRank: Mapped[int | None] = mapped_column(Integer, nullable=True)
     rankChange: Mapped[int] = mapped_column(Integer, default=0)
-    lastPointsChange: Mapped[int] = mapped_column(Integer, default=0)
-    pointsBehindNext: Mapped[int] = mapped_column(Integer, default=0)
+    lastPointsChange: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
+    pointsBehindNext: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     originalCreatorAlias: Mapped[str | None] = mapped_column(String, nullable=True)
     isClaimed: Mapped[bool] = mapped_column(Boolean, default=False)
     claimedByUserId: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -312,7 +313,7 @@ class UserStats(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     userId: Mapped[int] = mapped_column(ForeignKey("User.id"), unique=True)
-    totalPoints: Mapped[int] = mapped_column(Integer, default=0)
+    totalPoints: Mapped[Decimal] = mapped_column(ExactPoints, default=0)
     tournamentsPlayed: Mapped[int] = mapped_column(Integer, default=0)
     totalRaces: Mapped[int] = mapped_column(Integer, default=0)
     winRate: Mapped[float] = mapped_column(Float, default=0)

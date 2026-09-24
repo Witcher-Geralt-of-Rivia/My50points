@@ -483,7 +483,9 @@ class AchievementCardBody(BaseModel):
     track: str | None = None
     location: str | None = None
     date: str | None = None
-    points: int | None = None
+    # Display snapshot of a score for a shareable card (not a canonical score):
+    # MY50 scores carry decimals (e.g. 112.50), so an integer-only field rejected them.
+    points: float | None = None
     featName: str | None = None
     featNameEn: str | None = None
     earnedAt: str | None = None

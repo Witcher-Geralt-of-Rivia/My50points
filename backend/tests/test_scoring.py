@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 from app.scoring import score_ticket, ALLOCATIONS
 
@@ -31,7 +32,7 @@ def test_frozen_pre_tournament_dividends_full_point(sample_horses):
     results = [{"position": 1, "horseId": 2}, {"position": 2, "horseId": 1}, {"position": 3, "horseId": 3}]
     picks = [2]
     points = score_ticket("full_point", picks, results, sample_horses)
-    assert points == round(50 * 4.20)
+    assert points == (Decimal("50") * Decimal("4.20"))
     assert points == 210
 
 
@@ -47,19 +48,19 @@ def test_dual_point_strategy(sample_horses):
     """
     Dual Point: 2 horses, allocations [25, 25].
     Slot 1 = Horse 3 (odds 8.50), Slot 2 = Horse 1 (odds 2.50).
-    If Horse 3 wins: 25 * 8.50 = 212.5 -> 212.
+    If Horse 3 wins: 25 * 8.50 = 212.50 exactly (MY50 scores are never rounded).
     """
     results = [{"position": 1, "horseId": 3}, {"position": 2, "horseId": 1}]
     picks = [3, 1]
     points = score_ticket("dual_point", picks, results, sample_horses)
-    assert points == round(25 * 8.50)
-    assert points == 212
+    assert points == (Decimal("25") * Decimal("8.50"))
+    assert points == Decimal("212.50")
 
-    # If slot 2 (Horse 1) wins instead: 25 * 2.50 = 62.5 -> 62
+    # If slot 2 (Horse 1) wins instead: 25 * 2.50 = 62.50
     results_alt = [{"position": 1, "horseId": 1}, {"position": 2, "horseId": 3}]
     points_alt = score_ticket("dual_point", picks, results_alt, sample_horses)
-    assert points_alt == round(25 * 2.50)
-    assert points_alt == 62
+    assert points_alt == (Decimal("25") * Decimal("2.50"))
+    assert points_alt == Decimal("62.50")
 
 
 def test_smart_point_strategy(sample_horses):
@@ -69,15 +70,15 @@ def test_smart_point_strategy(sample_horses):
     """
     # Slot 1 wins: 30 * 2.50 = 75
     r1 = [{"position": 1, "horseId": 1}]
-    assert score_ticket("smart_pick", [1, 2, 3], r1, sample_horses) == round(30 * 2.50)
+    assert score_ticket("smart_pick", [1, 2, 3], r1, sample_horses) == (Decimal("30") * Decimal("2.50"))
 
     # Slot 2 wins: 15 * 4.20 = 63
     r2 = [{"position": 1, "horseId": 2}]
-    assert score_ticket("smart_pick", [1, 2, 3], r2, sample_horses) == round(15 * 4.20)
+    assert score_ticket("smart_pick", [1, 2, 3], r2, sample_horses) == (Decimal("15") * Decimal("4.20"))
 
-    # Slot 3 wins: 5 * 8.50 = 42.5 -> 42
+    # Slot 3 wins: 5 * 8.50 = 42.50 exactly
     r3 = [{"position": 1, "horseId": 3}]
-    assert score_ticket("smart_pick", [1, 2, 3], r3, sample_horses) == round(5 * 8.50)
+    assert score_ticket("smart_pick", [1, 2, 3], r3, sample_horses) == (Decimal("5") * Decimal("8.50"))
 
 
 def test_scratch_redistribution_to_favorite(sample_horses):
@@ -91,7 +92,7 @@ def test_scratch_redistribution_to_favorite(sample_horses):
     results = [{"position": 1, "horseId": 1}, {"position": 2, "horseId": 2}]
     picks = [4]  # Scratched horse
     points = score_ticket("full_point", picks, results, sample_horses)
-    assert points == round(50 * 2.50)
+    assert points == (Decimal("50") * Decimal("2.50"))
     assert points == 125
 
 
@@ -114,12 +115,12 @@ def test_dead_heat_single_ticket_winner():
 
     # Ticket A picked Horse 10
     points_a = score_ticket("full_point", [10], results, horses)
-    assert points_a == round(50 * 4.0)
+    assert points_a == (Decimal("50") * Decimal("4.0"))
     assert points_a == 200
 
     # Ticket B picked Horse 20
     points_b = score_ticket("full_point", [20], results, horses)
-    assert points_b == round(50 * 6.0)
+    assert points_b == (Decimal("50") * Decimal("6.0"))
     assert points_b == 300
 
 
@@ -128,7 +129,7 @@ def test_dead_heat_both_picks_win_dual_point():
     Dead Heat where user picked BOTH winning horses in Dual Point:
     Picks: [10, 20] (Slot 1: Horse 10 @ 4.0, Slot 2: Horse 20 @ 6.0)
     Both finish in position 1.
-    Total = round(25 * 4.0) + round(25 * 6.0) = 100 + 150 = 250.
+    Total = 25 x 4.0 + 25 x 6.0 = 100 + 150 = 250 (exact decimals).
     """
     horses = [
         {"id": 10, "odds": 4.0, "scratched": False},
@@ -139,7 +140,7 @@ def test_dead_heat_both_picks_win_dual_point():
         {"position": 1, "horseId": 20},
     ]
     points = score_ticket("dual_point", [10, 20], results, horses)
-    assert points == round(25 * 4.0) + round(25 * 6.0)
+    assert points == (Decimal("25") * Decimal("4.0")) + (Decimal("25") * Decimal("6.0"))
     assert points == 250
 
 

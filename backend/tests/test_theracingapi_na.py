@@ -3,6 +3,10 @@
 Fixtures (tests/fixtures/racing/theracingapi_na) are trimmed real responses for
 Churchill Downs 2026-09-23 (entries + results) and 2026-09-24 (entries). They are
 served through an httpx MockTransport: no test ever calls the provider.
+
+Canonical MY50 selection: the LAST seven eligible races by post instant
+(9-race card -> track races 3..9, 8-race card -> track races 2..8).
+MY50 scores are exact decimals (points x frozen MY50 dividend), never rounded.
 """
 from __future__ import annotations
 
@@ -10,35 +14,35 @@ import base64
 import copy
 import json
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
 import pytest
 
 from app.models import (
-    Horse, LeaderboardEntry, OfficialDividend, Race, RaceResult, RacingMeeting, Ticket, TicketSelection,
-    Tournament, TournamentTicket, User,
+    Horse, LeaderboardEntry, My50FixedDividend, OfficialDividend, Race, RaceResult, RacingMeeting, Ticket,
+    TicketSelection, Tournament, TournamentTicket, User,
 )
+from app.racing.dividends import PENDING_TIE_ADJUSTMENT as TIE_STATUS, fractional_to_decimal
 from app.racing.dto import RACE_FINISHED, RACE_RESULT_OFFICIAL, RUNNER_PROVIDER_UNKNOWN, RUNNER_SCRATCHED
 from app.racing.engine import SyncEngine
 from app.racing.errors import ProviderAuthError, ProviderRateLimited
 from app.racing.providers.theracingapi_na import TheRacingApiNorthAmericaProvider, parse_fractional_odds
 from app.racing.scheduler import Scheduler
-from decimal import Decimal
-
-from app.models import My50FixedDividend
-from app.racing.dividends import PENDING_TIE_ADJUSTMENT as TIE_STATUS, fractional_to_decimal
 from app.scoring import (
-    PENDING_SCRATCH_RULE, PENDING_TIE_ADJUSTMENT, SCORED, TOURNAMENT_CANCELLED, evaluate_ticket,
+    PENDING_SCRATCH_RULE, PENDING_TIE_ADJUSTMENT, SCORED, TOURNAMENT_CANCELLED, evaluate_ticket, slot_points,
 )
 from tests.conftest import TestingSessionLocal
 from tests.racing_support import config, snapshot
 
 FIX = Path(__file__).resolve().parent / "fixtures" / "racing" / "theracingapi_na"
-HIST = "CD_1790121600000"   # Churchill Downs 2026-09-23 (run, official results)
-LIVE = "CD_1790208000000"   # Churchill Downs 2026-09-24 (upcoming at capture time)
+HIST = "CD_1790121600000"   # Churchill Downs 2026-09-23 (9 races, run, official results)
+LIVE = "CD_1790208000000"   # Churchill Downs 2026-09-24 (8 races, upcoming at capture time)
 NOW = datetime(2026, 9, 24, 18, 30, tzinfo=timezone.utc)
-FIRST7 = (1, 2, 3, 4, 5, 6, 7)
+HIST_LAST7 = [3, 4, 5, 6, 7, 8, 9]
+LIVE_LAST7 = [2, 3, 4, 5, 6, 7, 8]
+D = Decimal
 
 
 def _load(name: str) -> dict:
@@ -72,10 +76,14 @@ class FakeApi:
             return httpx.Response(404, json={"detail": "Not Found"})
         return httpx.Response(200, json=body)
 
+    def race(self, meet: str, kind: str, track_number: int) -> dict:
+        body = self.payloads[f"/v1/north-america/meets/{meet}/{kind}"]
+        return next(r for r in body["races"] if r["race_key"]["race_number"] == str(track_number))
+
 
 def _cfg(**over):
-    base = dict(provider="theracingapi_na", meeting_allowlist=(HIST, LIVE),
-                explicit_races={HIST: FIRST7, LIVE: FIRST7}, max_retries=2, backoff_base_seconds=0.0)
+    # Canonical rule: no explicit race list, default last7 policy.
+    base = dict(provider="theracingapi_na", meeting_allowlist=(HIST, LIVE), max_retries=2, backoff_base_seconds=0.0)
     base.update(over)
     return config(**base)
 
@@ -99,7 +107,17 @@ def _races(db, t):
     return db.query(Race).filter_by(tournamentId=t.id).order_by(Race.raceNumber).all()
 
 
-def _ticket(db, t, username, picks_by_race: dict, strategy="full_point"):
+def _horse(db, race, name):
+    return db.query(Horse).filter_by(raceId=race.id, name=name).one()
+
+
+# Every name the captured result files declare a winner (win_payoff > 0).
+_REAL_WINNERS = {h["horse_name"] for r in _load("cd_2026-09-23_results.json")["races"] for h in r["runners"]
+                 if (h.get("win_payoff") or 0) > 0}
+
+
+def _ticket(db, t, username, picks_by_race: dict, strategy="full_point", strategies: dict | None = None):
+    """A confirmed 7-race ticket. Races without explicit picks get runners that did not win."""
     user = User(username=username, isGuest=True, gameMode=4)
     db.add(user)
     db.flush()
@@ -107,21 +125,23 @@ def _ticket(db, t, username, picks_by_race: dict, strategy="full_point"):
     db.add(agg)
     db.flush()
     for race in _races(db, t):
-        picks = json.dumps(picks_by_race.get(race.raceNumber) or [
-            next(h.id for h in race.horses if not h.scratched)])
+        strat = (strategies or {}).get(race.raceNumber, strategy)
+        need = {"full_point": 1, "dual_point": 2, "smart_pick": 3}[strat]
+        picks = picks_by_race.get(race.raceNumber)
+        if picks is None:
+            pool = [h.id for h in race.horses if not h.scratched and h.name not in _REAL_WINNERS]
+            picks = pool[:need]
+        payload = json.dumps(picks)
         db.add(TicketSelection(tournamentTicketId=agg.id, raceId=race.id, raceOrder=race.raceNumber,
-                               strategy=strategy, picks=picks))
+                               strategy=strat, picks=payload))
         db.add(Ticket(userId=user.id, raceId=race.id, tournamentId=t.id, ticketNumber=1,
-                      strategy=strategy, picks=picks))
+                      strategy=strat, picks=payload))
     db.commit()
     return user, agg
 
 
-def _freeze_table(db, race, values: dict[int, float]):
-    """Simulates the (client-supplied) frozen MY50 table for one race."""
-    for hid, v in values.items():
-        db.add(OfficialDividend(raceId=race.id, horseId=hid, winPayoff=0.0, dividend=v))
-    db.commit()
+def _selection(db, agg, race):
+    return db.query(TicketSelection).filter_by(tournamentTicketId=agg.id, raceId=race.id).one()
 
 
 # 1 ------------------------------------------------------------ authentication
@@ -183,7 +203,6 @@ def test_ms_of_day_post_time_is_london_clock_and_matches_epoch_form():
     assert e.races[0].meta["postTimeRaw"] == "63900000"
     assert e.races[0].post_time == datetime(2026, 9, 23, 16, 45, tzinfo=timezone.utc)   # 17:45 London (BST)
     assert all(r.status == RACE_FINISHED for r in e.races)
-    # same card, both forms observed on 2026-09-24: epoch and ms-of-day agree race by race
     api = FakeApi()
     epoch = _provider(api).get_entries(LIVE)
     ms_form = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{LIVE}/entries"])
@@ -209,6 +228,60 @@ def test_result_normalization_winner_only():
     assert len(results) == 9 and all(len(r.placings) == 1 for r in results.values())
 
 
+# ------------------------------------------------------------ canonical last-seven selection
+def test_nine_race_card_selects_track_races_3_to_9_as_indexes_1_to_7(db):
+    _engine(db, FakeApi()).sync_entries(HIST)
+    t = _tournament(db, HIST)
+    races = _races(db, t)
+    assert [r.trackRaceNumber for r in races] == HIST_LAST7
+    assert [r.raceNumber for r in races] == [1, 2, 3, 4, 5, 6, 7]
+    assert races[0].providerRaceId == f"{HIST}:R3:D" and t.selectionPolicy == "last7"
+
+
+def test_eight_race_card_selects_track_races_2_to_8(db):
+    _engine(db, FakeApi()).sync_entries(LIVE)
+    races = _races(db, _tournament(db, LIVE))
+    assert [r.trackRaceNumber for r in races] == LIVE_LAST7 and [r.raceNumber for r in races] == list(range(1, 8))
+    assert races[0].postTime.replace(tzinfo=timezone.utc) == datetime(2026, 9, 24, 21, 29, tzinfo=timezone.utc)
+
+
+def test_last_seven_follows_post_instant_then_track_number(db):
+    api = FakeApi()
+    card = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{LIVE}/entries"])
+    # Track race 1 re-timed to post LAST: by instant it is now one of the last seven.
+    card["races"][0]["post_time_long"] = str(int(card["races"][7]["post_time_long"]) + 60_000)
+    api.payloads[f"/v1/north-america/meets/{LIVE}/entries"] = card
+    _engine(db, api).sync_entries(LIVE)
+    races = _races(db, _tournament(db, LIVE))
+    assert [r.trackRaceNumber for r in races] == [3, 4, 5, 6, 7, 8, 1]
+
+
+def test_explicit_acceptance_selection_matches_canonical(db):
+    cfg = _cfg(explicit_races={HIST: tuple(HIST_LAST7)})
+    _engine(db, FakeApi(), cfg).sync_entries(HIST)
+    t = _tournament(db, HIST)
+    assert [r.trackRaceNumber for r in _races(db, t)] == HIST_LAST7 and t.selectionPolicy == "explicit:3,4,5,6,7,8,9"
+
+
+def test_frozen_race_ids_never_change_after_publication(db):
+    api = FakeApi()
+    eng = _engine(db, api)
+    eng.sync_entries(LIVE)
+    t = _tournament(db, LIVE)
+    frozen = [(r.id, r.raceNumber, r.providerRaceId) for r in _races(db, t)]
+    card = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{LIVE}/entries"])
+    extra = copy.deepcopy(card["races"][7])
+    extra["race_key"] = {"race_number": "9", "day_evening": "D"}
+    extra["post_time_long"] = str(int(card["races"][7]["post_time_long"]) + 1_800_000)
+    card["races"].append(extra)                      # a new later race appears on the card
+    card["races"][3]["post_time_long"] = str(int(card["races"][3]["post_time_long"]) + 600_000)   # post time moves
+    api.payloads[f"/v1/north-america/meets/{LIVE}/entries"] = card
+    report = eng.sync_entries(LIVE)
+    db.expire_all()
+    assert [(r.id, r.raceNumber, r.providerRaceId) for r in _races(db, t)] == frozen
+    assert report.ignored_races == 2                 # track races 1 and the new 9: never pulled in
+
+
 # 21 ------------------------------------------------------------ historical proof
 def test_historical_churchill_real_proof(db):
     api = FakeApi()
@@ -216,45 +289,33 @@ def test_historical_churchill_real_proof(db):
     eng.sync_entries(HIST)
     eng.sync_results(HIST)
     t = _tournament(db, HIST)
-    assert (t.origin, t.provider, t.selectionPolicy, t.status) == ("real", "theracingapi_na", "explicit:1,2,3,4,5,6,7", "completed")
+    assert (t.origin, t.provider, t.status) == ("real", "theracingapi_na", "completed")
     races = _races(db, t)
-    assert [r.trackRaceNumber for r in races] == list(FIRST7) and [r.raceNumber for r in races] == list(range(1, 8))
     winners = []
     for r in races:
         rows = db.query(RaceResult).filter_by(raceId=r.id).all()
         assert len(rows) == 1 and rows[0].position == 1 and rows[0].source == "provider"
         winners.append(db.get(Horse, rows[0].horseId).name)
-    assert winners == ["Hodl Hard", "Laughnowcrylater", "Doctor Jeff", "Halfway Joking", "Soul of the Night",
-                       "Special Sauce", "My Boy Gary"]
+    assert winners == ["Doctor Jeff", "Halfway Joking", "Soul of the Night", "Special Sauce", "My Boy Gary",
+                       "Memory", "Pelican Hill"]
     scratched = sorted(h.name for r in races for h in r.horses if h.scratched)
-    assert scratched == sorted(["Abundance", "Glint", "Saint in the City", "Redacted", "She's Toasty",
-                                "Your Choice", "Jr Miss Buttercup"])
-    assert sum(len(r.horses) for r in races) == 59
+    assert scratched == sorted(["Glint", "Saint in the City", "Redacted", "She's Toasty", "Your Choice",
+                                "Jr Miss Buttercup", "Gamblers Tail", "Universe", "Outofpi", "Telecaster"])
+    assert sum(len(r.horses) for r in races) == 66
     assert db.query(OfficialDividend).count() == 0       # results never create MY50 dividends
 
 
 # 22 ------------------------------------------------------------ live import
 def test_live_churchill_import(db):
-    eng = _engine(db, FakeApi())
-    eng.sync_entries(LIVE)
+    _engine(db, FakeApi()).sync_entries(LIVE)
     t = _tournament(db, LIVE)
     races = _races(db, t)
-    assert t.status == "upcoming" and len(races) == 7
-    assert [r.trackRaceNumber for r in races] == list(FIRST7)
-    assert races[0].postTime.replace(tzinfo=timezone.utc) == datetime(2026, 9, 24, 21, 0, tzinfo=timezone.utc)
-    assert all(r.status == "upcoming" and r.resultStatus == "none" for r in races)
+    assert t.status == "upcoming" and all(r.status == "upcoming" and r.resultStatus == "none" for r in races)
     scratched = sorted(h.name for r in races for h in r.horses if h.scratched)
-    assert scratched == sorted(["Prosecco Gal", "Shilling", "Magical Mikel", "Hogie the Player"])
-    meta = json.loads(db.query(Horse).filter_by(name="Deceiving Diva").one().providerMeta)
-    assert meta["jockeyId"] == "jky_na_486027" and meta["scratchIndicator"] == "N"
-
-
-def test_unknown_status_runner_persists_as_provider_unknown(db):
-    cfg = _cfg(explicit_races={LIVE: (2, 3, 4, 5, 6, 7, 8)})
-    _engine(db, FakeApi(), cfg).sync_entries(LIVE)
-    h = db.query(Horse).filter_by(name="Harwich Port").one()
-    assert (h.runnerStatus, h.scratched) == ("provider_unknown", False)
-    assert json.loads(h.providerMeta)["scratchIndicator"] == "A"
+    assert scratched == sorted(["Shilling", "Magical Mikel", "Hogie the Player", "Take Charge Beach"])
+    harwich = db.query(Horse).filter_by(name="Harwich Port").one()       # "A": kept, not scratched
+    assert (harwich.runnerStatus, harwich.scratched) == ("provider_unknown", False)
+    assert json.loads(harwich.providerMeta)["scratchIndicator"] == "A"
 
 
 def test_meetings_outside_the_allowlist_get_no_tournament(db):
@@ -271,11 +332,11 @@ def test_repeated_sync_is_idempotent_meetings_races_runners_results(db):
     eng.sync_entries(HIST)
     eng.sync_results(HIST)
     first = snapshot(db)
-    counts = (db.query(RacingMeeting).count(), db.query(Race).count(), db.query(Horse).count(), db.query(RaceResult).count())
     report_e = eng.sync_entries(HIST)
     report_r = eng.sync_results(HIST)
     assert snapshot(db) == first
-    assert counts == (db.query(RacingMeeting).count(), db.query(Race).count(), db.query(Horse).count(), db.query(RaceResult).count()) == (1, 7, 59, 7)
+    counts = (db.query(RacingMeeting).count(), db.query(Race).count(), db.query(Horse).count(), db.query(RaceResult).count())
+    assert counts == (1, 7, 66, 7)
     assert report_e.runners_created == 0 and report_e.tournaments_created == 0 and report_r.results_written == 0
 
 
@@ -302,49 +363,83 @@ def test_provider_odds_cannot_overwrite_frozen_my50_dividend(db):
     api = FakeApi()
     eng = _engine(db, api)
     eng.sync_entries(LIVE)
-    race = _races(db, _tournament(db, LIVE))[0]
-    horse = db.query(Horse).filter_by(raceId=race.id, name="Deceiving Diva").one()
+    race = _races(db, _tournament(db, LIVE))[0]                          # track race 2
+    raw = api.race(LIVE, "entries", 2)
+    runner = next(h for h in raw["runners"] if h["scratch_indicator"] == "N")
+    horse = _horse(db, race, runner["horse_name"])
     row = db.query(My50FixedDividend).filter_by(horseId=horse.id).one()
-    assert (row.value, row.source, row.sourceValue) == ("4.00", "morning_line", "3-1")   # 3/1 + 1
+    expected = str(fractional_to_decimal(runner["morning_line_odds"]))
+    assert (row.value, row.source, row.sourceValue) == (expected, "morning_line", runner["morning_line_odds"])
     changed = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{LIVE}/entries"])
-    runner = next(h for h in changed["races"][0]["runners"] if h["horse_name"] == "Deceiving Diva")
-    runner["morning_line_odds"], runner["live_odds"] = "9-5", "1-5"
+    target = next(h for r in changed["races"] if r["race_key"]["race_number"] == "2" for h in r["runners"]
+                  if h["horse_name"] == runner["horse_name"])
+    target["morning_line_odds"], target["live_odds"] = "9-5", "1-5"
     api.payloads[f"/v1/north-america/meets/{LIVE}/entries"] = changed
     eng.sync_entries(LIVE)
     db.expire_all()
     horse = db.get(Horse, horse.id)
-    assert (horse.morningLineOdds, horse.liveOdds) == (1.8, 0.2)           # provider information moved
-    assert db.query(My50FixedDividend).filter_by(horseId=horse.id).one().value == "4.00"   # MY50 value did not
+    assert (horse.morningLineOdds, horse.liveOdds) == (1.8, 0.2)               # provider information moved
+    assert db.query(My50FixedDividend).filter_by(horseId=horse.id).one().value == expected   # MY50 value did not
     assert db.query(OfficialDividend).count() == 0
+
+
+def test_fractional_to_decimal_includes_stake_exactly():
+    assert fractional_to_decimal("5/2") == D("3.50") and str(fractional_to_decimal("5-2")) == "3.50"
+    assert str(fractional_to_decimal("8-5")) == "2.60" and str(fractional_to_decimal("30-1")) == "31.00"
+    assert isinstance(fractional_to_decimal("7-2"), Decimal)
+    assert fractional_to_decimal("1-3") is None           # no finite decimal: never rounded
+    assert fractional_to_decimal("") is None and fractional_to_decimal(None) is None
+
+
+def test_publication_freezes_every_runner_once_and_marks_only_ties(db):
+    api = FakeApi()
+    eng = _engine(db, api)
+    eng.sync_entries(HIST)
+    races = _races(db, _tournament(db, HIST))
+
+    def table(race):
+        return {db.get(Horse, d.horseId).name: (d.value, d.tieStatus) for d in db.query(My50FixedDividend).filter_by(raceId=race.id)}
+
+    assert table(races[0]) == {                            # track race 3: no ties, withdrawn runners not frozen
+        "Doctor Jeff": ("3.50", "unique"), "Social Hour": ("4.00", "unique"), "League of Legends": ("16.00", "unique"),
+        "Secured Lender": ("9.00", "unique"), "Lucky Shot": ("5.50", "unique"), "Banidoso": ("11.00", "unique"),
+        "Miacomet": ("7.00", "unique"),
+    }
+    last = table(races[6])                                 # track race 9: D Bigalow and Soho Jimmy both 8-1
+    assert last["D Bigalow"] == ("9.00", TIE_STATUS) and last["Soho Jimmy"] == ("9.00", TIE_STATUS)
+    assert {n for n, (_, s) in last.items() if s == TIE_STATUS} == {"D Bigalow", "Soho Jimmy"}
+    assert last["Pelican Hill"] == ("21.00", "unique")
+    before = sorted((d.horseId, d.value, d.frozenAt) for d in db.query(My50FixedDividend))
+    eng.sync_entries(HIST)                                 # re-sync never re-freezes
+    assert sorted((d.horseId, d.value, d.frozenAt) for d in db.query(My50FixedDividend)) == before
 
 
 # 14 ------------------------------------------------------------ cancellation
 def test_one_cancelled_selected_race_cancels_the_whole_tournament(db):
     api = FakeApi()
     partial = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{HIST}/results"])
-    partial["races"] = [r for r in partial["races"] if r["race_key"]["race_number"] != "3"]
-    api.payloads[f"/v1/north-america/meets/{HIST}/results"] = partial   # race 3 has no result
+    partial["races"] = [r for r in partial["races"] if r["race_key"]["race_number"] != "9"]
+    api.payloads[f"/v1/north-america/meets/{HIST}/results"] = partial     # track race 9 has no result yet
     eng = _engine(db, api)
     eng.sync_entries(HIST)
     t = _tournament(db, HIST)
-    r1 = _races(db, t)[0]
-    winner = db.query(Horse).filter_by(raceId=r1.id, name="Hodl Hard").one()   # ML 4-1 -> frozen 5.00
-    user, agg = _ticket(db, t, "cancel_case", {1: [winner.id]})
+    r2 = _races(db, t)[1]                                                  # track race 4
+    hj = _horse(db, r2, "Halfway Joking")                                  # frozen 4.50 (7-2)
+    user, agg = _ticket(db, t, "cancel_case", {2: [hj.id]})
     eng.sync_results(HIST)
     db.expire_all()
-    assert db.get(TournamentTicket, agg.id).totalPoints >= 250                  # includes 50 x 5.00 before the cancellation
+    assert db.get(TournamentTicket, agg.id).totalPoints == D("225.00")     # 50 x 4.50 before the cancellation
     cancelled = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{HIST}/entries"])
-    cancelled["races"][2]["is_cancelled"] = True          # track race 3
+    next(r for r in cancelled["races"] if r["race_key"]["race_number"] == "9")["is_cancelled"] = True
     api.payloads[f"/v1/north-america/meets/{HIST}/entries"] = cancelled
     eng.sync_entries(HIST)
     db.expire_all()
-    t = db.get(Tournament, t.id)
-    assert t.status == "cancelled"
+    assert db.get(Tournament, t.id).status == "cancelled"
     sels = db.query(TicketSelection).filter_by(tournamentTicketId=agg.id).all()
     assert {(s.scoreStatus, s.pointsEarned, s.isScored) for s in sels} == {(TOURNAMENT_CANCELLED, 0, False)}
     assert db.get(TournamentTicket, agg.id).totalPoints == 0
     assert all(e.totalPoints == 0 for e in db.query(LeaderboardEntry).filter_by(userId=user.id))
-    eng.sync_results(HIST)                                # later results never re-score a cancelled tournament
+    eng.sync_results(HIST)                                                 # later results never re-score it
     db.expire_all()
     assert {s.scoreStatus for s in db.query(TicketSelection).filter_by(tournamentTicketId=agg.id)} == {TOURNAMENT_CANCELLED}
 
@@ -357,69 +452,134 @@ def test_withdrawal_moves_down_the_frozen_hierarchy_and_uses_replacement_dividen
         {"id": 3, "scratched": False, "runnerStatus": "active"},      # next valid favourite
         {"id": 4, "scratched": False, "runnerStatus": "active"},
     ]
-    frozen = {1: 5.2, 2: 1.8, 3: 2.4, 4: 7.1}
-    points, status = evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 3}], horses, frozen)
-    assert (points, status) == (round(50 * 2.4), SCORED)           # replacement's OWN frozen dividend
-    # accumulation: the replacement is also the ticket's other pick
-    points, status = evaluate_ticket("dual_point", [1, 3], [{"position": 1, "horseId": 3}], horses, frozen)
-    assert (points, status) == (round(25 * 2.4) * 2, SCORED)
-    # without a complete frozen table the withdrawal cannot be resolved honestly
-    assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 3}], horses, {3: 2.4})[1] == PENDING_SCRATCH_RULE
-    # a tie at the top of the frozen table (tenths rule not applied) is not guessed
-    tie = {1: 5.2, 2: 1.8, 3: 2.4, 4: 2.4}
+    frozen = {1: D("5.20"), 2: D("1.80"), 3: D("2.40"), 4: D("7.10")}
+    assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 3}], horses, frozen) == (D("120.00"), SCORED)
+    # accumulation: the replacement is also the ticket's other pick -> 25 x 2.40 twice
+    assert evaluate_ticket("dual_point", [1, 3], [{"position": 1, "horseId": 3}], horses, frozen) == (D("120.00"), SCORED)
+    assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 3}], horses, {3: D("2.40")})[1] == PENDING_SCRATCH_RULE
+    tie = {1: D("5.20"), 2: D("1.80"), 3: D("2.40"), 4: D("2.40")}
     assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 3}], horses, tie)[1] == PENDING_TIE_ADJUSTMENT
 
 
-# 17-18 ------------------------------------------------------------ scoring + ranking
-def test_official_result_scores_with_frozen_table_and_ranking_reflects_it(client, db):
+def test_real_withdrawn_pick_moves_to_frozen_favourite(db):
     api = FakeApi()
     eng = _engine(db, api)
     eng.sync_entries(HIST)
     t = _tournament(db, HIST)
-    r1 = _races(db, t)[0]
-    winner = db.query(Horse).filter_by(raceId=r1.id, name="Hodl Hard").one()
-    assert db.query(My50FixedDividend).filter_by(horseId=winner.id).one().value == "5.00"   # ML 4-1 + 1
-    user, agg = _ticket(db, t, "real_scorer", {1: [winner.id]})
+    r1 = _races(db, t)[0]                                                  # track race 3
+    glint = _horse(db, r1, "Glint")                                        # withdrawn (Y)
+    _, agg = _ticket(db, t, "withdrawn_case", {1: [glint.id]})
+    eng.sync_results(HIST)
+    # favourite by frozen value is Doctor Jeff (3.50, unique) and he won: 50 x 3.50 with HIS dividend
+    assert (_selection(db, agg, r1).scoreStatus, _selection(db, agg, r1).pointsEarned) == (SCORED, D("175.00"))
+
+
+# 17-18 ------------------------------------------------------------ exact decimal scoring + ranking
+def test_exact_decimal_products_no_rounding():
+    assert slot_points(25, D("4.50")) == D("112.50")
+    assert slot_points(15, D("4.50")) == D("67.50")
+    assert slot_points(30, D("3.50")) == D("105.00")
+    assert slot_points(5, D("3.50")) == D("17.50")
+    assert isinstance(slot_points(25, D("4.50")), Decimal)
+
+
+def test_official_results_score_exact_decimals_end_to_end(client, db):
+    api = FakeApi()
+    eng = _engine(db, api)
+    eng.sync_entries(HIST)
+    t = _tournament(db, HIST)
+    r1, r2 = _races(db, t)[:2]                                             # track 3 (Doctor Jeff 3.50), track 4 (Halfway Joking 4.50)
+    dj, hj = _horse(db, r1, "Doctor Jeff"), _horse(db, r2, "Halfway Joking")
+    o1 = [h.id for h in r1.horses if not h.scratched and h.id != dj.id]
+    o2 = [h.id for h in r2.horses if not h.scratched and h.id != hj.id]
+    _, a = _ticket(db, t, "exact_a", {1: [dj.id, o1[0], o1[1]], 2: [hj.id, o2[0]]},
+                   strategies={1: "smart_pick", 2: "dual_point"})              # 30 x 3.50 + 25 x 4.50
+    _, b = _ticket(db, t, "exact_b", {1: [o1[0], o1[1], dj.id], 2: [o2[0], hj.id, o2[1]]}, strategy="smart_pick")  # 5 x 3.50 + 15 x 4.50
     eng.sync_results(HIST)
     db.expire_all()
-    sel = db.query(TicketSelection).filter_by(tournamentTicketId=agg.id, raceId=r1.id).one()
-    assert (sel.scoreStatus, sel.pointsEarned) == (SCORED, 250)                              # 50 x 5.00
+    assert _selection(db, a, r1).pointsEarned == D("105.00") and _selection(db, a, r2).pointsEarned == D("112.50")
+    assert _selection(db, b, r1).pointsEarned == D("17.50") and _selection(db, b, r2).pointsEarned == D("67.50")
+    assert db.get(TournamentTicket, a.id).totalPoints == D("217.50")
+    assert db.get(TournamentTicket, b.id).totalPoints == D("85.00")
     rows = client.get(f"/api/tournaments/{t.slug}/leaderboard").json()["leaderboard"]
-    mine = next(r for r in rows if r["username"] == "real_scorer")
-    assert mine["totalPoints"] == db.get(TournamentTicket, agg.id).totalPoints >= 250 and mine["rank"] == 1
+    got = {r["username"]: r["totalPoints"] for r in rows}
+    assert got["exact_a"] == 217.5 and got["exact_b"] == 85.0            # JSON keeps the exact decimal value
     horses = client.get(f"/api/tournaments/{t.slug}").json()["tournament"]["races"][0]["horses"]
-    hodl = next(h for h in horses if h["name"] == "Hodl Hard")
-    assert (hodl["my50Dividend"], hodl["my50DividendFrozen"], hodl["my50TieStatus"]) == ("5.00", True, "unique")
+    djj = next(h for h in horses if h["name"] == "Doctor Jeff")
+    assert (djj["my50Dividend"], djj["my50DividendFrozen"], djj["my50TieStatus"]) == ("3.50", True, "unique")
+
+
+def test_ranking_orders_by_exact_decimal_totals(client, db):
+    _engine(db, FakeApi()).sync_entries(HIST)
+    t = _tournament(db, HIST)
+    for name, total in (("half_up", D("100.50")), ("quarter", D("100.25")), ("whole", D("100")), ("top", D("100.75"))):
+        u = User(username=name, isGuest=True, gameMode=4)
+        db.add(u)
+        db.flush()
+        db.add(LeaderboardEntry(userId=u.id, tournamentId=t.id, ticketNumber=1, totalPoints=total, racesPlayed=1))
+    db.commit()
+    rows = client.get(f"/api/tournaments/{t.slug}/leaderboard").json()["leaderboard"]
+    assert [(r["username"], r["totalPoints"]) for r in rows] == [
+        ("top", 100.75), ("half_up", 100.5), ("quarter", 100.25), ("whole", 100)]
+    assert [r["rank"] for r in rows] == [1, 2, 3, 4]
+
+
+def test_points_columns_refuse_binary_floats_and_never_round(db):
+    _engine(db, FakeApi()).sync_entries(HIST)
+    t = _tournament(db, HIST)
+    u = User(username="float_case", isGuest=True, gameMode=4)
+    db.add(u)
+    db.flush()
+    db.add(LeaderboardEntry(userId=u.id, tournamentId=t.id, ticketNumber=1, totalPoints=112.5, racesPlayed=1))
+    with pytest.raises(Exception):
+        db.flush()
+    db.rollback()
 
 
 def test_dead_heat_each_winner_scores_with_its_own_frozen_multiplier(db):
     api = FakeApi()
-    res = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{HIST}/results"])
-    res["races"][0]["runners"][1]["win_payoff"] = 9.9          # second runner also paid to win
-    api.payloads[f"/v1/north-america/meets/{HIST}/results"] = res
+    api.race(HIST, "results", 3)["runners"][1]["win_payoff"] = 9.9       # Miacomet also declared a winner
     eng = _engine(db, api)
     eng.sync_entries(HIST)
     t = _tournament(db, HIST)
-    r1 = _races(db, t)[0]
-    hodl = db.query(Horse).filter_by(raceId=r1.id, name="Hodl Hard").one()        # frozen 5.00 (4-1)
-    king = db.query(Horse).filter_by(raceId=r1.id, name="My King Air").one()      # frozen 2.40 (7-5)
-    _, single = _ticket(db, t, "dh_single", {1: [hodl.id]})
-    _, both = _ticket(db, t, "dh_both", {1: [hodl.id, king.id]}, strategy="dual_point")
+    r1 = _races(db, t)[0]                                                  # track race 3
+    dj, mia = _horse(db, r1, "Doctor Jeff"), _horse(db, r1, "Miacomet")   # frozen 3.50 and 7.00
+    _, single = _ticket(db, t, "dh_single", {1: [dj.id]})
+    _, both = _ticket(db, t, "dh_both", {1: [dj.id, mia.id]}, strategy="dual_point")
     eng.sync_results(HIST)
     rows = db.query(RaceResult).filter_by(raceId=r1.id).all()
     assert sorted((db.get(Horse, r.horseId).name, r.position, r.isDeadHeat) for r in rows) == \
-        [("Hodl Hard", 1, True), ("My King Air", 1, True)]
-    s1 = db.query(TicketSelection).filter_by(tournamentTicketId=single.id, raceId=r1.id).one()
-    assert (s1.scoreStatus, s1.pointsEarned) == (SCORED, 250)                    # 50 x 5.00
-    s2 = db.query(TicketSelection).filter_by(tournamentTicketId=both.id, raceId=r1.id).one()
-    assert (s2.scoreStatus, s2.pointsEarned) == (SCORED, 125 + 60)               # 25 x 5.00 + 25 x 2.40
+        [("Doctor Jeff", 1, True), ("Miacomet", 1, True)]
+    assert (_selection(db, single, r1).scoreStatus, _selection(db, single, r1).pointsEarned) == (SCORED, D("175.00"))
+    assert (_selection(db, both, r1).scoreStatus, _selection(db, both, r1).pointsEarned) == (SCORED, D("262.50"))  # 87.50 + 175.00
+
+
+def test_tied_value_only_holds_tickets_on_the_tied_winner():
+    horses = [{"id": i, "scratched": False, "runnerStatus": "active"} for i in (1, 2, 3)]
+    frozen = {1: D("9.00"), 2: D("9.00"), 3: D("21.00")}
+    tied = {1, 2}
+    assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 1}], horses, frozen, tied) == (0, PENDING_TIE_ADJUSTMENT)
+    assert evaluate_ticket("full_point", [3], [{"position": 1, "horseId": 1}], horses, frozen, tied) == (0, SCORED)
+    assert evaluate_ticket("full_point", [3], [{"position": 1, "horseId": 3}], horses, frozen, tied) == (D("1050.00"), SCORED)
+
+
+def test_real_tied_runners_do_not_block_the_race(db):
+    api = FakeApi()
+    eng = _engine(db, api)
+    eng.sync_entries(HIST)
+    t = _tournament(db, HIST)
+    r7 = _races(db, t)[6]                                                  # track race 9: D Bigalow/Soho Jimmy tied
+    bigalow, pelican = _horse(db, r7, "D Bigalow"), _horse(db, r7, "Pelican Hill")
+    _, tied_pick = _ticket(db, t, "tied_pick", {7: [bigalow.id]})
+    _, winner_pick = _ticket(db, t, "winner_pick", {7: [pelican.id]})
+    eng.sync_results(HIST)
+    assert (_selection(db, tied_pick, r7).scoreStatus, _selection(db, tied_pick, r7).pointsEarned) == (SCORED, 0)   # lost: 0 is final
+    assert (_selection(db, winner_pick, r7).scoreStatus, _selection(db, winner_pick, r7).pointsEarned) == (SCORED, D("1050.00"))
 
 
 def test_result_that_does_not_match_the_card_stays_pending(db):
     api = FakeApi()
-    res = copy.deepcopy(api.payloads[f"/v1/north-america/meets/{HIST}/results"])
-    res["races"][0]["runners"][0]["horse_name"] = "Some Other Horse"
-    api.payloads[f"/v1/north-america/meets/{HIST}/results"] = res
+    api.race(HIST, "results", 3)["runners"][0]["horse_name"] = "Some Other Horse"
     eng = _engine(db, api)
     eng.sync_entries(HIST)
     eng.sync_results(HIST)
@@ -427,42 +587,6 @@ def test_result_that_does_not_match_the_card_stays_pending(db):
     assert db.query(RaceResult).filter_by(raceId=r1.id).count() == 0
     assert (r1.resultStatus, r1.providerStatus) == ("pending", "result_unmapped")
     assert r1.status == "running"                         # still closed for picks
-
-
-# ------------------------------------------------------------ MY50 V1.1 freeze
-def test_fractional_to_decimal_includes_stake_exactly():
-    assert fractional_to_decimal("5/2") == Decimal("3.50") and str(fractional_to_decimal("5-2")) == "3.50"
-    assert str(fractional_to_decimal("8-5")) == "2.60" and str(fractional_to_decimal("30-1")) == "31.00"
-    assert isinstance(fractional_to_decimal("7-2"), Decimal)
-    assert fractional_to_decimal("1-3") is None           # no finite decimal: never rounded
-    assert fractional_to_decimal("") is None and fractional_to_decimal(None) is None
-
-
-def test_publication_freezes_every_runner_once_and_marks_only_ties(db):
-    api = FakeApi()
-    eng = _engine(db, api)
-    eng.sync_entries(HIST)
-    t = _tournament(db, HIST)
-    r1 = _races(db, t)[0]
-    rows = {db.get(Horse, d.horseId).name: d for d in db.query(My50FixedDividend).filter_by(raceId=r1.id)}
-    assert "Abundance" not in rows                        # withdrawn before publication: no value
-    assert {n: (d.value, d.tieStatus) for n, d in rows.items()} == {
-        "Hodl Hard": ("5.00", "unique"), "Problem Solved": ("2.80", "unique"), "My King Air": ("2.40", "unique"),
-        "Four Dimes": ("13.00", "unique"),
-        "Federal Agent": ("21.00", TIE_STATUS), "Berniedott": ("21.00", TIE_STATUS),   # both 20-1
-    }
-    before = sorted((d.horseId, d.value, d.frozenAt) for d in db.query(My50FixedDividend))
-    eng.sync_entries(HIST)                                # re-sync never re-freezes
-    assert sorted((d.horseId, d.value, d.frozenAt) for d in db.query(My50FixedDividend)) == before
-
-
-def test_tied_winner_is_pending_tie_adjustment_others_score():
-    horses = [{"id": i, "scratched": False, "runnerStatus": "active"} for i in (1, 2, 3)]
-    frozen = {1: Decimal("21.00"), 2: Decimal("21.00"), 3: Decimal("2.40")}
-    tied = {1, 2}
-    assert evaluate_ticket("full_point", [1], [{"position": 1, "horseId": 1}], horses, frozen, tied) == (0, PENDING_TIE_ADJUSTMENT)
-    assert evaluate_ticket("full_point", [3], [{"position": 1, "horseId": 1}], horses, frozen, tied) == (0, SCORED)
-    assert evaluate_ticket("full_point", [3], [{"position": 1, "horseId": 3}], horses, frozen, tied) == (120, SCORED)
 
 
 # 19 ------------------------------------------------------------ 401 / 403

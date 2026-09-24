@@ -1,3 +1,4 @@
+from decimal import Decimal
 from datetime import datetime, timedelta, timezone
 import pytest
 from app.models import (
@@ -132,7 +133,7 @@ def test_deterministic_co_favorite_tie_break():
     results = [{"position": 1, "horseId": 11}]
     # Points should transfer to postPosition 2 (horse 11) because 3.0 == 3.0, and 2 < 4
     pts = score_ticket("full_point", [13], results, horses)
-    assert pts == round(50 * 3.0)
+    assert pts == (Decimal("50") * Decimal("3.0"))
 
 
 def test_frozen_official_dividend_win_payoff_base():
@@ -147,7 +148,7 @@ def test_frozen_official_dividend_win_payoff_base():
     # Official $2 win payoff is $7.40, meaning dividend = 3.70 (differs from live odds 4.5)
     official_dividends = {1: 7.40 / 2.0}  # 3.70
     pts = score_ticket("full_point", [1], results, horses, official_dividends=official_dividends)
-    assert pts == round(50 * 3.70)
+    assert pts == (Decimal("50") * Decimal("3.70"))
     assert pts == 185  # not 50 * 4.5 = 225
 
 

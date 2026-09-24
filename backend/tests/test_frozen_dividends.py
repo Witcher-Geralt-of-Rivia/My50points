@@ -5,6 +5,7 @@ OfficialDividend table ($2 Win payoff base) and scoring must read ONLY that
 table. Later live-odds moves must never rewrite history, and re-posting a
 corrected result must rescoring idempotently to the same points.
 """
+from decimal import Decimal
 from app.auth_utils import sign_token
 from app.models import Horse, OfficialDividend, Race, Ticket, Tournament, User
 
@@ -108,7 +109,7 @@ def test_real_race_result_path_freezes_dividends(client, db):
     assert res.status_code == 200, res.text
 
     ticket = db.query(Ticket).filter(Ticket.userId == user.id, Ticket.raceId == race.id).first()
-    assert ticket.pointsEarned == round(50 * 5.0)
+    assert ticket.pointsEarned == (Decimal("50") * Decimal("5.0"))
 
     db.query(Horse).filter(Horse.id == winner.id).update({"odds": 42.0})
     db.commit()
@@ -126,7 +127,7 @@ def test_real_race_result_path_freezes_dividends(client, db):
     )
     assert res.status_code == 200, res.text
     db.refresh(ticket)
-    assert ticket.pointsEarned == round(50 * 5.0)
+    assert ticket.pointsEarned == (Decimal("50") * Decimal("5.0"))
 
 
 def test_result_path_without_dividends_never_uses_live_odds(client, db):

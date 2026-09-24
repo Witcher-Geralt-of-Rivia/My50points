@@ -1,5 +1,5 @@
 import json
-from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation
 
 ALLOCATIONS = {
     "full_point": [50],
@@ -39,7 +39,7 @@ def _normalize_picks(picks) -> list[int]:
     return [int(x) for x in picks]
 
 
-def _horse_dividend(horses: list | None, horse_id: int, official_dividends: dict[int, float] | None = None) -> float:
+def _horse_dividend(horses: list | None, horse_id: int, official_dividends: dict | None = None) -> Decimal:
     """
     Official frozen payout dividend for the selected horse.
     Two modes (Admin rule):
@@ -50,25 +50,18 @@ def _horse_dividend(horses: list | None, horse_id: int, official_dividends: dict
       runner odds, as before.
     """
     if official_dividends is not None:
-        val = official_dividends.get(int(horse_id))
-        try:
-            val = float(val)
-        except (TypeError, ValueError):
-            return 0.0
-        return val if val > 0 else 0.0
+        val = _dec(official_dividends.get(int(horse_id)))
+        return val if val is not None and val > 0 else Decimal(0)
 
     if not horses:
-        return 1.0
+        return Decimal(1)
     for h in horses:
         hid = h.get("id") if isinstance(h, dict) else h.id
         if int(hid) == int(horse_id):
             raw = h.get("odds") if isinstance(h, dict) else h.odds
-            try:
-                val = float(raw)
-            except (TypeError, ValueError):
-                return 1.0
-            return val if val > 0 else 1.0
-    return 1.0
+            val = _dec(raw)
+            return val if val is not None and val > 0 else Decimal(1)
+    return Decimal(1)
 
 
 def score_ticket(
@@ -76,8 +69,8 @@ def score_ticket(
     picks,
     results: list,
     horses: list | None = None,
-    official_dividends: dict[int, float] | None = None,
-) -> int:
+    official_dividends: dict | None = None,
+) -> Decimal:
     """
     Score a ticket: allocation × frozen official dividend for each pick that wins the race (ganador).
 
@@ -88,11 +81,11 @@ def score_ticket(
     """
     picks_arr = _normalize_picks(picks)
     if not picks_arr or strategy not in ALLOCATIONS:
-        return 0
+        return Decimal(0)
 
     by_position = _normalize_results(results)
     if not by_position:
-        return 0
+        return Decimal(0)
 
     # Identify scratched horse IDs and find the favorite horse with deterministic tie-breaking
     scratched_ids = set()
@@ -127,7 +120,7 @@ def score_ticket(
 
     allocation = ALLOCATIONS[strategy]
     winner_horse_ids = set(by_position.get(_WINNER_POSITION, []))
-    total = 0
+    total = Decimal(0)
 
     for i, pick_id in enumerate(picks_arr):
         if i >= len(allocation):
@@ -138,11 +131,10 @@ def score_ticket(
             effective_pick_id = favorite_horse_id
 
         if effective_pick_id in winner_horse_ids:
-            base = allocation[i]
             dividend = _horse_dividend(horses, effective_pick_id, official_dividends)
-            total += round(base * dividend)
+            total += slot_points(allocation[i], dividend)
 
-    return int(total)
+    return total
 
 
 
@@ -182,10 +174,10 @@ def _dec(value) -> Decimal | None:
         return None
 
 
-def slot_points(allocation: int, dividend: Decimal) -> int:
-    """allocation x frozen dividend, exact, rounded to whole points exactly as
-    before (Python round(): half to even)."""
-    return int((Decimal(allocation) * dividend).quantize(Decimal(1), rounding=ROUND_HALF_EVEN))
+def slot_points(allocation: int, dividend: Decimal) -> Decimal:
+    """allocation x frozen MY50 dividend, EXACT (25 x 4.50 = 112.50). No rounding,
+    no integer coercion anywhere in MY50 scoring."""
+    return Decimal(allocation) * dividend
 
 
 def frozen_favorite_hierarchy(horses: list | None, official_dividends: dict) -> list[int] | None:
@@ -227,7 +219,7 @@ def _replacement_from_hierarchy(hierarchy: list[int], official_dividends: dict) 
 
 
 def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, official_dividends: dict,
-                   tie_pending: set | None = None) -> tuple[int, str]:
+                   tie_pending: set | None = None) -> tuple[Decimal, str]:
     """Return (points, status). `official_dividends` must be the frozen MY50
     dividend table for the race (possibly empty) — it is REQUIRED here.
 
@@ -242,10 +234,10 @@ def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, of
         raise ValueError("evaluate_ticket requires the official MY50 dividend table")
     picks_arr = _normalize_picks(picks)
     if not picks_arr or strategy not in ALLOCATIONS:
-        return 0, SCORED
+        return Decimal(0), SCORED
     by_position = _normalize_results(results)
     if not by_position:
-        return 0, UNSCORED  # no official result yet: nothing to score
+        return Decimal(0), UNSCORED  # no official result yet: nothing to score
 
     scratched_ids: set[int] = set()
     favorite_horse_id = None
@@ -295,20 +287,20 @@ def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, of
     # its own frozen multiplier; points on several tied winners are summed.
     allocation = ALLOCATIONS[strategy]
     winners = set(by_position.get(_WINNER_POSITION, []))
-    total = 0
+    total = Decimal(0)
     for i, pick_id in enumerate(picks_arr):
         if i >= len(allocation):
             break
         effective = int(pick_id)
         if effective in scratched_ids:
             if favorite_horse_id is None:
-                return 0, PENDING_TIE_ADJUSTMENT if replacement_tied else PENDING_SCRATCH_RULE
+                return Decimal(0), PENDING_TIE_ADJUSTMENT if replacement_tied else PENDING_SCRATCH_RULE
             effective = favorite_horse_id
         if effective in winners:
             if effective in tie_pending:
-                return 0, PENDING_TIE_ADJUSTMENT
+                return Decimal(0), PENDING_TIE_ADJUSTMENT
             dividend = _dec(official_dividends.get(effective))
             if dividend is None or dividend <= 0:
-                return 0, PENDING_DIVIDEND
+                return Decimal(0), PENDING_DIVIDEND
             total += slot_points(allocation[i], dividend)
-    return int(total), SCORED
+    return total, SCORED
