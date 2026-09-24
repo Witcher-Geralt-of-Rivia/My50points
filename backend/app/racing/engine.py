@@ -21,6 +21,7 @@ Rules enforced here:
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -37,6 +38,7 @@ from app.racing.dto import (
     RACE_RESULT_OFFICIAL,
     RACE_RESULT_PROVISIONAL,
     RACE_VOID,
+    RUNNER_PROVIDER_UNKNOWN,
     RUNNER_SCRATCHED,
     ProviderEntries,
     ProviderMeeting,
@@ -45,7 +47,7 @@ from app.racing.dto import (
     ProviderRunner,
 )
 from app.racing.provider import RacingProvider
-from app.racing.selection import eligible_races, select_tournament_races
+from app.racing.selection import eligible_races, select_explicit_races, select_tournament_races
 from app.racing.status import reconcile_statuses
 
 logger = logging.getLogger(__name__)
@@ -77,6 +79,14 @@ def _set(obj, attr: str, value, report: SyncReport) -> bool:
         report.field_changes += 1
         return True
     return False
+
+
+def _meta_json(meta: dict | None) -> str | None:
+    return json.dumps(meta, sort_keys=True, ensure_ascii=False) if meta else None
+
+
+def _norm_name(text: str | None) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
 
 
 def _same_instant(a: datetime | None, b: datetime | None) -> bool:
@@ -159,13 +169,23 @@ class SyncEngine:
                 .first()
             )
             if tournament is None:
-                if meeting.status != "cancelled":
-                    selected = select_tournament_races(self.config.selection_policy, races)
+                allow = self.config.meeting_allowlist
+                explicit = self.config.explicit_races.get(provider_meeting_id)
+                if allow and provider_meeting_id not in allow:
+                    _set(meeting, "tournamentDecision", "not_allowlisted", report)
+                    report.notes.append("meeting not in RACING_MEETING_ALLOWLIST; no tournament")
+                elif meeting.status != "cancelled":
+                    if explicit:
+                        selected = select_explicit_races(explicit, races)
+                        policy = "explicit:" + ",".join(str(n) for n in explicit)
+                    else:
+                        selected = select_tournament_races(self.config.selection_policy, races)
+                        policy = self.config.selection_policy
                     if selected is None:
                         _set(meeting, "tournamentDecision", "insufficient_races", report)
-                        report.notes.append(f"fewer than {RACES_PER_TOURNAMENT} eligible races; no tournament")
+                        report.notes.append(f"no valid set of {RACES_PER_TOURNAMENT} races ({policy}); no tournament")
                     else:
-                        tournament = self._create_tournament(meeting, selected, now, report)
+                        tournament = self._create_tournament(meeting, selected, now, report, policy=policy)
                         _set(meeting, "tournamentDecision", "created", report)
             else:
                 self._update_tournament(tournament, meeting, entries, now, report)
@@ -191,7 +211,7 @@ class SyncEngine:
         return f"{base}-{suffix}"
 
     def _create_tournament(self, meeting: RacingMeeting, selected: list[ProviderRace], now: datetime,
-                           report: SyncReport) -> Tournament:
+                           report: SyncReport, policy: str | None = None) -> Tournament:
         tournament = Tournament(
             slug=self._unique_slug(meeting),
             name=meeting.trackName,
@@ -207,7 +227,7 @@ class SyncEngine:
             provider=self.provider.name,
             providerMeetingId=meeting.providerMeetingId,
             meetingId=meeting.id,
-            selectionPolicy=self.config.selection_policy,
+            selectionPolicy=policy or self.config.selection_policy,
             racesFrozenAt=now,
         )
         self.db.add(tournament)
@@ -257,7 +277,19 @@ class SyncEngine:
                 if race.resultStatus != "official":
                     _set(race, "status", "cancelled", report)
                     _set(race, "resultStatus", "void", report)
-            _set(tournament, "status", "cancelled", report)
+            self._cancel_tournament(tournament, report, "meeting cancelled")
+
+    def _cancel_tournament(self, tournament: Tournament | None, report: SyncReport, reason: str) -> None:
+        """CONFIRMED RULE: if ANY of the 7 selected races is cancelled, the whole
+        tournament is cancelled (no ticket keeps points from it)."""
+        if tournament is None:
+            return
+        from app.routers.races import cancel_tournament_scores
+        if tournament.status != "cancelled":
+            tournament.status = "cancelled"
+            report.field_changes += 1
+            report.notes.append(f"tournament {tournament.slug} cancelled: {reason}")
+        cancel_tournament_scores(self.db, tournament)
 
     def _apply_race(self, race: Race, pr: ProviderRace, now: datetime, report: SyncReport) -> None:
         if not _same_instant(race.postTime, pr.post_time):
@@ -271,14 +303,13 @@ class SyncEngine:
         _set(race, "raceClass", pr.race_class, report)
         _set(race, "purse", pr.purse, report)
         _set(race, "providerStatus", pr.status, report)
+        _set(race, "providerMeta", _meta_json(pr.meta), report)
         if pr.status in (RACE_CANCELLED, RACE_VOID) and race.resultStatus != "official":
-            newly_cancelled = _set(race, "status", "cancelled", report)
+            _set(race, "status", "cancelled", report)
             _set(race, "resultStatus", "void", report)
-            if newly_cancelled and race.id is not None:
-                # Confirmed tickets keep their selection for this race; its
-                # score is held pending (cancelled-race rule not defined yet).
-                from app.routers.races import hold_cancelled_race_scores
-                hold_cancelled_race_scores(self.db, race)
+            if race.id is not None and race.tournamentId is not None:
+                self._cancel_tournament(self.db.get(Tournament, race.tournamentId), report,
+                                        f"race {race.raceNumber} (track race {race.trackRaceNumber}) cancelled")
         race.lastSyncedAt = now
 
     def _sync_runners(self, race: Race, runners, *, complete: bool, now: datetime, report: SyncReport) -> None:
@@ -289,6 +320,8 @@ class SyncEngine:
             horse = existing.get(runner.provider_runner_id)
             post_position = runner.post_position if runner.post_position is not None else _program_to_int(runner.program_number, order)
             scratched = runner.status == RUNNER_SCRATCHED
+            runner_status = "scratched" if scratched else (
+                RUNNER_PROVIDER_UNKNOWN if runner.status == RUNNER_PROVIDER_UNKNOWN else "active")
             if horse is None:
                 horse = Horse(
                     raceId=race.id,
@@ -310,9 +343,11 @@ class SyncEngine:
                 ("jockey", runner.jockey),
                 ("trainer", runner.trainer),
                 ("scratched", scratched),
-                ("runnerStatus", "scratched" if scratched else "active"),
+                ("runnerStatus", runner_status),
                 ("morningLineOdds", runner.morning_line_odds),
                 ("liveOdds", runner.live_odds),
+                ("registrationNumber", runner.registration_number),
+                ("providerMeta", _meta_json(runner.meta)),
             ):
                 changed += _set(horse, attr, value, report)
             if runner.odds_updated_at is not None and not _same_instant(horse.oddsUpdatedAt, runner.odds_updated_at):
@@ -380,6 +415,8 @@ class SyncEngine:
             if race.resultStatus != "official":
                 _set(race, "status", "cancelled", report)
                 _set(race, "resultStatus", "void", report)
+                self._cancel_tournament(self.db.get(Tournament, race.tournamentId), report,
+                                        f"race {race.raceNumber} (track race {race.trackRaceNumber}) cancelled")
             return False
         if res.status == RACE_RESULT_PROVISIONAL:
             if race.resultStatus not in ("official",):
@@ -393,11 +430,17 @@ class SyncEngine:
         if any(r.source == "admin" for r in existing_rows):
             report.notes.append(f"race {race.id}: admin result kept (takes precedence)")
             return False
-        horses = {h.providerRunnerId: h for h in self.db.query(Horse).filter(Horse.raceId == race.id).all()}
+        race_horses = self.db.query(Horse).filter(Horse.raceId == race.id).all()
+        horses = {h.providerRunnerId: h for h in race_horses}
         placings = [p for p in res.placings if p.position is not None]
         mapped = []
         for p in placings:
-            horse = horses.get(p.provider_runner_id)
+            horse = horses.get(p.provider_runner_id) if p.provider_runner_id else None
+            if horse is None and not p.provider_runner_id and p.program_number and p.runner_name:
+                # No runner id in the result: program number AND name must both match one runner.
+                matches = [h for h in race_horses
+                           if (h.programNumber or "") == p.program_number and _norm_name(h.name) == _norm_name(p.runner_name)]
+                horse = matches[0] if len(matches) == 1 else None
             if horse is None:
                 # Unknown runner: do not write a half result.
                 _set(race, "resultStatus", "pending", report)

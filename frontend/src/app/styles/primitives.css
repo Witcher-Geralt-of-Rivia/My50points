@@ -279,6 +279,7 @@
   .ui-chip[data-tone="cancelled"] { --chip-c: var(--my50-live-bright); }
   .ui-chip[data-tone="unavailable"], .ui-chip[data-tone="stale"] { --chip-c: var(--my50-gold-highlight); }
   .ui-chip[data-tone="demo"], .ui-chip[data-tone="fixture"] { --chip-c: var(--my50-silver); }
+  .ui-chip[data-tone="real"] { --chip-c: var(--my50-green-bright); }
   .ui-chip[data-tone="m1"] { --chip-c: var(--my50-purple-bright); }
   .ui-chip[data-tone="m2"] { --chip-c: var(--my50-aqua-bright); }
   .ui-chip[data-tone="m3"] { --chip-c: var(--my50-gold-highlight); }

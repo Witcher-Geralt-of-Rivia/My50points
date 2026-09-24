@@ -639,7 +639,18 @@ export default function TournamentClient({ tournamentSlugParam = null }) {
           </p>
         ) : null}
 
-        {!entriesOpen && !finished && !isConfirmed && races.length ? (
+        {phase === PHASE.CANCELLED ? (
+          <p className="trn-banner trn-banner--paused" data-accent="gold" role="status" data-state="tournament-cancelled">
+            <PauseCircle size={17} aria-hidden />
+            <span>
+              {isEn
+                ? 'Tournament cancelled: one of its 7 races was cancelled, so no ticket scores points in this tournament.'
+                : 'Torneo cancelado: una de sus 7 carreras fue cancelada, por eso ningún boleto suma puntos en este torneo.'}
+            </span>
+          </p>
+        ) : null}
+
+        {!entriesOpen && !finished && !isConfirmed && races.length && phase !== PHASE.CANCELLED ? (
           <p className="trn-banner" data-accent="live">
             {phase === PHASE.LIVE ? <Radio size={17} aria-hidden /> : <Lock size={17} aria-hidden />}
             {isEn

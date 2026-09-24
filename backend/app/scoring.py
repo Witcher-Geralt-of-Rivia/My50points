@@ -153,10 +153,65 @@ SCORED = "scored"
 UNSCORED = "unscored"
 PENDING_DIVIDEND = "pending_dividend"          # a winning pick has no published MY50 dividend
 PENDING_SCRATCH_RULE = "pending_scratch_rule"  # a scratched pick cannot be reassigned honestly
-# A frozen tournament race was cancelled/voided after tickets were confirmed.
-# FINAL CANCELLED-RACE SCORING POLICY: AWAITING PRODUCT CONFIRMATION — no
-# points, no replacement race, no re-indexing; the selection stays as confirmed.
+# Legacy status of the superseded "hold the cancelled race" behaviour. Kept so
+# existing rows stay readable; new cancellations use TOURNAMENT_CANCELLED.
 PENDING_CANCELLED_RACE = "pending_cancelled_race"
+# CONFIRMED RULE: if ANY selected race is cancelled the whole tournament is
+# cancelled — every ticket/selection of it carries this status and 0 points.
+TOURNAMENT_CANCELLED = "tournament_cancelled"
+# Two or more official winners and the ticket picked one of them: the MY50
+# dead-heat scoring rule is not defined in the project materials, so the race is
+# held pending instead of inventing arithmetic.
+PENDING_DEAD_HEAT = "pending_dead_heat"
+
+# Runner states that can never receive migrated points.
+_NOT_VALID_FOR_REPLACEMENT = ("scratched", "unavailable", "provider_unknown")
+
+
+def _field(h, key, default=None):
+    return h.get(key, default) if isinstance(h, dict) else getattr(h, key, default)
+
+
+def frozen_favorite_hierarchy(horses: list | None, official_dividends: dict) -> list[int] | None:
+    """Runner ids from favourite down, ordered by the FROZEN MY50 fixed dividend
+    (lowest dividend = favourite). Only defined when the frozen table covers every
+    runner that can run; returns None otherwise (e.g. a table holding only the
+    winner's value). Equal values are not tie-broken here: the agreed tenths rule
+    is applied when the table is frozen, so a remaining tie means the hierarchy is
+    not determinable (the caller keeps the pick pending)."""
+    if not horses or not official_dividends:
+        return None
+    candidates = []
+    for h in horses:
+        hid = _field(h, "id")
+        if hid is None:
+            continue
+        status = _field(h, "runnerStatus", "active") or "active"
+        if _field(h, "scratched", False) or status in _NOT_VALID_FOR_REPLACEMENT:
+            continue
+        raw = official_dividends.get(int(hid))
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            return None
+        if value <= 0:
+            return None
+        candidates.append((value, int(hid)))
+    if not candidates:
+        return None
+    candidates.sort()
+    return [hid for _, hid in candidates]
+
+
+def _replacement_from_hierarchy(hierarchy: list[int], official_dividends: dict) -> int | None:
+    """First valid runner of the frozen hierarchy; None when its frozen value is
+    shared with the next runner (not deterministically orderable)."""
+    if not hierarchy:
+        return None
+    first = hierarchy[0]
+    if len(hierarchy) > 1 and float(official_dividends[first]) == float(official_dividends[hierarchy[1]]):
+        return None
+    return first
 
 
 def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, official_dividends: dict) -> tuple[int, str]:
@@ -191,6 +246,8 @@ def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, of
         if is_scratched:
             scratched_ids.add(int(h_id))
             continue
+        if (_field(h, "runnerStatus", "active") or "active") in _NOT_VALID_FOR_REPLACEMENT:
+            continue
         odds_val = h.get("odds") if isinstance(h, dict) else getattr(h, "odds", None)
         if odds_val is None:
             continue
@@ -208,6 +265,16 @@ def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, of
         if odds_float < min_odds or (odds_float == min_odds and pp_int < favorite_pp):
             min_odds, favorite_pp, favorite_horse_id = odds_float, pp_int, int(h_id)
 
+    # CONFIRMED RULE: a withdrawn pick's points move to the first valid runner of
+    # the FROZEN favourite hierarchy (frozen MY50 fixed dividends), and the
+    # replacement scores with ITS OWN frozen dividend. Points landing on a runner
+    # already picked simply accumulate (each slot is scored on its own).
+    # Without a complete frozen table, legacy/demo frozen odds decide (seed data);
+    # provider-synced runners have no such odds -> honestly pending.
+    hierarchy = frozen_favorite_hierarchy(horses, official_dividends)
+    if hierarchy is not None:
+        favorite_horse_id = _replacement_from_hierarchy(hierarchy, official_dividends)
+
     allocation = ALLOCATIONS[strategy]
     winners = set(by_position.get(_WINNER_POSITION, []))
     total = 0
@@ -219,6 +286,8 @@ def evaluate_ticket(strategy: str, picks, results: list, horses: list | None, of
             if favorite_horse_id is None:
                 return 0, PENDING_SCRATCH_RULE
             effective = favorite_horse_id
+        if effective in winners and len(winners) > 1:
+            return 0, PENDING_DEAD_HEAT
         if effective in winners:
             raw = official_dividends.get(effective)
             try:

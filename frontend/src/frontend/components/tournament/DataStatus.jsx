@@ -3,7 +3,7 @@
 /**
  * Real-data honesty states for provider-synced tournaments.
  *
- *  OriginChip   — labels demo / synthetic-fixture tournaments (real = no chip).
+ *  OriginChip   — labels real-provider, demo and synthetic-fixture tournaments.
  *  DataStatusNote — small "updated hh:mm" line for fresh provider data.
  *  DataStatusBanner — stale cache / provider unavailable / sync paused.
  *
@@ -11,12 +11,15 @@
  * lastSuccessfulSyncAt, dataFreshness, providerStatus } with no credentials.
  * The browser never talks to the racing provider; it only reads our API.
  */
-import { CloudOff, History, FlaskConical, RefreshCw } from 'lucide-react';
+import { CloudOff, History, FlaskConical, RefreshCw, BadgeCheck } from 'lucide-react';
 import { formatTime } from '@/frontend/lib/redesign';
 
 const PROVIDER_DOWN = new Set(['unavailable', 'auth_error', 'rate_limited', 'credentials_unavailable', 'adapter_pending_validation', 'error', 'schema_error', 'partial']);
 
 export function OriginChip({ origin, isEn }) {
+  if (origin === 'real') {
+    return <span className="ui-chip" data-tone="real"><BadgeCheck size={13} aria-hidden />{isEn ? 'Real data' : 'Datos reales'}</span>;
+  }
   if (origin === 'demo') {
     return <span className="ui-chip" data-tone="demo"><FlaskConical size={13} aria-hidden />{isEn ? 'Demo' : 'Demo'}</span>;
   }

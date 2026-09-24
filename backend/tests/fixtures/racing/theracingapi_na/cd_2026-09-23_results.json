@@ -1,0 +1,365 @@
+{
+ "meet_id": "CD_1790121600000",
+ "track_id": "CD",
+ "track_name": "Churchill Downs",
+ "country": "USA",
+ "date": "2026-09-23",
+ "races": [
+  {
+   "race_key": {
+    "race_number": "1",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "Hodl Hard",
+     "program_number": "1",
+     "win_payoff": 10.7,
+     "place_payoff": 4.94,
+     "show_payoff": 3.2
+    },
+    {
+     "horse_name": "My King Air",
+     "program_number": "5",
+     "win_payoff": 0.0,
+     "place_payoff": 4.32,
+     "show_payoff": 2.44
+    },
+    {
+     "horse_name": "Problem Solved",
+     "program_number": "2",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 2.24
+    }
+   ],
+   "also_ran": [
+    "Berniedott",
+    "Federal Agent",
+    "Four Dimes"
+   ],
+   "scratches": [
+    "Abundance"
+   ],
+   "off_time": 1790181900000
+  },
+  {
+   "race_key": {
+    "race_number": "2",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "Laughnowcrylater",
+     "program_number": "3",
+     "win_payoff": 3.72,
+     "place_payoff": 2.68,
+     "show_payoff": 2.1
+    },
+    {
+     "horse_name": "Spurgeon",
+     "program_number": "2",
+     "win_payoff": 0.0,
+     "place_payoff": 7.18,
+     "show_payoff": 4.52
+    },
+    {
+     "horse_name": "Suited and Booted",
+     "program_number": "4",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 3.52
+    }
+   ],
+   "also_ran": [
+    "Culprit",
+    "Fletcher Bay",
+    "Susan's Boy"
+   ],
+   "scratches": [],
+   "off_time": 1790140440000
+  },
+  {
+   "race_key": {
+    "race_number": "3",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "Doctor Jeff",
+     "program_number": "1",
+     "win_payoff": 7.42,
+     "place_payoff": 4.56,
+     "show_payoff": 3.48
+    },
+    {
+     "horse_name": "Miacomet",
+     "program_number": "9",
+     "win_payoff": 0.0,
+     "place_payoff": 9.02,
+     "show_payoff": 5.14
+    },
+    {
+     "horse_name": "Lucky Shot",
+     "program_number": "6",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 3.84
+    }
+   ],
+   "also_ran": [
+    "Secured Lender",
+    "Social Hour",
+    "League of Legends",
+    "Banidoso"
+   ],
+   "scratches": [
+    "Glint",
+    "Saint in the City"
+   ],
+   "off_time": 1790142180000
+  },
+  {
+   "race_key": {
+    "race_number": "4",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "Halfway Joking",
+     "program_number": "3",
+     "win_payoff": 7.78,
+     "place_payoff": 4.02,
+     "show_payoff": 3.2
+    },
+    {
+     "horse_name": "Tiger's Legacy",
+     "program_number": "6",
+     "win_payoff": 0.0,
+     "place_payoff": 3.68,
+     "show_payoff": 3.3
+    },
+    {
+     "horse_name": "Mister Positivity",
+     "program_number": "5",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 5.86
+    }
+   ],
+   "also_ran": [
+    "Good to Be Prince",
+    "Dr Fenn",
+    "Hesper",
+    "Proctor Phantom"
+   ],
+   "scratches": [
+    "Redacted"
+   ],
+   "off_time": 1790143980000
+  },
+  {
+   "race_key": {
+    "race_number": "5",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "Soul of the Night",
+     "program_number": "9",
+     "win_payoff": 6.6,
+     "place_payoff": 4.18,
+     "show_payoff": 3.4
+    },
+    {
+     "horse_name": "Greatest Blaze",
+     "program_number": "1",
+     "win_payoff": 0.0,
+     "place_payoff": 6.76,
+     "show_payoff": 4.72
+    },
+    {
+     "horse_name": "Hex Appeal",
+     "program_number": "3",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 7.06
+    }
+   ],
+   "also_ran": [
+    "Blame to Fame",
+    "Corniche Road",
+    "Acerbic",
+    "Tumbling",
+    "Passage Du Desir",
+    "Twenty Three Gold",
+    "Devious Lady",
+    "Putnam Market"
+   ],
+   "scratches": [
+    "She's Toasty",
+    "Your Choice"
+   ],
+   "off_time": 1790145900000
+  },
+  {
+   "race_key": {
+    "race_number": "6",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "Special Sauce",
+     "program_number": "2",
+     "win_payoff": 9.24,
+     "place_payoff": 4.94,
+     "show_payoff": 3.7
+    },
+    {
+     "horse_name": "Good Call",
+     "program_number": "6",
+     "win_payoff": 0.0,
+     "place_payoff": 17.94,
+     "show_payoff": 5.04
+    },
+    {
+     "horse_name": "Tempting Eve",
+     "program_number": "1",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 5.7
+    }
+   ],
+   "also_ran": [
+    "Revel Toast",
+    "Tetiaroa",
+    "Just Do Believe"
+   ],
+   "scratches": [
+    "Jr Miss Buttercup"
+   ],
+   "off_time": 1790147820000
+  },
+  {
+   "race_key": {
+    "race_number": "7",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "My Boy Gary",
+     "program_number": "5",
+     "win_payoff": 8.76,
+     "place_payoff": 4.06,
+     "show_payoff": 3.14
+    },
+    {
+     "horse_name": "Gut Reaction",
+     "program_number": "3",
+     "win_payoff": 0.0,
+     "place_payoff": 3.52,
+     "show_payoff": 2.74
+    },
+    {
+     "horse_name": "When I Go",
+     "program_number": "7",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 3.02
+    }
+   ],
+   "also_ran": [
+    "My Birthday Gift",
+    "Greatest Nate",
+    "Buffalo Soldier",
+    "Asher Dasher",
+    "Good Hand",
+    "Mo Reviews"
+   ],
+   "scratches": [],
+   "off_time": 1790149680000
+  },
+  {
+   "race_key": {
+    "race_number": "8",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "Memory",
+     "program_number": "3",
+     "win_payoff": 14.46,
+     "place_payoff": 4.9,
+     "show_payoff": 4.14
+    },
+    {
+     "horse_name": "Pagode",
+     "program_number": "9",
+     "win_payoff": 0.0,
+     "place_payoff": 3.0,
+     "show_payoff": 2.2
+    },
+    {
+     "horse_name": "Penalty Box",
+     "program_number": "5",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 3.28
+    }
+   ],
+   "also_ran": [
+    "Zapruder",
+    "Coalmoon",
+    "Stellenbosch",
+    "Amor Patriae",
+    "Fear of Union"
+   ],
+   "scratches": [
+    "Gamblers Tail",
+    "Universe"
+   ],
+   "off_time": 1790151540000
+  },
+  {
+   "race_key": {
+    "race_number": "9",
+    "day_evening": "D"
+   },
+   "runners": [
+    {
+     "horse_name": "Pelican Hill",
+     "program_number": "10",
+     "win_payoff": 25.04,
+     "place_payoff": 10.14,
+     "show_payoff": 4.78
+    },
+    {
+     "horse_name": "Rockfest",
+     "program_number": "9",
+     "win_payoff": 0.0,
+     "place_payoff": 4.26,
+     "show_payoff": 2.88
+    },
+    {
+     "horse_name": "D Bigalow",
+     "program_number": "3",
+     "win_payoff": 0.0,
+     "place_payoff": 0.0,
+     "show_payoff": 2.78
+    }
+   ],
+   "also_ran": [
+    "Stoic Sage",
+    "Justone More Thing",
+    "Soho Jimmy",
+    "Anthony the Great",
+    "Tonys Kingdom"
+   ],
+   "scratches": [
+    "Outofpi",
+    "Telecaster"
+   ],
+   "off_time": 1790153400000
+  }
+ ]
+}

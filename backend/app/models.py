@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -98,6 +98,7 @@ class Race(Base):
     # active | unavailable (missing from a complete provider card; row retained)
     availability: Mapped[str] = mapped_column(String, default="active", server_default="active")
     providerStatus: Mapped[str | None] = mapped_column(String, nullable=True)
+    providerMeta: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: other verified provider facts
     lastSyncedAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(PrismaDateTime, default=datetime.utcnow)
 
@@ -131,7 +132,10 @@ class Horse(Base):
     provider: Mapped[str | None] = mapped_column(String, nullable=True)
     providerRunnerId: Mapped[str | None] = mapped_column(String, nullable=True)
     # active | scratched | unavailable (missing from a complete card; row retained)
+    # | provider_unknown (provider sent an undocumented status code; kept raw in providerMeta)
     runnerStatus: Mapped[str] = mapped_column(String, default="active", server_default="active")
+    registrationNumber: Mapped[str | None] = mapped_column(String, nullable=True)  # stable NA horse id
+    providerMeta: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: other verified provider facts
     morningLineOdds: Mapped[float | None] = mapped_column(Float, nullable=True)  # provider information only
     liveOdds: Mapped[float | None] = mapped_column(Float, nullable=True)         # provider information only
     oddsUpdatedAt: Mapped[datetime | None] = mapped_column(PrismaDateTime, nullable=True)

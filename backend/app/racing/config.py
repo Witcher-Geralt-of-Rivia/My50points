@@ -44,9 +44,32 @@ DEFAULT_QUOTA_RESERVE = (0.0, 0.05, 0.15, 0.30, 0.50, 0.70)
 SELECTION_POLICIES = ("last7", "first7")
 
 
+def _csv(name: str) -> tuple[str, ...]:
+    raw = os.getenv(name) or ""
+    return tuple(x.strip() for x in raw.split(",") if x.strip())
+
+
+def parse_explicit_races(raw: str | None) -> dict[str, tuple[int, ...]]:
+    """RACING_TOURNAMENT_RACES="MEET_A:1,2,3,4,5,6,7;MEET_B:2,3,4,5,6,7,8".
+    An explicit, per-meeting choice of the track races that form the tournament
+    (acceptance/test configuration). Malformed entries are ignored."""
+    out: dict[str, tuple[int, ...]] = {}
+    for part in (raw or "").split(";"):
+        if ":" not in part:
+            continue
+        meet, nums = part.split(":", 1)
+        try:
+            values = tuple(int(n) for n in nums.split(",") if n.strip())
+        except ValueError:
+            continue
+        if meet.strip() and values:
+            out[meet.strip()] = values
+    return out
+
+
 @dataclass(frozen=True)
 class RacingConfig:
-    provider: str = "none"                  # none | orbistats | fixture
+    provider: str = "none"                  # none | orbistats | fixture | theracingapi_na
     sync_enabled: bool = False              # provider synchronization (network) on/off
     worker_enabled: bool = True             # background worker (maintenance + scheduler)
     selection_policy: str = "last7"         # AWAITING PRODUCT CONFIRMATION (see docs)
@@ -79,6 +102,11 @@ class RacingConfig:
     # freshness: data is stale when older than interval * factor
     stale_factor: float = 3.0
     fixture_path: str | None = None
+    # When set, ONLY these provider meeting ids are synchronized (no daily
+    # discovery sweep, no tournaments for other meetings).
+    meeting_allowlist: tuple = field(default=())
+    # Explicit per-meeting tournament races (track race numbers), see parse_explicit_races.
+    explicit_races: dict = field(default_factory=dict)
 
     @classmethod
     def from_env(cls) -> "RacingConfig":
@@ -88,7 +116,7 @@ class RacingConfig:
             policy = "last7"
         # Provider-specific quota knobs (documented for Orbistats).
         limit = _int("ORBISTATS_DAILY_REQUEST_LIMIT", None) if provider == "orbistats" else _int("RACING_DAILY_REQUEST_LIMIT", None)
-        rps = _float("ORBISTATS_RATE_LIMIT_PER_SECOND", 1.0) if provider == "orbistats" else _float("RACING_RATE_LIMIT_PER_SECOND", 5.0)
+        rps = _float("ORBISTATS_RATE_LIMIT_PER_SECOND", 1.0) if provider == "orbistats" else _float("RACING_RATE_LIMIT_PER_SECOND", 1.0 if provider == "theracingapi_na" else 5.0)
         # Background worker: BACKGROUND_WORKER_ENABLED wins; the legacy
         # RACING_BACKGROUND_SYNC=false (tests) also disables it.
         if os.getenv("BACKGROUND_WORKER_ENABLED") is not None:
@@ -123,4 +151,6 @@ class RacingConfig:
             lease_seconds=_int("RACING_LEASE_SECONDS", 300),
             stale_factor=_float("RACING_STALE_FACTOR", 3.0),
             fixture_path=os.getenv("RACING_FIXTURE_PATH") or None,
+            meeting_allowlist=_csv("RACING_MEETING_ALLOWLIST"),
+            explicit_races=parse_explicit_races(os.getenv("RACING_TOURNAMENT_RACES")),
         )

@@ -25,6 +25,20 @@ def eligible_races(races: list[ProviderRace] | tuple[ProviderRace, ...]) -> list
     )
 
 
+def select_explicit_races(track_numbers, races) -> list[ProviderRace] | None:
+    """Explicitly configured tournament races (RACING_TOURNAMENT_RACES), used for
+    the acceptance demonstration. Every listed track race must exist on the card
+    and be eligible, and exactly RACES_PER_TOURNAMENT distinct races are needed;
+    otherwise None (no tournament) — never a silent substitute."""
+    wanted = list(dict.fromkeys(int(n) for n in track_numbers))
+    if len(wanted) != RACES_PER_TOURNAMENT:
+        return None
+    by_number = {r.track_race_number: r for r in eligible_races(races)}
+    if any(n not in by_number for n in wanted):
+        return None
+    return [by_number[n] for n in sorted(wanted)]
+
+
 def select_tournament_races(policy: str, races) -> list[ProviderRace] | None:
     """Return exactly RACES_PER_TOURNAMENT races in track order, or None when the
     meeting has fewer eligible races (then no ticketable tournament is created)."""

@@ -14,6 +14,9 @@ from app.racing.config import RacingConfig
 logger = logging.getLogger(__name__)
 
 REAL_ORIGINS = ("real", "fixture")
+# Provider states meaning "this race has been run" (result pending, provisional,
+# or a published result that could not be linked to the card yet).
+PROVIDER_RUN_STATUSES = ("finished", "provisional", "result_unmapped")
 FINAL_RESULT_STATUSES = ("official", "void", "overdue")
 LEGACY_RESULTS_GRACE = timedelta(days=1)
 
@@ -46,6 +49,10 @@ def desired_race_state(race, has_results: bool, now: datetime, origin: str, conf
         return "cancelled", race.resultStatus if race.resultStatus in ("void",) else "void"
     if has_results or race.resultStatus == "official":
         return "finished", "official"
+    if origin in REAL_ORIGINS and getattr(race, "providerStatus", None) in PROVIDER_RUN_STATUSES:
+        # The provider reports the race as run (even when no reliable post time
+        # is known): closed for picks, official result pending.
+        return "running", "overdue" if race.resultStatus == "overdue" else "pending"
     post = race_post_time(race)
     if post is not None and now >= post:
         if origin in REAL_ORIGINS:

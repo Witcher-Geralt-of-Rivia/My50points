@@ -17,9 +17,14 @@ RACE_RESULT_PROVISIONAL = "provisional"
 RACE_RESULT_OFFICIAL = "official"
 RACE_CANCELLED = "cancelled"     # abandoned / cancelled / void before running
 RACE_VOID = "void"               # run but declared void; no result will come
+RACE_FINISHED = "finished"       # provider says the race has been run; result may still be pending
 
 RUNNER_ACTIVE = "active"
 RUNNER_SCRATCHED = "scratched"
+# The provider sent a runner status code whose meaning is not documented or
+# verified (e.g. The Racing API North America scratch_indicator "A"). The raw
+# code is kept; the runner is NOT treated as scratched and NOT as confirmed.
+RUNNER_PROVIDER_UNKNOWN = "provider_unknown"
 
 
 @dataclass(frozen=True)
@@ -34,6 +39,10 @@ class ProviderRunner:
     morning_line_odds: float | None = None   # provider information only
     live_odds: float | None = None           # provider information only
     odds_updated_at: datetime | None = None
+    # Optional provider facts (None when the provider does not supply them).
+    registration_number: str | None = None   # stable horse identifier when the provider has one
+    provider_status_code: str | None = None  # raw runner status code as sent (e.g. "N", "Y", "A")
+    meta: dict | None = None                 # other verified provider fields (ids, weight, equipment...)
 
 
 @dataclass(frozen=True)
@@ -48,6 +57,7 @@ class ProviderRace:
     purse: int | None = None
     status: str = RACE_SCHEDULED
     runners: tuple[ProviderRunner, ...] = field(default_factory=tuple)
+    meta: dict | None = None                 # other verified provider fields (distance text, flags...)
 
 
 @dataclass(frozen=True)
@@ -72,9 +82,13 @@ class ProviderEntries:
 
 @dataclass(frozen=True)
 class ProviderPlacing:
-    provider_runner_id: str
+    provider_runner_id: str                # "" when the provider result carries no runner id
     position: int | None                   # None = did not finish / not placed
     finish_code: str | None = None         # e.g. DNF, DQ as supplied
+    # When the result has no runner id, the engine links it to the card by
+    # program number AND horse name within the same race (both must match).
+    program_number: str | None = None
+    runner_name: str | None = None
 
 
 @dataclass(frozen=True)

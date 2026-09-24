@@ -1,0 +1,114 @@
+{
+ "meets": [
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "ALB_1790208000000",
+   "track_id": "ALB",
+   "track_name": "Albuquerque"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "BAQ_1790208000000",
+   "track_id": "BAQ",
+   "track_name": "Belmont Park"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "BEL_1790208000000",
+   "track_id": "BEL",
+   "track_name": "Belmont Park"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "BTP_1790208000000",
+   "track_id": "BTP",
+   "track_name": "Belterra Park"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "CD_1790208000000",
+   "track_id": "CD",
+   "track_name": "Churchill Downs"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "CT_1790208000000",
+   "track_id": "CT",
+   "track_name": "Charles Town"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "DEL_1790208000000",
+   "track_id": "DEL",
+   "track_name": "Delaware Park"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "IND_1790208000000",
+   "track_id": "IND",
+   "track_name": "Horseshoe Indianapolis"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "LS_1790208000000",
+   "track_id": "LS",
+   "track_name": "Lone Star Park"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "PRM_1790208000000",
+   "track_id": "PRM",
+   "track_name": "Prairie Meadows"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "RP_1790208000000",
+   "track_id": "RP",
+   "track_name": "Remington Park"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "SWA_1790208000000",
+   "track_id": "SWA",
+   "track_name": "Horseshoe Turf Pick 3"
+  },
+  {
+   "country": "USA",
+   "date": "2026-09-24",
+   "meet_id": "TDN_1790208000000",
+   "track_id": "TDN",
+   "track_name": "Thistledown"
+  },
+  {
+   "country": "CAN",
+   "date": "2026-09-24",
+   "meet_id": "WO_1790208000000",
+   "track_id": "WO",
+   "track_name": "Woodbine"
+  }
+ ],
+ "limit": 25,
+ "skip": 0,
+ "query": [
+  [
+   "start_date",
+   "2026-09-24"
+  ],
+  [
+   "end_date",
+   "2026-09-24"
+  ]
+ ]
+}

@@ -32,7 +32,7 @@ from app.racing.engine import SyncEngine
 from app.racing.errors import ProviderAuthError, ProviderError, ProviderRateLimited
 from app.racing.locks import LeaseManager
 from app.racing.provider import RacingProvider
-from app.racing.status import as_utc, race_is_done, race_post_time
+from app.racing.status import PROVIDER_RUN_STATUSES, as_utc, race_is_done, race_post_time
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +73,11 @@ class TickReport:
 def plan_units(db: Session, provider_name: str, config: RacingConfig, now: datetime) -> list[PlannedUnit]:
     today = now.date()
     units: list[PlannedUnit] = []
+    allow = tuple(config.meeting_allowlist or ())
 
-    for d in range(0, config.discovery_days_ahead + 1):
+    # Allowlist mode: only the listed meetings are synchronized (no daily
+    # discovery sweep, so no requests are spent on other tracks).
+    for d in (range(0) if allow else range(0, config.discovery_days_ahead + 1)):
         day = (today + timedelta(days=d)).isoformat()
         if d == 0:
             prio, interval = 2, config.interval_today
@@ -88,22 +91,35 @@ def plan_units(db: Session, provider_name: str, config: RacingConfig, now: datet
     giveup = timedelta(hours=config.result_giveup_hours)
     first_day = (today - timedelta(days=1)).isoformat()
     last_day = (today + timedelta(days=config.discovery_days_ahead)).isoformat()
-    meetings = (
-        db.query(RacingMeeting)
-        .filter(
-            RacingMeeting.provider == provider_name,
-            RacingMeeting.meetingDate >= first_day,
-            RacingMeeting.meetingDate <= last_day,
+    if allow:
+        meetings = (
+            db.query(RacingMeeting)
+            .filter(RacingMeeting.provider == provider_name, RacingMeeting.providerMeetingId.in_(allow))
+            .all()
         )
-        .all()
-    )
+        known = {m.providerMeetingId for m in meetings}
+        for ref in allow:
+            if ref not in known:  # first card fetch creates the meeting (and its tournament)
+                units.append(PlannedUnit(f"{provider_name}:entries:{ref}", "entries", ref, 2, config.interval_today))
+    else:
+        meetings = (
+            db.query(RacingMeeting)
+            .filter(
+                RacingMeeting.provider == provider_name,
+                RacingMeeting.meetingDate >= first_day,
+                RacingMeeting.meetingDate <= last_day,
+            )
+            .all()
+        )
     for m in meetings:
         ref = m.providerMeetingId
         m_day = datetime.fromisoformat(m.meetingDate).date()
         day_delta = (m_day - today).days
         tournament = db.query(Tournament).filter(Tournament.meetingId == m.id).first()
         if tournament is None:
-            if day_delta >= 0 and m.status != "cancelled":
+            if allow and m.tournamentDecision == "pending" and m.status != "cancelled":
+                units.append(PlannedUnit(f"{provider_name}:entries:{ref}", "entries", ref, 2, config.interval_today))
+            elif day_delta >= 0 and m.status != "cancelled":
                 prio = 2 if day_delta == 0 else 3 if day_delta == 1 else 4
                 interval = config.interval_today if day_delta == 0 else config.interval_tomorrow if day_delta == 1 else config.interval_future
                 units.append(PlannedUnit(f"{provider_name}:entries:{ref}", "entries", ref, prio, interval))
@@ -112,15 +128,20 @@ def plan_units(db: Session, provider_name: str, config: RacingConfig, now: datet
         races = db.query(Race).filter(Race.tournamentId == tournament.id).all()
         active = [r for r in races if not race_is_done(r)]
         if not active:
-            if day_delta >= -1:
+            if day_delta >= -1 or (allow and tournament.status != "cancelled"):
                 units.append(PlannedUnit(f"{provider_name}:reconcile:{ref}", "reconcile", ref, 5, config.interval_reconcile))
             continue
 
         pending_results = []
         near = False
         for r in active:
+            if r.status == "cancelled":
+                continue
+            if r.providerStatus in PROVIDER_RUN_STATUSES:
+                pending_results.append(r)  # provider says it has been run: fetch its result
+                continue
             post = race_post_time(r)
-            if post is None or r.status == "cancelled":
+            if post is None:
                 continue
             if now >= post:
                 if now - post <= giveup:

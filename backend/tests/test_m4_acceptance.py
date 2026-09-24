@@ -2,9 +2,9 @@
 
 * A frozen tournament race that becomes cancelled/unavailable BEFORE a ticket
   is confirmed blocks confirmation (409) — nothing is replaced or re-indexed.
-* A ticket confirmed BEFORE the cancellation stays exactly as confirmed; the
-  cancelled race is held `pending_cancelled_race` (0 points, no invented score).
-  FINAL CANCELLED-RACE SCORING POLICY: AWAITING PRODUCT CONFIRMATION.
+* A ticket confirmed BEFORE the cancellation keeps its picks exactly as
+  confirmed. CONFIRMED RULE: if ANY selected race is cancelled the whole
+  tournament is cancelled — every selection is `tournament_cancelled`, 0 points.
 * The seven provider race IDs frozen at creation never shift.
 * The M4 (guest) three-ticket flow works end to end on a provider tournament.
 * M1/M2/M3 backend logic is still available although the UI does not offer it.
@@ -24,7 +24,7 @@ from app.config import settings
 from app.constants import LAUNCH_GAME_MODES
 from app.models import LeaderboardEntry, Race, Ticket, Tournament, TournamentTicket, User
 from app.racing.engine import SyncEngine
-from app.scoring import PENDING_CANCELLED_RACE, UNSCORED
+from app.scoring import TOURNAMENT_CANCELLED
 from tests.racing_support import config, meeting_raw, provider
 
 MEETING = "SYN-MEET-A"
@@ -129,11 +129,10 @@ def test_confirmed_ticket_survives_later_cancellation_unchanged(client, db):
     assert sorted((x.raceId, x.strategy, x.picks) for x in db.query(Ticket).filter_by(userId=user.id)) == per_race_before
     cancelled = db.get(Race, races[4].id)
     assert cancelled.status == "cancelled" and cancelled.resultStatus == "void" and cancelled.raceNumber == 5
-    held = [s for s in tt.selections if s.raceId == cancelled.id]
-    assert [(s.scoreStatus, s.pointsEarned, s.isScored) for s in held] == [(PENDING_CANCELLED_RACE, 0, False)]
-    assert {s.scoreStatus for s in tt.selections if s.raceId != cancelled.id} == {UNSCORED}
-    per_race = db.query(Ticket).filter_by(userId=user.id, raceId=cancelled.id).one()
-    assert (per_race.scoreStatus, per_race.pointsEarned) == (PENDING_CANCELLED_RACE, 0)
+    # the WHOLE tournament is cancelled: every selection and per-race row, 0 points
+    assert db.get(Tournament, t.id).status == "cancelled"
+    assert {(s.scoreStatus, s.pointsEarned, s.isScored) for s in tt.selections} == {(TOURNAMENT_CANCELLED, 0, False)}
+    assert {(x.scoreStatus, x.pointsEarned) for x in db.query(Ticket).filter_by(userId=user.id)} == {(TOURNAMENT_CANCELLED, 0)}
     assert tt.totalPoints == 0
     assert db.query(LeaderboardEntry).filter_by(userId=user.id).count() == 0 or \
         db.query(LeaderboardEntry).filter_by(userId=user.id).one().totalPoints == 0

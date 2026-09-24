@@ -10,7 +10,7 @@ from app.models import (
     LeaderboardEntry, Race, RaceResult, Ticket, Tournament, UserStats,
     OfficialDividend, TournamentTicket, TicketSelection
 )
-from app.scoring import PENDING_CANCELLED_RACE, SCORED, UNSCORED, evaluate_ticket
+from app.scoring import PENDING_CANCELLED_RACE, SCORED, TOURNAMENT_CANCELLED, UNSCORED, evaluate_ticket
 from app.services.leaderboard_snapshot import refresh_tournament_rank_changes
 
 router = APIRouter(prefix="/races", tags=["races"])
@@ -36,7 +36,8 @@ def _horse_rows(race: Race) -> list[dict]:
     # `odds` is the legacy/demo column only; provider-synced runners carry None,
     # so provider prices can never decide a scratch reassignment or a score.
     return [
-        {"id": h.id, "odds": h.odds, "scratched": h.scratched, "postPosition": h.postPosition}
+        {"id": h.id, "odds": h.odds, "scratched": h.scratched, "postPosition": h.postPosition,
+         "runnerStatus": getattr(h, "runnerStatus", "active")}
         for h in race.horses
     ]
 
@@ -137,11 +138,50 @@ def hold_cancelled_race_scores(db: Session, race: Race) -> int:
     return changed
 
 
+def cancel_tournament_scores(db: Session, tournament: Tournament) -> int:
+    """CONFIRMED RULE: a tournament with ANY cancelled selected race is cancelled.
+    Every per-race ticket and aggregate selection of it is set to
+    TOURNAMENT_CANCELLED with 0 points; points already counted are removed from
+    the leaderboard and the ticket totals. Picks and strategies are kept as
+    confirmed (history). Idempotent. Returns how many rows changed."""
+    changed = 0
+    for ticket in db.query(Ticket).filter(Ticket.tournamentId == tournament.id).all():
+        if ticket.scoreStatus == TOURNAMENT_CANCELLED and not ticket.isScored:
+            continue
+        if ticket.isScored:
+            _apply_leaderboard(db, ticket, tournament.id, 0, -(ticket.pointsEarned or 0), True, False)
+        ticket.pointsEarned = 0
+        ticket.isScored = False
+        ticket.scoreStatus = TOURNAMENT_CANCELLED
+        changed += 1
+    selections = (
+        db.query(TicketSelection)
+        .join(TournamentTicket, TicketSelection.tournamentTicketId == TournamentTicket.id)
+        .filter(TournamentTicket.tournamentId == tournament.id)
+        .all()
+    )
+    for sel in selections:
+        if sel.scoreStatus == TOURNAMENT_CANCELLED and not sel.isScored:
+            continue
+        if sel.isScored and sel.pointsEarned and sel.tournamentTicket:
+            sel.tournamentTicket.totalPoints -= sel.pointsEarned
+        sel.pointsEarned = 0
+        sel.isScored = False
+        sel.scoreStatus = TOURNAMENT_CANCELLED
+        changed += 1
+    return changed
+
+
 def score_race_entries(db: Session, race: Race, result_dicts: list[dict]) -> list[dict]:
     """Score every per-race Ticket and aggregate TicketSelection of `race` from the
     frozen MY50 dividend table ONLY. A winning pick without a published MY50
     dividend (or an unresolvable scratch) is left honestly PENDING: 0 points,
     isScored=False, not counted in leaderboards — never a fabricated score."""
+    tournament = db.get(Tournament, race.tournamentId) if race.tournamentId else None
+    if tournament is not None and tournament.status == "cancelled":
+        # Results stay recorded as racing facts; a cancelled tournament scores nothing.
+        cancel_tournament_scores(db, tournament)
+        return []
     official_divs = {
         d.horseId: d.dividend
         for d in db.query(OfficialDividend).filter(OfficialDividend.raceId == race.id).all()
@@ -191,6 +231,9 @@ def score_race_entries(db: Session, race: Race, result_dicts: list[dict]) -> lis
         if sel.tournamentTicket:
             sel.tournamentTicket.totalPoints += new_points - prev
 
+    # Sessions run with autoflush=False: make new LeaderboardEntry / UserStats rows
+    # visible before the next race of the same sync is scored (else duplicates).
+    db.flush()
     return scored_tickets
 
 

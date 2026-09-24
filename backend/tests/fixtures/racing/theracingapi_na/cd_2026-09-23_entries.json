@@ -1,0 +1,2577 @@
+{
+ "meet_id": "CD_1790121600000",
+ "track_id": "CD",
+ "track_name": "Churchill Downs",
+ "country": "USA",
+ "date": "2026-09-23",
+ "races": [
+  {
+   "race_key": {
+    "race_number": "1",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "63900000",
+   "time_zone": "E",
+   "distance_description": "6 1/2 Furlongs",
+   "distance_value": 6,
+   "distance_unit": "F",
+   "surface_description": "Dirt",
+   "race_type_description": "MAIDEN CLAIMING",
+   "race_class": "MAIDEN CLAIMING($20,000)",
+   "breed": "Thoroughbred",
+   "purse": 48000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Abundance",
+     "program_number": "",
+     "post_pos": "4",
+     "registration_number": "22009490",
+     "jockey": {
+      "id": "jky_na_531117",
+      "alias": "SCRATCHED",
+      "first_name": "Johanis",
+      "first_name_initial": "J",
+      "last_name": "Aranguren",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2457693",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "8-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Hodl Hard",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "23005678",
+     "jockey": {
+      "id": "jky_na_463614",
+      "alias": "Gaffalione T",
+      "first_name": "Tyler",
+      "first_name_initial": "T",
+      "last_name": "Gaffalione",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8563491",
+      "alias": null,
+      "first_name": "Joe",
+      "first_name_initial": "J",
+      "last_name": "Sharp",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "4-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Problem Solved",
+     "program_number": "2",
+     "post_pos": "2",
+     "registration_number": "22011867",
+     "jockey": {
+      "id": "jky_na_522147",
+      "alias": "Asmussen E",
+      "first_name": "Erik",
+      "first_name_initial": "E",
+      "last_name": "Asmussen",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_50589",
+      "alias": "Asmussen Steven M",
+      "first_name": "Steven",
+      "first_name_initial": "S",
+      "last_name": "Asmussen",
+      "middle_name": "M.",
+      "type": "TE"
+     },
+     "weight": "124",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "9-5",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Federal Agent",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "23004867",
+     "jockey": {
+      "id": "jky_na_486027",
+      "alias": "Morales E",
+      "first_name": "Edgar",
+      "first_name_initial": "E",
+      "last_name": "Morales",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_228321",
+      "alias": "Barnett Bobby C",
+      "first_name": "Bobby",
+      "first_name_initial": "B",
+      "last_name": "Barnett",
+      "middle_name": "C.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "20-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "My King Air",
+     "program_number": "5",
+     "post_pos": "5",
+     "registration_number": "22017996",
+     "jockey": {
+      "id": "jky_na_441324",
+      "alias": "Ortiz J L",
+      "first_name": "Jose",
+      "first_name_initial": "J",
+      "last_name": "Ortiz",
+      "middle_name": "L.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8563491",
+      "alias": null,
+      "first_name": "Joe",
+      "first_name_initial": "J",
+      "last_name": "Sharp",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "124",
+     "equipment": "Blk-O",
+     "medication": "L",
+     "morning_line_odds": "7-5",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Berniedott",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "22008885",
+     "jockey": {
+      "id": "jky_na_530082",
+      "alias": "Hazlewood Y",
+      "first_name": "Yedsit",
+      "first_name_initial": "Y",
+      "last_name": "Hazlewood",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8636562",
+      "alias": null,
+      "first_name": "Barry",
+      "first_name_initial": "B",
+      "last_name": "King",
+      "middle_name": "L.",
+      "type": "TE"
+     },
+     "weight": "124",
+     "equipment": "Blk-O",
+     "medication": "L",
+     "morning_line_odds": "20-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Four Dimes",
+     "program_number": "7",
+     "post_pos": "7",
+     "registration_number": "23000180",
+     "jockey": {
+      "id": "jky_na_514482",
+      "alias": "Rodriguez W A",
+      "first_name": "Walter",
+      "first_name_initial": "W",
+      "last_name": "Rodriguez",
+      "middle_name": "A.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8780535",
+      "alias": null,
+      "first_name": "Colby",
+      "first_name_initial": "C",
+      "last_name": "Williams",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  },
+  {
+   "race_key": {
+    "race_number": "2",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "65640000",
+   "time_zone": "E",
+   "distance_description": "1 Mile",
+   "distance_value": 8,
+   "distance_unit": "F",
+   "surface_description": "Dirt",
+   "race_type_description": "STARTER ALLOWANCE",
+   "race_class": "STARTER ALLOWANCE",
+   "breed": "Thoroughbred",
+   "purse": 62000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Culprit",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "21012704",
+     "jockey": {
+      "id": "jky_na_463614",
+      "alias": "Gaffalione T",
+      "first_name": "Tyler",
+      "first_name_initial": "T",
+      "last_name": "Gaffalione",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2318499",
+      "alias": null,
+      "first_name": "David",
+      "first_name_initial": "D",
+      "last_name": "Jacobson",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "4-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Spurgeon",
+     "program_number": "2",
+     "post_pos": "2",
+     "registration_number": "22008271",
+     "jockey": {
+      "id": "jky_na_363921",
+      "alias": "Saez G",
+      "first_name": "Gabriel",
+      "first_name_initial": "G",
+      "last_name": "Saez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_29437578",
+      "alias": null,
+      "first_name": "Shelbi",
+      "first_name_initial": "S",
+      "last_name": "Kurtz",
+      "middle_name": "A.",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "10-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Laughnowcrylater",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "21007830",
+     "jockey": {
+      "id": "jky_na_441324",
+      "alias": "Ortiz J L",
+      "first_name": "Jose",
+      "first_name_initial": "J",
+      "last_name": "Ortiz",
+      "middle_name": "L.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2276910",
+      "alias": null,
+      "first_name": "Michael",
+      "first_name_initial": "M",
+      "last_name": "McCarthy",
+      "middle_name": "W.",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "6-5",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Suited and Booted",
+     "program_number": "4",
+     "post_pos": "4",
+     "registration_number": "22017633",
+     "jockey": {
+      "id": "jky_na_322254",
+      "alias": "Graham J",
+      "first_name": "James",
+      "first_name_initial": "J",
+      "last_name": "Graham",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8630181",
+      "alias": null,
+      "first_name": "J.",
+      "first_name_initial": "J",
+      "last_name": "Sweezey",
+      "middle_name": "Kent",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "7-2",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Susan's Boy",
+     "program_number": "5",
+     "post_pos": "5",
+     "registration_number": "22002422",
+     "jockey": {
+      "id": "jky_na_532731",
+      "alias": "Machado D",
+      "first_name": "Dylan",
+      "first_name_initial": "D",
+      "last_name": "Machado",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2273328",
+      "alias": null,
+      "first_name": "Ben",
+      "first_name_initial": "B",
+      "last_name": "Colebrook",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "6-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Fletcher Bay",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "22006108",
+     "jockey": {
+      "id": "jky_na_451944",
+      "alias": "Esquivel E",
+      "first_name": "Emmanuel",
+      "first_name_initial": "E",
+      "last_name": "Esquivel",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8608590",
+      "alias": null,
+      "first_name": "Cipriano",
+      "first_name_initial": "C",
+      "last_name": "Contreras",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "124",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "5-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  },
+  {
+   "race_key": {
+    "race_number": "3",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "67380000",
+   "time_zone": "E",
+   "distance_description": "6 Furlongs",
+   "distance_value": 6,
+   "distance_unit": "F",
+   "surface_description": "Dirt",
+   "race_type_description": "CLAIMING",
+   "race_class": "CLAIMING($12,500)",
+   "breed": "Thoroughbred",
+   "purse": 45000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Glint",
+     "program_number": "",
+     "post_pos": "5",
+     "registration_number": "21013173",
+     "jockey": {
+      "id": "jky_na_517518",
+      "alias": "SCRATCHED",
+      "first_name": "Luis",
+      "first_name_initial": "L",
+      "last_name": "Rivera, Jr.",
+      "middle_name": "Raul",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8744940",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "10-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Saint in the City",
+     "program_number": "",
+     "post_pos": "7",
+     "registration_number": "20005427",
+     "jockey": {
+      "id": "jky_na_486027",
+      "alias": "SCRATCHED",
+      "first_name": "Edgar",
+      "first_name_initial": "E",
+      "last_name": "Morales",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1462869",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Doctor Jeff",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "19019568",
+     "jockey": {
+      "id": "jky_na_441324",
+      "alias": "Ortiz J L",
+      "first_name": "Jose",
+      "first_name_initial": "J",
+      "last_name": "Ortiz",
+      "middle_name": "L.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8563491",
+      "alias": null,
+      "first_name": "Joe",
+      "first_name_initial": "J",
+      "last_name": "Sharp",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "5-2",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Social Hour",
+     "program_number": "2",
+     "post_pos": "2",
+     "registration_number": "22017809",
+     "jockey": {
+      "id": "jky_na_463614",
+      "alias": "Gaffalione T",
+      "first_name": "Tyler",
+      "first_name_initial": "T",
+      "last_name": "Gaffalione",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2318499",
+      "alias": null,
+      "first_name": "David",
+      "first_name_initial": "D",
+      "last_name": "Jacobson",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "3-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "League of Legends",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "17005515",
+     "jockey": {
+      "id": "jky_na_445683",
+      "alias": "Arrieta F",
+      "first_name": "Francisco",
+      "first_name_initial": "F",
+      "last_name": "Arrieta",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_11700",
+      "alias": "Morse Randy L",
+      "first_name": "Randy",
+      "first_name_initial": "R",
+      "last_name": "Morse",
+      "middle_name": "L.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Secured Lender",
+     "program_number": "4",
+     "post_pos": "4",
+     "registration_number": "21014603",
+     "jockey": {
+      "id": "jky_na_306096",
+      "alias": "Bejarano R",
+      "first_name": "Rafael",
+      "first_name_initial": "R",
+      "last_name": "Bejarano",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2115243",
+      "alias": "Hartman Chris A",
+      "first_name": "Chris",
+      "first_name_initial": "C",
+      "last_name": "Hartman",
+      "middle_name": "A.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "8-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Lucky Shot",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "19014622",
+     "jockey": {
+      "id": "jky_na_340452",
+      "alias": "Gonzalez S",
+      "first_name": "Santiago",
+      "first_name_initial": "S",
+      "last_name": "Gonzalez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8645256",
+      "alias": null,
+      "first_name": "Chris",
+      "first_name_initial": "C",
+      "last_name": "Banks",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "9-2",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Banidoso",
+     "program_number": "8",
+     "post_pos": "8",
+     "registration_number": "22008074",
+     "jockey": {
+      "id": "jky_na_472023",
+      "alias": "Machado L",
+      "first_name": "Luan",
+      "first_name_initial": "L",
+      "last_name": "Machado",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8722143",
+      "alias": null,
+      "first_name": "Kelly",
+      "first_name_initial": "K",
+      "last_name": "Fernandez",
+      "middle_name": "A.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "10-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Miacomet",
+     "program_number": "9",
+     "post_pos": "9",
+     "registration_number": "18000243",
+     "jockey": {
+      "id": "jky_na_367761",
+      "alias": "Gutierrez Mario",
+      "first_name": "Mario",
+      "first_name_initial": "M",
+      "last_name": "Gutierrez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8798823",
+      "alias": null,
+      "first_name": "Gustavo",
+      "first_name_initial": "G",
+      "last_name": "Esquivel",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "6-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  },
+  {
+   "race_key": {
+    "race_number": "4",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "69180000",
+   "time_zone": "E",
+   "distance_description": "6 Furlongs",
+   "distance_value": 6,
+   "distance_unit": "F",
+   "surface_description": "Dirt",
+   "race_type_description": "CLAIMING",
+   "race_class": "CLAIMING($16,000)",
+   "breed": "Thoroughbred",
+   "purse": 37000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Redacted",
+     "program_number": "",
+     "post_pos": "2",
+     "registration_number": "22019259",
+     "jockey": {
+      "id": "jky_na_517518",
+      "alias": "SCRATCHED",
+      "first_name": "Luis",
+      "first_name_initial": "L",
+      "last_name": "Rivera, Jr.",
+      "middle_name": "Raul",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8744940",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "6-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Proctor Phantom",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "20009353",
+     "jockey": {
+      "id": "jky_na_406974",
+      "alias": "Saez L",
+      "first_name": "Luis",
+      "first_name_initial": "L",
+      "last_name": "Saez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8660934",
+      "alias": null,
+      "first_name": "Norm",
+      "first_name_initial": "N",
+      "last_name": "Casse",
+      "middle_name": "W.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "5-2",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Halfway Joking",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "21014557",
+     "jockey": {
+      "id": "jky_na_514482",
+      "alias": "Rodriguez W A",
+      "first_name": "Walter",
+      "first_name_initial": "W",
+      "last_name": "Rodriguez",
+      "middle_name": "A.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2318499",
+      "alias": null,
+      "first_name": "David",
+      "first_name_initial": "D",
+      "last_name": "Jacobson",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "7-2",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Dr Fenn",
+     "program_number": "4",
+     "post_pos": "4",
+     "registration_number": "23008144",
+     "jockey": {
+      "id": "jky_na_531498",
+      "alias": "Sheehy D",
+      "first_name": "Danny",
+      "first_name_initial": "D",
+      "last_name": "Sheehy",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_125847",
+      "alias": "Vance Thomas D",
+      "first_name": "Thomas",
+      "first_name_initial": "T",
+      "last_name": "Vance",
+      "middle_name": "D.",
+      "type": "TE"
+     },
+     "weight": "118",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Mister Positivity",
+     "program_number": "5",
+     "post_pos": "5",
+     "registration_number": "23015382",
+     "jockey": {
+      "id": "jky_na_522174",
+      "alias": "Pauly S",
+      "first_name": "Summer",
+      "first_name_initial": "S",
+      "last_name": "Pauly",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1712304",
+      "alias": "Foster Eric",
+      "first_name": "Eric",
+      "first_name_initial": "E",
+      "last_name": "Foster",
+      "middle_name": "N.",
+      "type": "TE"
+     },
+     "weight": "118",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Tiger's Legacy",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "20005621",
+     "jockey": {
+      "id": "jky_na_505176",
+      "alias": "Asmussen K J",
+      "first_name": "Keith",
+      "first_name_initial": "K",
+      "last_name": "Asmussen",
+      "middle_name": "J.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_50589",
+      "alias": "Asmussen Steven M",
+      "first_name": "Steven",
+      "first_name_initial": "S",
+      "last_name": "Asmussen",
+      "middle_name": "M.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "4-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Hesper",
+     "program_number": "7",
+     "post_pos": "7",
+     "registration_number": "22015319",
+     "jockey": {
+      "id": "jky_na_463614",
+      "alias": "Gaffalione T",
+      "first_name": "Tyler",
+      "first_name_initial": "T",
+      "last_name": "Gaffalione",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_180036",
+      "alias": "Foley Gregory D",
+      "first_name": "Gregory",
+      "first_name_initial": "G",
+      "last_name": "Foley",
+      "middle_name": "D.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "5-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Good to Be Prince",
+     "program_number": "8",
+     "post_pos": "8",
+     "registration_number": "22009346",
+     "jockey": {
+      "id": "jky_na_351237",
+      "alias": "Loveberry J",
+      "first_name": "Jareth",
+      "first_name_initial": "J",
+      "last_name": "Loveberry",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2457693",
+      "alias": null,
+      "first_name": "Eduardo",
+      "first_name_initial": "E",
+      "last_name": "Rodriguez",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "10-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  },
+  {
+   "race_key": {
+    "race_number": "5",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "71100000",
+   "time_zone": "E",
+   "distance_description": "6 Furlongs",
+   "distance_value": 6,
+   "distance_unit": "F",
+   "surface_description": "Dirt",
+   "race_type_description": "MAIDEN CLAIMING",
+   "race_class": "MAIDEN CLAIMING($150,000)",
+   "breed": "Thoroughbred",
+   "purse": 75000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Your Choice",
+     "program_number": "",
+     "post_pos": "13",
+     "registration_number": "24016700",
+     "jockey": {
+      "id": "jky_na_489174",
+      "alias": "SCRATCHED",
+      "first_name": "Agustin",
+      "first_name_initial": "A",
+      "last_name": "Gomez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2103552",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "30-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "She's Toasty",
+     "program_number": "",
+     "post_pos": "11",
+     "registration_number": "24002190",
+     "jockey": {
+      "id": "jky_na_8991132",
+      "alias": "SCRATCHED",
+      "first_name": "Jane",
+      "first_name_initial": "J",
+      "last_name": "Elliott",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_336348",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "6-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Greatest Blaze",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "24012434",
+     "jockey": {
+      "id": "jky_na_306096",
+      "alias": "Bejarano R",
+      "first_name": "Rafael",
+      "first_name_initial": "R",
+      "last_name": "Bejarano",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2115243",
+      "alias": "Hartman Chris A",
+      "first_name": "Chris",
+      "first_name_initial": "C",
+      "last_name": "Hartman",
+      "middle_name": "A.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Twenty Three Gold",
+     "program_number": "2",
+     "post_pos": "2",
+     "registration_number": "24007423",
+     "jockey": {
+      "id": "jky_na_472023",
+      "alias": "Machado L",
+      "first_name": "Luan",
+      "first_name_initial": "L",
+      "last_name": "Machado",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2273328",
+      "alias": null,
+      "first_name": "Ben",
+      "first_name_initial": "B",
+      "last_name": "Colebrook",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Hex Appeal",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "24001141",
+     "jockey": {
+      "id": "jky_na_445683",
+      "alias": "Arrieta F",
+      "first_name": "Francisco",
+      "first_name_initial": "F",
+      "last_name": "Arrieta",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_336348",
+      "alias": "Kenneally Eddie",
+      "first_name": "Eddie",
+      "first_name_initial": "E",
+      "last_name": "Kenneally",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "10-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Acerbic",
+     "program_number": "4",
+     "post_pos": "4",
+     "registration_number": "24000230",
+     "jockey": {
+      "id": "jky_na_408369",
+      "alias": "Cedillo A",
+      "first_name": "Abel",
+      "first_name_initial": "A",
+      "last_name": "Cedillo",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_11700",
+      "alias": "Morse Randy L",
+      "first_name": "Randy",
+      "first_name_initial": "R",
+      "last_name": "Morse",
+      "middle_name": "L.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "20-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Corniche Road",
+     "program_number": "5",
+     "post_pos": "5",
+     "registration_number": "24013233",
+     "jockey": {
+      "id": "jky_na_367761",
+      "alias": "Gutierrez Mario",
+      "first_name": "Mario",
+      "first_name_initial": "M",
+      "last_name": "Gutierrez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1222902",
+      "alias": "Stewart Dallas",
+      "first_name": "Dallas",
+      "first_name_initial": "D",
+      "last_name": "Stewart",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "8-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Devious Lady",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "24006612",
+     "jockey": {
+      "id": "jky_na_515310",
+      "alias": "Torres J A",
+      "first_name": "Jaime",
+      "first_name_initial": "J",
+      "last_name": "Torres",
+      "middle_name": "A.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_50967",
+      "alias": "Calhoun William Bret",
+      "first_name": "W.",
+      "first_name_initial": "W",
+      "last_name": "Calhoun",
+      "middle_name": "Bret",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "6-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Blame to Fame",
+     "program_number": "7",
+     "post_pos": "7",
+     "registration_number": "24015015",
+     "jockey": {
+      "id": "jky_na_517491",
+      "alias": "Concepcion A",
+      "first_name": "Axel",
+      "first_name_initial": "A",
+      "last_name": "Concepcion",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_122148",
+      "alias": "Stall Albert M Jr",
+      "first_name": "Albert",
+      "first_name_initial": "A",
+      "last_name": "Stall, Jr.",
+      "middle_name": "M.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Passage Du Desir",
+     "program_number": "8",
+     "post_pos": "8",
+     "registration_number": "24010072",
+     "jockey": {
+      "id": "jky_na_441324",
+      "alias": "Ortiz J L",
+      "first_name": "Jose",
+      "first_name_initial": "J",
+      "last_name": "Ortiz",
+      "middle_name": "L.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2174202",
+      "alias": null,
+      "first_name": "Brad",
+      "first_name_initial": "B",
+      "last_name": "Cox",
+      "middle_name": "H.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "4-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Soul of the Night",
+     "program_number": "9",
+     "post_pos": "9",
+     "registration_number": "24013669",
+     "jockey": {
+      "id": "jky_na_406974",
+      "alias": "Saez L",
+      "first_name": "Luis",
+      "first_name_initial": "L",
+      "last_name": "Saez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2174202",
+      "alias": null,
+      "first_name": "Brad",
+      "first_name_initial": "B",
+      "last_name": "Cox",
+      "middle_name": "H.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "5-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Tumbling",
+     "program_number": "10",
+     "post_pos": "10",
+     "registration_number": "24012547",
+     "jockey": {
+      "id": "jky_na_441666",
+      "alias": "Curtis B",
+      "first_name": "Ben",
+      "first_name_initial": "B",
+      "last_name": "Curtis",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2276910",
+      "alias": null,
+      "first_name": "Michael",
+      "first_name_initial": "M",
+      "last_name": "McCarthy",
+      "middle_name": "W.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Putnam Market",
+     "program_number": "12",
+     "post_pos": "12",
+     "registration_number": "24011805",
+     "jockey": {
+      "id": "jky_na_463614",
+      "alias": "Gaffalione T",
+      "first_name": "Tyler",
+      "first_name_initial": "T",
+      "last_name": "Gaffalione",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_269874",
+      "alias": "Maker Michael J",
+      "first_name": "Michael",
+      "first_name_initial": "M",
+      "last_name": "Maker",
+      "middle_name": "J.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  },
+  {
+   "race_key": {
+    "race_number": "6",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "73020000",
+   "time_zone": "E",
+   "distance_description": "6 Furlongs",
+   "distance_value": 6,
+   "distance_unit": "F",
+   "surface_description": "Dirt",
+   "race_type_description": "CLAIMING",
+   "race_class": "CLAIMING($50,000)",
+   "breed": "Thoroughbred",
+   "purse": 78000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Jr Miss Buttercup",
+     "program_number": "",
+     "post_pos": "7",
+     "registration_number": "23013249",
+     "jockey": {
+      "id": "jky_na_515310",
+      "alias": "SCRATCHED",
+      "first_name": "Jaime",
+      "first_name_initial": "J",
+      "last_name": "Torres",
+      "middle_name": "A.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_3636",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "6-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Tempting Eve",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "22017945",
+     "jockey": {
+      "id": "jky_na_531498",
+      "alias": "Sheehy D",
+      "first_name": "Danny",
+      "first_name_initial": "D",
+      "last_name": "Sheehy",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2115243",
+      "alias": "Hartman Chris A",
+      "first_name": "Chris",
+      "first_name_initial": "C",
+      "last_name": "Hartman",
+      "middle_name": "A.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Special Sauce",
+     "program_number": "2",
+     "post_pos": "2",
+     "registration_number": "23013473",
+     "jockey": {
+      "id": "jky_na_486027",
+      "alias": "Morales E",
+      "first_name": "Edgar",
+      "first_name_initial": "E",
+      "last_name": "Morales",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2274363",
+      "alias": null,
+      "first_name": "Genaro",
+      "first_name_initial": "G",
+      "last_name": "Garcia",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "118",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "9-2",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Tetiaroa",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "22016970",
+     "jockey": {
+      "id": "jky_na_441324",
+      "alias": "Ortiz J L",
+      "first_name": "Jose",
+      "first_name_initial": "J",
+      "last_name": "Ortiz",
+      "middle_name": "L.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8537616",
+      "alias": null,
+      "first_name": "Philip",
+      "first_name_initial": "P",
+      "last_name": "Bauer",
+      "middle_name": "A.",
+      "type": "TE"
+     },
+     "weight": "123",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "7-5",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Just Do Believe",
+     "program_number": "4",
+     "post_pos": "4",
+     "registration_number": "23005582",
+     "jockey": {
+      "id": "jky_na_512271",
+      "alias": "Barbosa J",
+      "first_name": "Jeiron",
+      "first_name_initial": "J",
+      "last_name": "Barbosa",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2503737",
+      "alias": null,
+      "first_name": "Anthony",
+      "first_name_initial": "A",
+      "last_name": "Farrior",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "118",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "7-2",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Revel Toast",
+     "program_number": "5",
+     "post_pos": "5",
+     "registration_number": "23000395",
+     "jockey": {
+      "id": "jky_na_463614",
+      "alias": "Gaffalione T",
+      "first_name": "Tyler",
+      "first_name_initial": "T",
+      "last_name": "Gaffalione",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8817435",
+      "alias": null,
+      "first_name": "Kinnon",
+      "first_name_initial": "K",
+      "last_name": "LaRose",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "118",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "4-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Good Call",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "22007486",
+     "jockey": {
+      "id": "jky_na_476589",
+      "alias": "Torres C A",
+      "first_name": "Cristian",
+      "first_name_initial": "C",
+      "last_name": "Torres",
+      "middle_name": "A.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2447973",
+      "alias": null,
+      "first_name": "Aaron",
+      "first_name_initial": "A",
+      "last_name": "Shorter",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "30-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  },
+  {
+   "race_key": {
+    "race_number": "7",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "74880000",
+   "time_zone": "E",
+   "distance_description": "1 Mile",
+   "distance_value": 8,
+   "distance_unit": "F",
+   "surface_description": "Dirt",
+   "race_type_description": "MAIDEN SPECIAL WEIGHT",
+   "race_class": "MAIDEN SPECIAL WEIGHT",
+   "breed": "Thoroughbred",
+   "purse": 92000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Mo Reviews",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "24002660",
+     "jockey": {
+      "id": "jky_na_517491",
+      "alias": "Concepcion A",
+      "first_name": "Axel",
+      "first_name_initial": "A",
+      "last_name": "Concepcion",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_122148",
+      "alias": "Stall Albert M Jr",
+      "first_name": "Albert",
+      "first_name_initial": "A",
+      "last_name": "Stall, Jr.",
+      "middle_name": "M.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Greatest Nate",
+     "program_number": "2",
+     "post_pos": "2",
+     "registration_number": "24006393",
+     "jockey": {
+      "id": "jky_na_471819",
+      "alias": "Corrales G",
+      "first_name": "Gerardo",
+      "first_name_initial": "G",
+      "last_name": "Corrales",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_97542",
+      "alias": "Briley Lonnie",
+      "first_name": "Lonnie",
+      "first_name_initial": "L",
+      "last_name": "Briley",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "20-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Gut Reaction",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "24010363",
+     "jockey": {
+      "id": "jky_na_441324",
+      "alias": "Ortiz J L",
+      "first_name": "Jose",
+      "first_name_initial": "J",
+      "last_name": "Ortiz",
+      "middle_name": "L.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8817435",
+      "alias": null,
+      "first_name": "Kinnon",
+      "first_name_initial": "K",
+      "last_name": "LaRose",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "9-5",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Buffalo Soldier",
+     "program_number": "4",
+     "post_pos": "4",
+     "registration_number": "24016545",
+     "jockey": {
+      "id": "jky_na_486027",
+      "alias": "Morales E",
+      "first_name": "Edgar",
+      "first_name_initial": "E",
+      "last_name": "Morales",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8537823",
+      "alias": null,
+      "first_name": "Jordan",
+      "first_name_initial": "J",
+      "last_name": "Blair",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "My Boy Gary",
+     "program_number": "5",
+     "post_pos": "5",
+     "registration_number": "24001686",
+     "jockey": {
+      "id": "jky_na_451944",
+      "alias": "Esquivel E",
+      "first_name": "Emmanuel",
+      "first_name_initial": "E",
+      "last_name": "Esquivel",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_11034",
+      "alias": "McPeek Kenneth G",
+      "first_name": "Kenneth",
+      "first_name_initial": "K",
+      "last_name": "McPeek",
+      "middle_name": "G.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "8-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Asher Dasher",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "24017820",
+     "jockey": {
+      "id": "jky_na_322254",
+      "alias": "Graham J",
+      "first_name": "James",
+      "first_name_initial": "J",
+      "last_name": "Graham",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_137358",
+      "alias": "Desormeaux J Keith",
+      "first_name": "J.",
+      "first_name_initial": "J",
+      "last_name": "Desormeaux",
+      "middle_name": "Keith",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "20-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "When I Go",
+     "program_number": "7",
+     "post_pos": "7",
+     "registration_number": "24014265",
+     "jockey": {
+      "id": "jky_na_463614",
+      "alias": "Gaffalione T",
+      "first_name": "Tyler",
+      "first_name_initial": "T",
+      "last_name": "Gaffalione",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1712304",
+      "alias": "Foster Eric",
+      "first_name": "Eric",
+      "first_name_initial": "E",
+      "last_name": "Foster",
+      "middle_name": "N.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "5-2",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "My Birthday Gift",
+     "program_number": "8",
+     "post_pos": "8",
+     "registration_number": "24008043",
+     "jockey": {
+      "id": "jky_na_306096",
+      "alias": "Bejarano R",
+      "first_name": "Rafael",
+      "first_name_initial": "R",
+      "last_name": "Bejarano",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8501517",
+      "alias": null,
+      "first_name": "Roddina",
+      "first_name_initial": "R",
+      "last_name": "Barrett",
+      "middle_name": "A.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "4-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Good Hand",
+     "program_number": "9",
+     "post_pos": "9",
+     "registration_number": "24001388",
+     "jockey": {
+      "id": "jky_na_445683",
+      "alias": "Arrieta F",
+      "first_name": "Francisco",
+      "first_name_initial": "F",
+      "last_name": "Arrieta",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_11700",
+      "alias": "Morse Randy L",
+      "first_name": "Randy",
+      "first_name_initial": "R",
+      "last_name": "Morse",
+      "middle_name": "L.",
+      "type": "TE"
+     },
+     "weight": "119",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "10-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  },
+  {
+   "race_key": {
+    "race_number": "8",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "76740000",
+   "time_zone": "E",
+   "distance_description": "1 1/16 Miles",
+   "distance_value": 8,
+   "distance_unit": "F",
+   "surface_description": "Dirt",
+   "race_type_description": "ALLOWANCE",
+   "race_class": "ALLOWANCE",
+   "breed": "Thoroughbred",
+   "purse": 127000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Universe",
+     "program_number": "",
+     "post_pos": "7",
+     "registration_number": "23012220",
+     "jockey": {
+      "id": "jky_na_451944",
+      "alias": "SCRATCHED",
+      "first_name": "Emmanuel",
+      "first_name_initial": "E",
+      "last_name": "Esquivel",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_11034",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "6-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Gamblers Tail",
+     "program_number": "",
+     "post_pos": "4",
+     "registration_number": "21015664",
+     "jockey": {
+      "id": "jky_na_406974",
+      "alias": "SCRATCHED",
+      "first_name": "Luis",
+      "first_name_initial": "L",
+      "last_name": "Saez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8618994",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Fear of Union",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "20014910",
+     "jockey": {
+      "id": "jky_na_476589",
+      "alias": "Torres C A",
+      "first_name": "Cristian",
+      "first_name_initial": "C",
+      "last_name": "Torres",
+      "middle_name": "A.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8774235",
+      "alias": null,
+      "first_name": "S.",
+      "first_name_initial": "S",
+      "last_name": "Cunningham",
+      "middle_name": "Jade",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Amor Patriae",
+     "program_number": "2",
+     "post_pos": "2",
+     "registration_number": "22017176",
+     "jockey": {
+      "id": "jky_na_515310",
+      "alias": "Torres J A",
+      "first_name": "Jaime",
+      "first_name_initial": "J",
+      "last_name": "Torres",
+      "middle_name": "A.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_4077",
+      "alias": "DiVito James P",
+      "first_name": "James",
+      "first_name_initial": "J",
+      "last_name": "DiVito",
+      "middle_name": "P.",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "10-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Memory",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "23011358",
+     "jockey": {
+      "id": "jky_na_463614",
+      "alias": "Gaffalione T",
+      "first_name": "Tyler",
+      "first_name_initial": "T",
+      "last_name": "Gaffalione",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2530368",
+      "alias": null,
+      "first_name": "Brendan",
+      "first_name_initial": "B",
+      "last_name": "Walsh",
+      "middle_name": "P.",
+      "type": "TE"
+     },
+     "weight": "118",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "8-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Penalty Box",
+     "program_number": "5",
+     "post_pos": "5",
+     "registration_number": "22012713",
+     "jockey": {
+      "id": "jky_na_441666",
+      "alias": "Curtis B",
+      "first_name": "Ben",
+      "first_name_initial": "B",
+      "last_name": "Curtis",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2276910",
+      "alias": null,
+      "first_name": "Michael",
+      "first_name_initial": "M",
+      "last_name": "McCarthy",
+      "middle_name": "W.",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "4-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Coalmoon",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "22008828",
+     "jockey": {
+      "id": "jky_na_472023",
+      "alias": "Machado L",
+      "first_name": "Luan",
+      "first_name_initial": "L",
+      "last_name": "Machado",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1870119",
+      "alias": "Lobo Paulo H",
+      "first_name": "Paulo",
+      "first_name_initial": "P",
+      "last_name": "Lobo",
+      "middle_name": "H.",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Zapruder",
+     "program_number": "8",
+     "post_pos": "8",
+     "registration_number": "20000007",
+     "jockey": {
+      "id": "jky_na_353793",
+      "alias": "Garcia M",
+      "first_name": "Martin",
+      "first_name_initial": "M",
+      "last_name": "Garcia",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_124992",
+      "alias": "Romans Dale",
+      "first_name": "Dale",
+      "first_name_initial": "D",
+      "last_name": "Romans",
+      "middle_name": "L.",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "20-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Pagode",
+     "program_number": "9",
+     "post_pos": "9",
+     "registration_number": "22019017",
+     "jockey": {
+      "id": "jky_na_441324",
+      "alias": "Ortiz J L",
+      "first_name": "Jose",
+      "first_name_initial": "J",
+      "last_name": "Ortiz",
+      "middle_name": "L.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8563491",
+      "alias": null,
+      "first_name": "Joe",
+      "first_name_initial": "J",
+      "last_name": "Sharp",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "122",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "8-5",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Stellenbosch",
+     "program_number": "10",
+     "post_pos": "10",
+     "registration_number": "23007605",
+     "jockey": {
+      "id": "jky_na_445683",
+      "alias": "Arrieta F",
+      "first_name": "Francisco",
+      "first_name_initial": "F",
+      "last_name": "Arrieta",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_747",
+      "alias": "Baffert Bob",
+      "first_name": "Bob",
+      "first_name_initial": "B",
+      "last_name": "Baffert",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "120",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "8-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  },
+  {
+   "race_key": {
+    "race_number": "9",
+    "day_evening": "D"
+   },
+   "race_name": "",
+   "post_time_long": "78600000",
+   "time_zone": "E",
+   "distance_description": "5 1/2 Furlongs",
+   "distance_value": 5,
+   "distance_unit": "F",
+   "surface_description": "Turf",
+   "race_type_description": "MAIDEN CLAIMING",
+   "race_class": "MAIDEN CLAIMING($50,000)",
+   "breed": "Thoroughbred",
+   "purse": 67000,
+   "is_cancelled": false,
+   "has_finished": true,
+   "has_results": true,
+   "runners": [
+    {
+     "horse_name": "Outofpi",
+     "program_number": "",
+     "post_pos": "5",
+     "registration_number": "22016574",
+     "jockey": {
+      "id": "jky_na_489633",
+      "alias": "SCRATCHED",
+      "first_name": "Assael",
+      "first_name_initial": "A",
+      "last_name": "Espinoza",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1769796",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "4-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Telecaster",
+     "program_number": "",
+     "post_pos": "4",
+     "registration_number": "23012070",
+     "jockey": {
+      "id": "jky_na_360105",
+      "alias": "SCRATCHED",
+      "first_name": "William",
+      "first_name_initial": "W",
+      "last_name": "Antongeorgi III",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_368487",
+      "alias": "",
+      "first_name": "",
+      "first_name_initial": "",
+      "last_name": "",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "0",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "10-1",
+     "live_odds": null,
+     "scratch_indicator": "Y"
+    },
+    {
+     "horse_name": "Anthony the Great",
+     "program_number": "1",
+     "post_pos": "1",
+     "registration_number": "22005344",
+     "jockey": {
+      "id": "jky_na_445683",
+      "alias": "Arrieta F",
+      "first_name": "Francisco",
+      "first_name_initial": "F",
+      "last_name": "Arrieta",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8694486",
+      "alias": null,
+      "first_name": "Armando",
+      "first_name_initial": "A",
+      "last_name": "Hernandez",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "124",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "12-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Stoic Sage",
+     "program_number": "2",
+     "post_pos": "2",
+     "registration_number": "23011178",
+     "jockey": {
+      "id": "jky_na_486027",
+      "alias": "Morales E",
+      "first_name": "Edgar",
+      "first_name_initial": "E",
+      "last_name": "Morales",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1444761",
+      "alias": "Richard Chris",
+      "first_name": "Chris",
+      "first_name_initial": "C",
+      "last_name": "Richard",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "15-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "D Bigalow",
+     "program_number": "3",
+     "post_pos": "3",
+     "registration_number": "22003746",
+     "jockey": {
+      "id": "jky_na_367761",
+      "alias": "Gutierrez Mario",
+      "first_name": "Mario",
+      "first_name_initial": "M",
+      "last_name": "Gutierrez",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1373598",
+      "alias": "Fawkes David",
+      "first_name": "David",
+      "first_name_initial": "D",
+      "last_name": "Fawkes",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "124",
+     "equipment": "",
+     "medication": "",
+     "morning_line_odds": "8-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Justone More Thing",
+     "program_number": "6",
+     "post_pos": "6",
+     "registration_number": "23014663",
+     "jockey": {
+      "id": "jky_na_532731",
+      "alias": "Machado D",
+      "first_name": "Dylan",
+      "first_name_initial": "D",
+      "last_name": "Machado",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_266670",
+      "alias": "Cowans William D",
+      "first_name": "William",
+      "first_name_initial": "W",
+      "last_name": "Cowans",
+      "middle_name": "D.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "5-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Tonys Kingdom",
+     "program_number": "7",
+     "post_pos": "7",
+     "registration_number": "22004738",
+     "jockey": {
+      "id": "jky_na_471819",
+      "alias": "Corrales G",
+      "first_name": "Gerardo",
+      "first_name_initial": "G",
+      "last_name": "Corrales",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_8694486",
+      "alias": null,
+      "first_name": "Armando",
+      "first_name_initial": "A",
+      "last_name": "Hernandez",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "124",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "6-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Soho Jimmy",
+     "program_number": "8",
+     "post_pos": "8",
+     "registration_number": "23010928",
+     "jockey": {
+      "id": "jky_na_450474",
+      "alias": "Carrasco V R",
+      "first_name": "Victor",
+      "first_name_initial": "V",
+      "last_name": "Carrasco",
+      "middle_name": "R.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_1495350",
+      "alias": "Humphries Thomas",
+      "first_name": "Tommy",
+      "first_name_initial": "T",
+      "last_name": "Humphries",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "8-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Rockfest",
+     "program_number": "9",
+     "post_pos": "9",
+     "registration_number": "23008669",
+     "jockey": {
+      "id": "jky_na_515310",
+      "alias": "Torres J A",
+      "first_name": "Jaime",
+      "first_name_initial": "J",
+      "last_name": "Torres",
+      "middle_name": "A.",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_4077",
+      "alias": "DiVito James P",
+      "first_name": "James",
+      "first_name_initial": "J",
+      "last_name": "DiVito",
+      "middle_name": "P.",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "3-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    },
+    {
+     "horse_name": "Pelican Hill",
+     "program_number": "10",
+     "post_pos": "10",
+     "registration_number": "23004212",
+     "jockey": {
+      "id": "jky_na_322254",
+      "alias": "Graham J",
+      "first_name": "James",
+      "first_name_initial": "J",
+      "last_name": "Graham",
+      "middle_name": "",
+      "type": "JE"
+     },
+     "trainer": {
+      "id": "trn_na_2542779",
+      "alias": null,
+      "first_name": "Felipe",
+      "first_name_initial": "F",
+      "last_name": "Nickel",
+      "middle_name": "",
+      "type": "TE"
+     },
+     "weight": "121",
+     "equipment": "",
+     "medication": "L",
+     "morning_line_odds": "20-1",
+     "live_odds": null,
+     "scratch_indicator": "N"
+    }
+   ]
+  }
+ ]
+}

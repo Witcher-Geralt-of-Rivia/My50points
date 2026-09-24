@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth_utils import require_admin
 from app.database import get_db
-from app.models import Horse, ProviderSyncState, Race, SyncTask
+from app.models import Horse, ProviderSyncState, Race, SyncTask, Tournament
 from app.racing.config import RacingConfig
 from app.racing.providers import get_provider
 from app.racing.worker import run_sync_tick
@@ -30,6 +30,24 @@ def seed_database(db: Session = Depends(get_db)):
         return run_seed(db)
     except SeedRefused as exc:
         raise HTTPException(status_code=403, detail=f"Demo seeding refused: {exc}")
+
+
+@router.post("/racing/proof-tickets/{slug}", dependencies=[Depends(require_admin)])
+def create_acceptance_proof_tickets(slug: str, db: Session = Depends(get_db)):
+    """Acceptance only: SYNTHETIC proof players (usernames prueba_*) on a real
+    provider tournament, picks from pre-race card data only, then scoring of the
+    races that already have official results. Refused in production-like envs."""
+    from app.services.acceptance_proof import ProofRefused, create_proof_tickets
+
+    tournament = db.query(Tournament).filter(Tournament.slug == slug).first()
+    if tournament is None:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+    if tournament.origin != "real":
+        raise HTTPException(status_code=400, detail="Proof players are only for real provider tournaments")
+    try:
+        return create_proof_tickets(db, tournament)
+    except ProofRefused as exc:
+        raise HTTPException(status_code=403, detail=f"Proof refused: {exc}")
 
 
 @router.post("/sync-racing", dependencies=[Depends(require_admin)])

@@ -13,6 +13,10 @@ def get_provider(config: RacingConfig | None = None) -> RacingProvider | None:
         from app.racing.providers.orbistats import OrbistatsProvider
 
         return OrbistatsProvider.from_env(config)
+    if name == "theracingapi_na":
+        from app.racing.providers.theracingapi_na import TheRacingApiNorthAmericaProvider
+
+        return TheRacingApiNorthAmericaProvider.from_env(config)
     if name == "fixture":
         from app.racing.providers.fixture import FixtureProvider
 
